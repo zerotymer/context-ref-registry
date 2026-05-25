@@ -232,13 +232,13 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 ## Step 7. Batch Ingest
 
 **브랜치**: `feat/step7-batch-ingest`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/07-ingest-format.md`
 
 ### 작업 목록
 
-- [ ] `app/service/ingest_service.py`
-- [ ] `app/api/ingest.py`
+- [x] `app/service/ingest_service.py`
+- [x] `app/api/ingest.py`
   - `POST /ingest/batch`
 
 ### 검증 로직 (필수)
@@ -261,7 +261,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - 배치 내 relation target 누락 → 실패
 - 같은 배치 내부 entity를 relation target으로 사용 가능
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 

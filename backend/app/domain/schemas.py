@@ -197,3 +197,64 @@ class SourceRefRead(BaseModel):
     version: str | None
     retrieved_at: datetime | None
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Batch Ingest
+# ---------------------------------------------------------------------------
+
+
+class IngestSourceInput(BaseModel):
+    type: str = Field(..., max_length=100)
+    name: str | None = Field(None, max_length=500)
+    uri: str = Field(..., max_length=2000)
+    version: str | None = Field(None, max_length=100)
+    checksum: str | None = Field(None, max_length=200)
+
+
+class IngestContextInput(BaseModel):
+    context_type: ContextType
+    title: str | None = Field(None, max_length=500)
+    body: str
+    language: Locale = Locale.KO
+
+
+class IngestEntityInput(BaseModel):
+    id: uuid.UUID | None = None
+    type: EntityType
+    canonical_name: str = Field(..., max_length=500)
+    description: str | None = None
+    status: EntityStatus = EntityStatus.CANDIDATE
+    confidence: float = Field(1.0, ge=0.0, le=1.0)
+    aliases: dict[Locale, list[str]] = Field(default_factory=dict)
+    contexts: list[IngestContextInput] = Field(default_factory=list)
+    metadata: dict[str, Any] | None = None
+
+
+class IngestRelationInput(BaseModel):
+    id: uuid.UUID | None = None
+    from_entity_id: uuid.UUID
+    to_entity_id: uuid.UUID
+    relation_type: RelationType
+    description: str | None = None
+    confidence: float = Field(1.0, ge=0.0, le=1.0)
+
+
+class BatchIngestRequest(BaseModel):
+    source: IngestSourceInput
+    entities: list[IngestEntityInput] = Field(default_factory=list)
+    relations: list[IngestRelationInput] = Field(default_factory=list)
+
+
+class IngestCounts(BaseModel):
+    entities: int = 0
+    aliases: int = 0
+    contexts: int = 0
+    relations: int = 0
+
+
+class BatchIngestResult(BaseModel):
+    source_ref_id: uuid.UUID
+    created: IngestCounts
+    updated: IngestCounts
+    warnings: list[str] = Field(default_factory=list)
