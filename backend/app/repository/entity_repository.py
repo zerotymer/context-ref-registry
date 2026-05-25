@@ -39,3 +39,42 @@ class EntityRepository:
         await self._session.flush()
         await self._session.refresh(entity)
         return entity
+
+    async def search(
+        self,
+        query: str,
+        types: list | None = None,
+        limit: int = 10,
+    ) -> list[tuple[Entity, str]]:
+        from app.domain.models import EntityAlias
+
+        results: list[tuple[Entity, str]] = []
+        seen_ids: set[uuid.UUID] = set()
+
+        # 1. alias exact match
+        stmt = (
+            select(Entity)
+            .join(EntityAlias, EntityAlias.entity_id == Entity.id)
+            .where(EntityAlias.alias == query, EntityAlias.is_active == True)  # noqa: E712
+        )
+        if types:
+            stmt = stmt.where(Entity.type.in_(types))
+        result = await self._session.execute(stmt.distinct().limit(limit))
+        for entity in result.scalars().all():
+            if entity.id not in seen_ids:
+                seen_ids.add(entity.id)
+                results.append((entity, "alias_exact"))
+
+        # 2. canonical_name partial match (ILIKE)
+        remaining = limit - len(results)
+        if remaining > 0:
+            stmt2 = select(Entity).where(Entity.canonical_name.ilike(f"%{query}%"))
+            if types:
+                stmt2 = stmt2.where(Entity.type.in_(types))
+            result2 = await self._session.execute(stmt2.limit(remaining))
+            for entity in result2.scalars().all():
+                if entity.id not in seen_ids:
+                    seen_ids.add(entity.id)
+                    results.append((entity, "canonical_name_partial"))
+
+        return results

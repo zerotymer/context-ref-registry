@@ -306,13 +306,13 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 ## Step 9. MCP Server
 
 **브랜치**: `feat/step9-mcp-server`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/05-mcp-server.md`
 
 ### 작업 목록
 
-- [ ] `app/mcp/server.py` — Python MCP SDK 서버 설정
-- [ ] `app/mcp/tools.py` — read-only tool 구현
+- [x] `app/mcp/server.py` — Python MCP SDK 서버 설정
+- [x] `app/mcp/tools.py` — read-only tool 구현
 
 ### 구현할 Tool 목록
 
@@ -336,7 +336,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - MCP client로 `get_context_bundle` 호출 성공
 - `resolve_alias` ambiguous case 동작
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
