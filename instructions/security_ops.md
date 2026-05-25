@@ -1,0 +1,141 @@
+---
+uuid: ce6d92bf-2c2d-4944-adb3-1089a6530e56
+title: 운영 준비 — 보안 & 모니터링
+status: draft
+created: 2026-05-25
+completed:
+ref_docs:
+  - docs/09-security-and-ops.md
+prerequisite: 240e1460-a7e6-4b0e-a08f-10f9c74c497c (Phase 1 MVP 완료 후 시작)
+---
+
+# 운영 준비 — 보안 & 모니터링
+
+> **이 지침은 Phase 1 MVP 완료 후 진행한다.**
+> 미결 사항이 있으므로 Phase 1 완료 시점에 구체화한다.
+
+---
+
+## Step 2-1. API Key 인증
+
+**브랜치**: `feat/security-api-key`
+**상태**: `[ ]` pending
+
+### 작업 목록
+
+- [ ] `X-API-Key` 헤더 기반 인증 미들웨어 구현
+- [ ] write 엔드포인트 보호 (`POST /entities`, `POST /ingest/batch` 등)
+- [ ] read 엔드포인트는 인증 없이 허용
+- [ ] MCP server는 기본 read-only 유지 (추가 인증 불필요)
+- [ ] API key 환경변수 관리 (`.env`)
+- [ ] 인증 실패 시 표준 에러 응답: `{"ok": false, "error": {"code": "UNAUTHORIZED"}}`
+
+### scope 구분 (운영 단계)
+
+```
+read    → GET 전체 + MCP
+ingest  → POST /ingest/batch
+write   → POST/PATCH /entities 등
+admin   → status 변경, entity 삭제 등
+```
+
+**완료 조건**
+
+- `X-API-Key` 없이 write → 401
+- 올바른 key → 정상 동작
+- MCP read-only tool → 인증 없이 동작
+
+**완료일**: —
+
+---
+
+## Step 2-2. Audit Log
+
+**브랜치**: `feat/security-audit-log`
+**상태**: `[ ]` pending
+
+### 기록 대상 (`docs/09` 기준)
+
+```
+entity create / update / status 변경
+alias add / deactivate
+context add / update
+relation create / delete
+batch ingest (성공/실패)
+```
+
+### Audit Log 필드
+
+```
+id, actor, action, target_type, target_id,
+before_snapshot (JSONB), after_snapshot (JSONB), created_at
+```
+
+### 작업 목록
+
+- [ ] `entity_audit_log` 테이블 Alembic migration
+- [ ] `AuditService` 구현 — 서비스 레이어에서 자동 기록
+- [ ] actor: MVP에서는 API key 식별자 또는 `"system"` 고정
+- [ ] before/after snapshot은 핵심 필드만 포함 (context body 전체 제외)
+
+### 로그에 기록하지 않는 것
+
+```
+secret 값, 인증 토큰, context body 전체 (길이 초과 시)
+```
+
+**완료일**: —
+
+---
+
+## Step 2-3. Backup
+
+**브랜치**: `feat/ops-backup`
+**상태**: `[ ]` pending
+
+### MVP 백업 구성
+
+- [ ] `docker-compose.yml`에 backup 서비스 추가 또는 cron script 작성
+- [ ] `pg_dump` daily 스크립트
+- [ ] 백업 파일 보관 경로 정의 (로컬 볼륨 또는 minio)
+
+**미결**: minio 포함 여부에 따라 백업 대상 변경 (→ README 미결 사항 참고)
+
+**완료일**: —
+
+---
+
+## Step 2-4. Observability
+
+**브랜치**: `feat/ops-observability`
+**상태**: `[ ]` pending
+
+### 기본 메트릭 (`docs/09` 기준)
+
+```
+API 요청 수 / 레이턴시
+alias ambiguous 비율
+not_found 비율
+context_bundle 레이턴시
+MCP tool call 수
+batch ingest 성공/실패 수
+```
+
+### 작업 목록
+
+- [ ] FastAPI middleware로 요청 로깅 (request_id, endpoint, result_status)
+- [ ] structlog 또는 표준 logging으로 JSON 로그 출력
+- [ ] `/metrics` 엔드포인트 (Prometheus 포맷, optional)
+- [ ] Docker Compose health check 설정
+
+**미결**: Prometheus + Grafana 스택 포함 여부 확인 필요
+
+**완료일**: —
+
+---
+
+## 미결 사항
+
+- [ ] **minio**: Docker Compose에 포함할 것인가? (backup + source_ref 파일 저장)
+- [ ] **Observability 스택**: Prometheus + Grafana까지 구성할 것인가? 아니면 로그만?
+- [ ] **actor 식별**: Audit Log에서 actor를 API key 식별자로 할 것인가? 아니면 별도 사용자 개념?
