@@ -21,7 +21,7 @@ ref_docs:
 
 | 항목 | 확정값 |
 |------|--------|
-| Language | Python 3.11+ |
+| Language | Python 3.12 |
 | Framework | FastAPI |
 | ORM | SQLAlchemy 2.x (async) |
 | Migration | Alembic |
@@ -362,9 +362,11 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 
 ---
 
-## 미결 사항 (확인 필요)
+## 확정 사항
 
-- [ ] **Write API 인증**: MVP에서 API Key 인증 구현 여부 (생략 시 인증 없이 시작)
-- [ ] **Python 버전**: 3.11 또는 3.12 확정
-- [ ] **브랜치 전략**: Step별 feature 브랜치 단위 확정 필요 (git-branch 전략 스킬 `e03f48fb-3e00-41d7-b99d-c32854567d67` 참조)
-- [ ] **Search**: MVP에서 PostgreSQL full-text 또는 단순 LIKE 검색 사용 여부
+| 항목 | 결정 |
+|------|------|
+| Write API 인증 | MVP에서 인증 없이 시작. 운영 단계에서 API Key/scope 추가. |
+| Python 버전 | 3.12 |
+| 브랜치 전략 | Step별 `feat/step{N}-{slug}` → PR → main (스킬 `e03f48fb-3e00-41d7-b99d-c32854567d67` 참조) |
+| Search 방식 | PostgreSQL LIKE + full-text (tsvector). alias exact → canonical_name partial → context tsvector 순서. |
