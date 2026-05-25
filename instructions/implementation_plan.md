@@ -185,14 +185,14 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 ## Step 5. Context API
 
 **브랜치**: `feat/step5-context-api`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/04-rest-api.md`
 
 ### 작업 목록
 
-- [ ] `app/repository/context_repository.py`
-- [ ] `app/service/context_service.py`
-- [ ] `app/api/contexts.py`
+- [x] `app/repository/context_repository.py`
+- [x] `app/service/context_service.py`
+- [x] `app/api/contexts.py`
   - `POST /entities/{id}/contexts`
   - `GET /entities/{id}/contexts?context_type=&language=`
 
@@ -201,7 +201,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - context 추가 후 조회 성공
 - context_type, language 필터 동작
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
