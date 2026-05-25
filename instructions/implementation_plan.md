@@ -98,22 +98,22 @@ ref_docs:
 ## Step 2. Domain 정의
 
 **브랜치**: `feat/step2-domain`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/02-domain-model.md`, `docs/11-codex-task-brief.md`
 
 ### 작업 목록
 
-- [ ] `app/domain/enums.py` — EntityType, EntityStatus, ContextType, RelationType, Locale
-- [ ] `app/domain/models.py` — SQLAlchemy ORM 모델 (Entity, EntityAlias, EntityContext, EntityRelation, EntityMetadata, SourceRef)
-- [ ] `app/domain/schemas.py` — Pydantic v2 request/response schema
-- [ ] 공통 응답 스키마: `{"ok": true, "data": {}}` / `{"ok": false, "error": {"code", "message"}}`
+- [x] `app/domain/enums.py` — EntityType, EntityStatus, ContextType, RelationType, Locale
+- [x] `app/domain/models.py` — SQLAlchemy ORM 모델 (Entity, EntityAlias, EntityContext, EntityRelation, EntityMetadata, SourceRef)
+- [x] `app/domain/schemas.py` — Pydantic v2 request/response schema
+- [x] 공통 응답 스키마: `{"ok": true, "data": {}}` / `{"ok": false, "error": {"code", "message"}}`
 
 ### 완료 조건
 
 - `from app.domain.enums import EntityType` import 성공
 - Pydantic schema validation 단위 테스트 통과
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
