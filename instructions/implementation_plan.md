@@ -48,24 +48,24 @@ ref_docs:
 ## Step 0. 프로젝트 초기화
 
 **브랜치**: `feat/step0-project-init`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 
 ### 작업 목록
 
-- [ ] `pyproject.toml` 작성 (uv 기반)
-- [ ] `docker-compose.yml` 작성 (api, mcp, postgres 서비스 — minio 제외)
-- [ ] `.env.example`에 `TEST_DATABASE_URL` 항목 포함
-- [ ] `.env.example` 작성
-- [ ] `app/` 디렉터리 뼈대 생성
-- [ ] `tests/` 디렉터리 생성
-- [ ] `Makefile` 또는 `justfile` 기본 명령어 정의
+- [x] `pyproject.toml` 작성 (uv 기반)
+- [x] `docker-compose.yml` 작성 (api, mcp, postgres 서비스 — minio 제외)
+- [x] `.env.example`에 `TEST_DATABASE_URL` 항목 포함
+- [x] `.env.example` 작성
+- [x] `app/` 디렉터리 뼈대 생성
+- [x] `tests/` 디렉터리 생성
+- [x] `Makefile` 기본 명령어 정의
 
 ### 완료 조건
 
 - `docker compose up -d` 실행 시 postgres 컨테이너 기동
-- `uv pip install -e .` 성공
+- `uv pip install -e .` 성공 ✓
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
