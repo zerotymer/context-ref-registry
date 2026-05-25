@@ -120,18 +120,18 @@ ref_docs:
 ## Step 3. Entity CRUD
 
 **브랜치**: `feat/step3-entity-crud`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/04-rest-api.md`
 
 ### 작업 목록
 
-- [ ] `app/repository/entity_repository.py`
-- [ ] `app/service/entity_service.py`
-- [ ] `app/api/entities.py`
+- [x] `app/repository/entity_repository.py`
+- [x] `app/service/entity_service.py`
+- [x] `app/api/entities.py`
   - `POST /entities` — id 지정 또는 서버 UUID 생성
   - `GET /entities/{id}` — 404 시 표준 에러 반환
   - `PATCH /entities/{id}` — id·type 변경 거부
-- [ ] `app/db/session.py` — async SQLAlchemy session 설정
+- [x] `app/db/session.py` — async SQLAlchemy session 설정
 
 ### 주의사항
 
@@ -145,7 +145,7 @@ ref_docs:
 - `GET /entities/{uuid}` → 200, entity 반환
 - `GET /entities/nonexistent` → 404
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
