@@ -123,19 +123,25 @@ batch ingest 성공/실패 수
 
 ### 작업 목록
 
-- [ ] FastAPI middleware로 요청 로깅 (request_id, endpoint, result_status)
-- [ ] structlog 또는 표준 logging으로 JSON 로그 출력
-- [ ] `/metrics` 엔드포인트 (Prometheus 포맷, optional)
-- [ ] Docker Compose health check 설정
+- [ ] FastAPI middleware로 요청 로깅 (request_id, endpoint, result_status, latency_ms)
+- [ ] structlog으로 JSON 구조화 로그 출력
+- [ ] `GET /health` 엔드포인트 (DB 연결 상태 포함)
+- [ ] Docker Compose `healthcheck` 설정 (api, postgres)
 
-**미결**: Prometheus + Grafana 스택 포함 여부 확인 필요
+> Prometheus / Grafana는 **MVP 제외**. 필요 시 Phase 3에서 추가.
 
 **완료일**: —
 
 ---
 
+## 확정 사항
+
+| 항목 | 결정 |
+|------|------|
+| minio | Phase 2에서도 제외. source_ref URI 기록만 유지. |
+| Observability | 구조화 로그(structlog) + /health 엔드포인트만. Prometheus 제외. |
+
 ## 미결 사항
 
-- [ ] **minio**: Docker Compose에 포함할 것인가? (backup + source_ref 파일 저장)
-- [ ] **Observability 스택**: Prometheus + Grafana까지 구성할 것인가? 아니면 로그만?
 - [ ] **actor 식별**: Audit Log에서 actor를 API key 식별자로 할 것인가? 아니면 별도 사용자 개념?
+- [ ] **Step 2-3 Backup**: pg_dump 주기/보관 위치 확정 (Phase 2 시작 시점에 결정)

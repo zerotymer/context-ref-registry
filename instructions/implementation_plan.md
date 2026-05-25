@@ -27,9 +27,10 @@ ref_docs:
 | Migration | Alembic |
 | DB | PostgreSQL 16 |
 | MCP | Python MCP SDK (read-only) |
-| Deployment | Docker Compose |
+| Deployment | Docker Compose (minio 제외, MVP에서 불필요) |
 | Package Manager | uv |
-| Test | pytest (real DB, integration test) |
+| Test | pytest (real DB via TEST_DATABASE_URL 환경변수) |
+| Test Fixtures | `conftest.py` — docs/10 예제 데이터 기반 |
 
 ## 완료 기준 (Definition of Done)
 
@@ -52,7 +53,8 @@ ref_docs:
 ### 작업 목록
 
 - [ ] `pyproject.toml` 작성 (uv 기반)
-- [ ] `docker-compose.yml` 작성 (api, mcp, postgres 서비스)
+- [ ] `docker-compose.yml` 작성 (api, mcp, postgres 서비스 — minio 제외)
+- [ ] `.env.example`에 `TEST_DATABASE_URL` 항목 포함
 - [ ] `.env.example` 작성
 - [ ] `app/` 디렉터리 뼈대 생성
 - [ ] `tests/` 디렉터리 생성
@@ -348,10 +350,31 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 
 | 파일 | 테스트 케이스 |
 |------|-------------|
+| `conftest.py` | pytest fixtures — docs/10 예제 데이터 (UI_AREA, FEATURE, INFRA_UNIT, Relation) |
 | `test_entity_api.py` | UUID 생성/조회, PATCH 제한, deprecated 표시 |
 | `test_alias_resolve.py` | ambiguous / resolved / not_found |
 | `test_context_bundle.py` | depth 탐색, token_budget 컷, deprecated warning |
 | `test_ingest_batch.py` | 정상 배치, relation target 누락 실패, 배치 내부 참조 |
+
+### conftest.py fixtures 구성 (docs/10 기반)
+
+```python
+# 사용할 예제 entity 3개 + relation 2개
+entity_user_search_area     # UI_AREA: 사용자 검색 조건 영역
+entity_user_search_feature  # FEATURE: 사용자 검색
+entity_user_db              # INFRA_UNIT: 사용자 서비스 PostgreSQL
+relation_area_to_feature    # RELATED_TO
+relation_feature_to_db      # READS_FROM
+```
+
+### 테스트 DB 격리
+
+```bash
+# .env.test 또는 환경변수
+TEST_DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/llmref_test
+```
+
+pytest 실행 전 test DB에 `alembic upgrade head` 자동 실행, 각 테스트 후 rollback.
 
 ### 완료 조건
 
