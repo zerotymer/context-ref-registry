@@ -152,14 +152,14 @@ ref_docs:
 ## Step 4. Alias API
 
 **브랜치**: `feat/step4-alias-api`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/04-rest-api.md`, `docs/02-domain-model.md`
 
 ### 작업 목록
 
-- [ ] `app/repository/alias_repository.py`
-- [ ] `app/service/alias_service.py`
-- [ ] `app/api/aliases.py`
+- [x] `app/repository/alias_repository.py`
+- [x] `app/service/alias_service.py`
+- [x] `app/api/aliases.py`
   - `POST /entities/{id}/aliases`
   - `GET /entities/{id}/aliases`
   - `GET /resolve?alias=&locale=&type=`
@@ -178,7 +178,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - 단일 매칭 시 `resolved` 반환
 - 없는 alias → `not_found`
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 

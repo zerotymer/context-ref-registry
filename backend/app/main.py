@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.api.aliases import router as aliases_router
 from app.api.entities import router as entities_router
 from app.exceptions import RegistryError
 
@@ -16,6 +17,7 @@ async def _registry_error_handler(request: Request, exc: RegistryError) -> JSONR
 
 
 app.include_router(entities_router)
+app.include_router(aliases_router)
 
 
 @app.get("/health")
