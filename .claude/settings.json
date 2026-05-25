@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits"
+  },
+"hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json,sys,re; inp=json.load(sys.stdin); cmd=inp.get('command',''); found=re.search(r'\\\\bmutation\\\\b', cmd, re.I); exit(2 if 'md.zerotymer.net/graphql' in cmd and found else 0)\"",
+            "onMatch": "block",
+            "blockMessage": "Wiki.js GraphQL mutation is blocked — read-only access only."
+          }
+        ]
+      }
+    ]
+  }
+}

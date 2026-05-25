@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "fastapi-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "computedHash": "ee1afe686391e7bbec4519730a7f5dfe2a0ed60cd5583409a47f93b01802efde"
+    }
+  }
+}
