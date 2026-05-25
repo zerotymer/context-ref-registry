@@ -258,3 +258,52 @@ class BatchIngestResult(BaseModel):
     created: IngestCounts
     updated: IngestCounts
     warnings: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Context Bundle
+# ---------------------------------------------------------------------------
+
+
+class DeprecatedWarning(BaseModel):
+    type: str = "deprecated_entity"
+    entity_id: uuid.UUID
+    message: str
+    replacement_entity_id: uuid.UUID | None = None
+
+
+class BundleEntityRead(BaseModel):
+    id: uuid.UUID
+    type: EntityType
+    canonical_name: str
+    status: EntityStatus
+
+
+class BundleContextRead(BaseModel):
+    entity_id: uuid.UUID
+    context_type: ContextType
+    body: str
+
+
+class BundleRelationRead(BaseModel):
+    from_entity_id: uuid.UUID
+    to_entity_id: uuid.UUID
+    relation_type: RelationType
+
+
+class ContextBundleRequest(BaseModel):
+    root_ids: list[uuid.UUID] = Field(..., min_length=1)
+    include_relations: list[RelationType] | None = None
+    include_types: list[EntityType] | None = None
+    max_depth: int = Field(1, ge=0, le=10)
+    token_budget: int = Field(6000, ge=100)
+    language: Locale = Locale.KO
+
+
+class ContextBundleResponse(BaseModel):
+    roots: list[BundleEntityRead]
+    entities: list[BundleEntityRead]
+    contexts: list[BundleContextRead]
+    relations: list[BundleRelationRead]
+    warnings: list[DeprecatedWarning]
+    ambiguities: list = Field(default_factory=list)
