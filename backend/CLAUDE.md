@@ -29,8 +29,8 @@ python -m app.mcp
 `.env.example`을 복사해서 `.env` 생성:
 
 ```
-DATABASE_URL=postgresql+asyncpg://llmref:llmref@localhost:5433/llmref
-TEST_DATABASE_URL=postgresql+asyncpg://llmref:llmref@localhost:5433/llmref_test
+DATABASE_URL=postgresql+asyncpg://llmref:llmref@localhost:5432/llmref
+TEST_DATABASE_URL=postgresql+asyncpg://llmref:llmref@localhost:5432/llmref_test
 ```
 
 테스트는 `TEST_DATABASE_URL`을 우선 사용하며, `conftest.py`에서 `os.environ["DATABASE_URL"]`에 주입한다.

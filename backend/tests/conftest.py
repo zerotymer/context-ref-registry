@@ -3,7 +3,7 @@ import os
 # Must be set before app modules are imported so pydantic-settings picks up the test URL
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
-    "postgresql+asyncpg://llmref:llmref@localhost:5433/llmref_test",
+    "postgresql+asyncpg://llmref:llmref@localhost:5432/llmref_test",
 )
 
 import pytest

@@ -59,7 +59,7 @@ docker compose up -d
 ## 프로젝트 구조
 
 ```
-docker-compose.yml          # postgres(5433), api(8000), mcp(8001)
+docker-compose.yml          # postgres(5432), api(8000), mcp(stdio)
 backend/
   pyproject.toml
   Dockerfile
