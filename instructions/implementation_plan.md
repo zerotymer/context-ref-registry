@@ -48,90 +48,90 @@ ref_docs:
 ## Step 0. 프로젝트 초기화
 
 **브랜치**: `feat/step0-project-init`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 
 ### 작업 목록
 
-- [ ] `pyproject.toml` 작성 (uv 기반)
-- [ ] `docker-compose.yml` 작성 (api, mcp, postgres 서비스 — minio 제외)
-- [ ] `.env.example`에 `TEST_DATABASE_URL` 항목 포함
-- [ ] `.env.example` 작성
-- [ ] `app/` 디렉터리 뼈대 생성
-- [ ] `tests/` 디렉터리 생성
-- [ ] `Makefile` 또는 `justfile` 기본 명령어 정의
+- [x] `pyproject.toml` 작성 (uv 기반)
+- [x] `docker-compose.yml` 작성 (api, mcp, postgres 서비스 — minio 제외)
+- [x] `.env.example`에 `TEST_DATABASE_URL` 항목 포함
+- [x] `.env.example` 작성
+- [x] `app/` 디렉터리 뼈대 생성
+- [x] `tests/` 디렉터리 생성
+- [x] `Makefile` 기본 명령어 정의
 
 ### 완료 조건
 
 - `docker compose up -d` 실행 시 postgres 컨테이너 기동
-- `uv pip install -e .` 성공
+- `uv pip install -e .` 성공 ✓
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
 ## Step 1. DB Schema 작성
 
 **브랜치**: `feat/step1-db-schema`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/03-database-schema.md`
 
 ### 작업 목록
 
-- [ ] Alembic 초기화 (`alembic init`)
-- [ ] `entity` 테이블 migration 작성
-- [ ] `entity_alias` 테이블 migration 작성 (unique 제약 없음)
-- [ ] `entity_context` 테이블 migration 작성
-- [ ] `entity_relation` 테이블 migration 작성
-- [ ] `entity_metadata` 테이블 migration 작성 (JSONB)
-- [ ] `source_ref` 테이블 migration 작성
-- [ ] 인덱스 전체 확인 (type, status, alias, locale+alias)
+- [x] Alembic 초기화 (`alembic init`)
+- [x] `entity` 테이블 migration 작성
+- [x] `entity_alias` 테이블 migration 작성 (unique 제약 없음)
+- [x] `entity_context` 테이블 migration 작성
+- [x] `entity_relation` 테이블 migration 작성
+- [x] `entity_metadata` 테이블 migration 작성 (JSONB)
+- [x] `source_ref` 테이블 migration 작성
+- [x] 인덱스 전체 확인 (type, status, alias, locale+alias)
 
 ### 완료 조건
 
 - `alembic upgrade head` 성공
 - 모든 테이블 및 인덱스 생성 확인
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
 ## Step 2. Domain 정의
 
 **브랜치**: `feat/step2-domain`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/02-domain-model.md`, `docs/11-codex-task-brief.md`
 
 ### 작업 목록
 
-- [ ] `app/domain/enums.py` — EntityType, EntityStatus, ContextType, RelationType, Locale
-- [ ] `app/domain/models.py` — SQLAlchemy ORM 모델 (Entity, EntityAlias, EntityContext, EntityRelation, EntityMetadata, SourceRef)
-- [ ] `app/domain/schemas.py` — Pydantic v2 request/response schema
-- [ ] 공통 응답 스키마: `{"ok": true, "data": {}}` / `{"ok": false, "error": {"code", "message"}}`
+- [x] `app/domain/enums.py` — EntityType, EntityStatus, ContextType, RelationType, Locale
+- [x] `app/domain/models.py` — SQLAlchemy ORM 모델 (Entity, EntityAlias, EntityContext, EntityRelation, EntityMetadata, SourceRef)
+- [x] `app/domain/schemas.py` — Pydantic v2 request/response schema
+- [x] 공통 응답 스키마: `{"ok": true, "data": {}}` / `{"ok": false, "error": {"code", "message"}}`
 
 ### 완료 조건
 
 - `from app.domain.enums import EntityType` import 성공
 - Pydantic schema validation 단위 테스트 통과
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
 ## Step 3. Entity CRUD
 
 **브랜치**: `feat/step3-entity-crud`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/04-rest-api.md`
 
 ### 작업 목록
 
-- [ ] `app/repository/entity_repository.py`
-- [ ] `app/service/entity_service.py`
-- [ ] `app/api/entities.py`
+- [x] `app/repository/entity_repository.py`
+- [x] `app/service/entity_service.py`
+- [x] `app/api/entities.py`
   - `POST /entities` — id 지정 또는 서버 UUID 생성
   - `GET /entities/{id}` — 404 시 표준 에러 반환
   - `PATCH /entities/{id}` — id·type 변경 거부
-- [ ] `app/db/session.py` — async SQLAlchemy session 설정
+- [x] `app/db/session.py` — async SQLAlchemy session 설정
 
 ### 주의사항
 
@@ -145,21 +145,21 @@ ref_docs:
 - `GET /entities/{uuid}` → 200, entity 반환
 - `GET /entities/nonexistent` → 404
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
 ## Step 4. Alias API
 
 **브랜치**: `feat/step4-alias-api`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/04-rest-api.md`, `docs/02-domain-model.md`
 
 ### 작업 목록
 
-- [ ] `app/repository/alias_repository.py`
-- [ ] `app/service/alias_service.py`
-- [ ] `app/api/aliases.py`
+- [x] `app/repository/alias_repository.py`
+- [x] `app/service/alias_service.py`
+- [x] `app/api/aliases.py`
   - `POST /entities/{id}/aliases`
   - `GET /entities/{id}/aliases`
   - `GET /resolve?alias=&locale=&type=`
@@ -178,21 +178,21 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - 단일 매칭 시 `resolved` 반환
 - 없는 alias → `not_found`
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
 ## Step 5. Context API
 
 **브랜치**: `feat/step5-context-api`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/04-rest-api.md`
 
 ### 작업 목록
 
-- [ ] `app/repository/context_repository.py`
-- [ ] `app/service/context_service.py`
-- [ ] `app/api/contexts.py`
+- [x] `app/repository/context_repository.py`
+- [x] `app/service/context_service.py`
+- [x] `app/api/contexts.py`
   - `POST /entities/{id}/contexts`
   - `GET /entities/{id}/contexts?context_type=&language=`
 
@@ -201,21 +201,21 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - context 추가 후 조회 성공
 - context_type, language 필터 동작
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
 ## Step 6. Relation API
 
 **브랜치**: `feat/step6-relation-api`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/04-rest-api.md`
 
 ### 작업 목록
 
-- [ ] `app/repository/relation_repository.py`
-- [ ] `app/service/relation_service.py`
-- [ ] `app/api/relations.py`
+- [x] `app/repository/relation_repository.py`
+- [x] `app/service/relation_service.py`
+- [x] `app/api/relations.py`
   - `POST /relations` — from/to entity 존재 여부 검증
   - `GET /entities/{id}/relations?direction=&relation_type=&max_depth=`
 
@@ -225,20 +225,20 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - direction=out/in/both 동작
 - from/to entity 미존재 시 에러
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
 ## Step 7. Batch Ingest
 
 **브랜치**: `feat/step7-batch-ingest`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/07-ingest-format.md`
 
 ### 작업 목록
 
-- [ ] `app/service/ingest_service.py`
-- [ ] `app/api/ingest.py`
+- [x] `app/service/ingest_service.py`
+- [x] `app/api/ingest.py`
   - `POST /ingest/batch`
 
 ### 검증 로직 (필수)
@@ -261,7 +261,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - 배치 내 relation target 누락 → 실패
 - 같은 배치 내부 entity를 relation target으로 사용 가능
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
