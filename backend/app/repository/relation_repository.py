@@ -58,6 +58,23 @@ class RelationRepository:
 
         return results
 
+    async def get_direct_relations(
+        self,
+        entity_id: uuid.UUID,
+        relation_types: list[RelationType] | None = None,
+    ) -> list[EntityRelation]:
+        stmt = select(EntityRelation).where(
+            or_(
+                EntityRelation.from_entity_id == entity_id,
+                EntityRelation.to_entity_id == entity_id,
+            )
+        )
+        if relation_types:
+            stmt = stmt.where(EntityRelation.relation_type.in_(relation_types))
+        stmt = stmt.order_by(EntityRelation.created_at)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
     async def _fetch_direct(
         self,
         entity_id: uuid.UUID,

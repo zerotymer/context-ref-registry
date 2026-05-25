@@ -268,13 +268,13 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 ## Step 8. Context Bundle
 
 **브랜치**: `feat/step8-context-bundle`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/06-context-bundle.md`, `docs/04-rest-api.md`
 
 ### 작업 목록
 
-- [ ] `app/service/bundle_service.py`
-- [ ] `app/api/bundles.py`
+- [x] `app/service/bundle_service.py`
+- [x] `app/api/bundles.py`
   - `POST /context-bundle`
 
 ### BFS 탐색 알고리즘
@@ -299,7 +299,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - max_depth 제한 동작
 - deprecated entity → warning 반환
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
