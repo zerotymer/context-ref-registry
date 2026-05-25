@@ -72,26 +72,26 @@ ref_docs:
 ## Step 1. DB Schema 작성
 
 **브랜치**: `feat/step1-db-schema`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/03-database-schema.md`
 
 ### 작업 목록
 
-- [ ] Alembic 초기화 (`alembic init`)
-- [ ] `entity` 테이블 migration 작성
-- [ ] `entity_alias` 테이블 migration 작성 (unique 제약 없음)
-- [ ] `entity_context` 테이블 migration 작성
-- [ ] `entity_relation` 테이블 migration 작성
-- [ ] `entity_metadata` 테이블 migration 작성 (JSONB)
-- [ ] `source_ref` 테이블 migration 작성
-- [ ] 인덱스 전체 확인 (type, status, alias, locale+alias)
+- [x] Alembic 초기화 (`alembic init`)
+- [x] `entity` 테이블 migration 작성
+- [x] `entity_alias` 테이블 migration 작성 (unique 제약 없음)
+- [x] `entity_context` 테이블 migration 작성
+- [x] `entity_relation` 테이블 migration 작성
+- [x] `entity_metadata` 테이블 migration 작성 (JSONB)
+- [x] `source_ref` 테이블 migration 작성
+- [x] 인덱스 전체 확인 (type, status, alias, locale+alias)
 
 ### 완료 조건
 
 - `alembic upgrade head` 성공
 - 모든 테이블 및 인덱스 생성 확인
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
