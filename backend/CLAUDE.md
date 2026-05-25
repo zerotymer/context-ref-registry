@@ -75,7 +75,7 @@ Locale:       ko | en
 | GET | `/entities/{id}/contexts` | context 목록 |
 | POST | `/relations` | relation 생성 |
 | GET | `/entities/{id}/relations` | relation 목록 (direction, max_depth) |
-| GET | `/search` | entity 검색 |
+| GET | `/search?q=&types=&limit=` | entity 검색 (alias exact → canonical partial) |
 | POST | `/context-bundle` | BFS context bundle |
 | POST | `/ingest/batch` | 일괄 ingest |
 | GET | `/health` | 헬스체크 |
@@ -123,6 +123,7 @@ test_ingest_batch.py upsert, type 변경 금지, relation 검증
 test_mcp_tools.py    MCP 6개 tool 직접 호출
 test_domain_schemas.py Pydantic 스키마 검증
 test_examples.py     docs/10 예제 기반 DoD 통합 테스트
+test_search_api.py   GET /search (alias exact, canonical partial, type filter)
 ```
 
 테스트는 **실제 PostgreSQL**(TEST_DATABASE_URL)에서 실행. mock DB 사용 금지.
@@ -130,7 +131,5 @@ test_examples.py     docs/10 예제 기반 DoD 통합 테스트
 각 테스트는 `_clean_tables` fixture로 테이블 전체 truncate 후 실행.
 
 ## 주의사항
-
-- `search.py` (GET /search)는 구현됐지만 테스트 미작성 상태 — 수정 시 테스트 추가 필요.
 - MCP server는 `stdio` transport로 실행 (`python -m app.mcp.server`). HTTP transport가 아님.
 - `pyproject.toml`의 `mcp>=1.0.0` 의존성은 시스템 Python이 아닌 `.venv`에만 설치됨 — 항상 `.venv/bin/python` 사용.

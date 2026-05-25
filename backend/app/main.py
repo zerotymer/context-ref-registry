@@ -7,6 +7,7 @@ from app.api.contexts import router as contexts_router
 from app.api.entities import router as entities_router
 from app.api.ingest import router as ingest_router
 from app.api.relations import router as relations_router
+from app.api.search import router as search_router
 from app.exceptions import RegistryError
 
 app = FastAPI(title="LLM Reference Registry", version="0.1.0")
@@ -29,6 +30,7 @@ app.include_router(contexts_router)
 app.include_router(relations_router)
 app.include_router(ingest_router)
 app.include_router(bundles_router)
+app.include_router(search_router)
 
 
 @app.get("/health")

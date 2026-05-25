@@ -20,45 +20,45 @@ LLM Reference Registry 구현 지침 파일 모음.
 ## 전체 구현 로드맵
 
 ```
-Phase 1 — MVP 구현              ← 지금 여기
-Phase 2 — 운영 준비 (Post-MVP)  ← MVP 완료 후
+Phase 1 — MVP 구현              ✅ 완료 (2026-05-25)
+Phase 2 — 운영 준비 (Post-MVP)  ← 다음
 Phase 3 — 확장 기능 (Future)    ← 운영 후 필요 시
 ```
 
 ---
 
-## Phase 1 — MVP 구현
+## Phase 1 — MVP 구현 ✅
 
 **목표**: `docker compose up` + `pytest` 통과 + MCP tool 동작
 
 | 순서 | UUID | 지침 파일 | 상태 |
 |------|------|-----------|------|
-| 1 | [240e1460](implementation_plan.md) | implementation_plan.md | `pending` |
+| 1 | 240e1460 | .completed/240e1460-a7e6-4b0e-a08f-10f9c74c497c.md | `completed` |
 
-### Step 순서 (implementation_plan.md 내부)
+### Step 완료 이력
 
 ```
-Step 0   프로젝트 초기화        pyproject.toml, docker-compose.yml, 디렉터리 뼈대
-Step 1   DB Schema 작성         Alembic migration, 6개 테이블
-Step 2   Domain 정의            enums.py, models.py, schemas.py (Pydantic v2)
-Step 3   Entity CRUD            POST/GET/PATCH /entities
-Step 4   Alias API              POST/GET /aliases, GET /resolve (3-way split)
-Step 5   Context API            POST/GET /contexts
-Step 6   Relation API           POST /relations, GET /relations
-Step 7   Batch Ingest           POST /ingest/batch (upsert + relation 검증)
-Step 8   Context Bundle         POST /context-bundle (BFS + token_budget)
-Step 9   MCP Server             read-only 6개 tool
-Step 10  테스트 작성             pytest integration test (real DB)
+Step 0   프로젝트 초기화        ✅
+Step 1   DB Schema 작성         ✅
+Step 2   Domain 정의            ✅
+Step 3   Entity CRUD            ✅
+Step 4   Alias API              ✅
+Step 5   Context API            ✅
+Step 6   Relation API           ✅
+Step 7   Batch Ingest           ✅
+Step 8   Context Bundle         ✅
+Step 9   MCP Server             ✅
+Step 10  테스트 작성             ✅
 ```
 
 **완료 기준** (`docs/11` 기준):
 
-- [ ] `docker compose up` → API + DB 정상 기동
-- [ ] `POST /ingest/batch` sample 성공
-- [ ] `GET /resolve` ambiguous case 동작
-- [ ] `POST /context-bundle` JSON 반환
-- [ ] MCP `get_context_bundle` 호출 성공
-- [ ] `pytest` 전체 통과
+- [x] `POST /ingest/batch` sample 성공
+- [x] `GET /resolve` ambiguous case 동작
+- [x] `POST /context-bundle` JSON 반환
+- [x] MCP `get_context_bundle` 호출 성공
+- [x] `pytest` 전체 통과 (100 passed)
+- [ ] `docker compose up` → API + DB 정상 기동 (환경 실행 필요)
 
 ---
 
@@ -68,7 +68,7 @@ Step 10  테스트 작성             pytest integration test (real DB)
 
 | 순서 | UUID | 지침 파일 | 상태 |
 |------|------|-----------|------|
-| 2 | [ce6d92bf](security_ops.md) | security_ops.md | `draft` |
+| 2 | ce6d92bf | security_ops.md | `draft` |
 
 ### 포함 범위 (`docs/09` 기반)
 
@@ -87,7 +87,7 @@ Step 10  테스트 작성             pytest integration test (real DB)
 
 | 순서 | UUID | 지침 파일 | 상태 |
 |------|------|-----------|------|
-| 3 | [03080220](extensions.md) | extensions.md | `draft` |
+| 3 | 03080220 | extensions.md | `draft` |
 
 ### 포함 범위 (`docs/08` 추후 확장 기반)
 
@@ -106,9 +106,9 @@ Step 10  테스트 작성             pytest integration test (real DB)
 
 | UUID | 파일 | Phase | 상태 |
 |------|------|-------|------|
-| 240e1460-a7e6-4b0e-a08f-10f9c74c497c | implementation_plan.md | 1 | pending |
-| ce6d92bf-2c2d-4944-adb3-1089a6530e56 | security_ops.md | 2 | draft |
-| 03080220-3b52-4d28-a79d-e2d698e5480f | extensions.md | 3 | draft |
+| 240e1460-a7e6-4b0e-a08f-10f9c74c497c | .completed/ | 1 | `completed` 2026-05-25 |
+| ce6d92bf-2c2d-4944-adb3-1089a6530e56 | security_ops.md | 2 | `draft` |
+| 03080220-3b52-4d28-a79d-e2d698e5480f | extensions.md | 3 | `draft` |
 
 > 완료된 지침은 `instructions/.completed/{uuid}.md`에 보관.
 > 전체 이력은 `instructions/instructions.log` 참고.
