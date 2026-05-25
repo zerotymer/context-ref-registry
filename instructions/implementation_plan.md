@@ -208,14 +208,14 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 ## Step 6. Relation API
 
 **브랜치**: `feat/step6-relation-api`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/04-rest-api.md`
 
 ### 작업 목록
 
-- [ ] `app/repository/relation_repository.py`
-- [ ] `app/service/relation_service.py`
-- [ ] `app/api/relations.py`
+- [x] `app/repository/relation_repository.py`
+- [x] `app/service/relation_service.py`
+- [x] `app/api/relations.py`
   - `POST /relations` — from/to entity 존재 여부 검증
   - `GET /entities/{id}/relations?direction=&relation_type=&max_depth=`
 
@@ -225,7 +225,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 - direction=out/in/both 동작
 - from/to entity 미존재 시 에러
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
