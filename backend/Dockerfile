@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN pip install uv
 
-COPY pyproject.toml .
-RUN uv pip install --system -e .
-
+# Copy source first so the editable install (-e .) can find the `app` package.
+# .dockerignore excludes .venv/.env/tests from the build context.
 COPY . .
+RUN uv pip install --system -e .

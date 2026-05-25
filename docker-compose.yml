@@ -30,9 +30,10 @@ services:
 
   mcp:
     build: ./backend
-    command: python -m app.mcp.server
-    ports:
-      - "8001:8001"
+    # Read-only MCP server over stdio — clients spawn this process, no port.
+    command: python -m app.mcp
+    stdin_open: true
+    tty: true
     env_file:
       - ./backend/.env
     depends_on:

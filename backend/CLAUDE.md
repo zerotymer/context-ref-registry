@@ -20,8 +20,8 @@ uvicorn app.main:app --reload --port 8000
 alembic upgrade head
 alembic revision --autogenerate -m "describe change"
 
-# MCP 서버 단독 실행
-python -m app.mcp.server
+# MCP 서버 단독 실행 (stdio)
+python -m app.mcp
 ```
 
 ## 환경변수
@@ -131,5 +131,5 @@ test_search_api.py   GET /search (alias exact, canonical partial, type filter)
 각 테스트는 `_clean_tables` fixture로 테이블 전체 truncate 후 실행.
 
 ## 주의사항
-- MCP server는 `stdio` transport로 실행 (`python -m app.mcp.server`). HTTP transport가 아님.
+- MCP server는 `stdio` transport로 실행 (`python -m app.mcp` → `app/mcp/__main__.py`). 포트 미사용, 클라이언트가 프로세스를 spawn. docker-compose `mcp` 서비스도 stdio (`stdin_open: true`).
 - `pyproject.toml`의 `mcp>=1.0.0` 의존성은 시스템 Python이 아닌 `.venv`에만 설치됨 — 항상 `.venv/bin/python` 사용.

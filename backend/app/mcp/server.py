@@ -13,3 +13,8 @@ mcp: FastMCP = FastMCP(
 
 # Import tools module to trigger @mcp.tool() registrations
 import app.mcp.tools  # noqa: E402, F401
+
+
+if __name__ == "__main__":
+    # Read-only registry server over stdio. MCP clients spawn this process.
+    mcp.run()

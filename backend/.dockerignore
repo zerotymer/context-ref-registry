@@ -1,0 +1,28 @@
+# Virtualenvs (host arch, must not leak into image)
+.venv/
+venv/
+
+# Secrets / local env
+.env
+.env.local
+.env.*.local
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Tests are not needed in the runtime image
+tests/
+
+# Editor / OS
+.DS_Store
+*.swp
