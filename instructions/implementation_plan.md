@@ -37,11 +37,11 @@ ref_docs:
 `docs/11-codex-task-brief.md` 기준:
 
 - [ ] `docker compose up`으로 API와 DB가 정상 실행
-- [ ] batch ingest sample 성공
-- [ ] alias resolve ambiguous case 동작
-- [ ] context bundle API JSON 반환
-- [ ] MCP tool `get_context_bundle` 호출 성공
-- [ ] `pytest` 전체 통과
+- [x] batch ingest sample 성공
+- [x] alias resolve ambiguous case 동작
+- [x] context bundle API JSON 반환
+- [x] MCP tool `get_context_bundle` 호출 성공
+- [x] `pytest` 전체 통과 (95 passed)
 
 ---
 
@@ -343,7 +343,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 ## Step 10. 테스트 작성
 
 **브랜치**: `feat/step10-tests`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/11-codex-task-brief.md`
 
 ### 필수 테스트 목록
@@ -355,6 +355,7 @@ ambiguous  → 복수 매칭, candidates 반환, 임의 선택 금지
 | `test_alias_resolve.py` | ambiguous / resolved / not_found |
 | `test_context_bundle.py` | depth 탐색, token_budget 컷, deprecated warning |
 | `test_ingest_batch.py` | 정상 배치, relation target 누락 실패, 배치 내부 참조 |
+| `test_examples.py` | docs/10 예제 데이터 기반 통합 테스트 (DoD 1~7 + batch sample) |
 
 ### conftest.py fixtures 구성 (docs/10 기반)
 
@@ -378,10 +379,10 @@ pytest 실행 전 test DB에 `alembic upgrade head` 자동 실행, 각 테스트
 
 ### 완료 조건
 
-- `pytest` 전체 통과
-- 전체 6개 완료 기준 확인 (`docs/11` 참조)
+- [x] `pytest` 전체 통과 (95 passed)
+- [x] 전체 6개 완료 기준 확인 (`docs/11` 참조)
 
-**완료일**: —
+**완료일**: 2026-05-25
 
 ---
 
