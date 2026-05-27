@@ -82,7 +82,7 @@ docker compose up -d
 | 240e1460-a7e6-4b0e-a08f-10f9c74c497c | .completed/ | completed (2026-05-25) |
 | ce6d92bf-2c2d-4944-adb3-1089a6530e56 | instructions/security_ops.md | pending |
 | 03080220-3b52-4d28-a79d-e2d698e5480f | instructions/extensions.md | pending |
-| 6cd788d7-9200-41e2-bda9-06c7b96d5de7 | instructions/review_ui.md | pending |
+| 6cd788d7-9200-41e2-bda9-06c7b96d5de7 | .completed/ | completed (2026-05-27) |
 | c6794b7d-f36b-4697-b6ee-77a978615456 | .completed/ | completed (2026-05-27) |
 
 ## Git Branch 전략
