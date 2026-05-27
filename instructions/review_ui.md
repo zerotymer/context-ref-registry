@@ -1,0 +1,429 @@
+---
+uuid: 6cd788d7-9200-41e2-bda9-06c7b96d5de7
+title: Review UI — Next.js + Tailwind 관리자 웹
+status: pending
+created: 2026-05-27
+completed:
+ref_docs:
+  - docs/04-rest-api.md
+  - docs/06-context-bundle.md
+  - instructions/extensions.md (Step 3-3)
+prerequisite: ce6d92bf-2c2d-4944-adb3-1089a6530e56 (API Key 인증 완료 후 배포 권장)
+---
+
+# Review UI — Next.js + Tailwind 관리자 웹
+
+> **목적**: `candidate` 상태 entity 검토/승인, 등록된 entity/alias/context/relation 탐색,
+> context bundle 결과 확인을 위한 최소 관리자 UI.
+>
+> 백엔드 REST API를 그대로 사용하며 별도 FastAPI 변경 없음.
+
+---
+
+## 기술 스택
+
+| 항목 | 선택 | 이유 |
+|------|------|------|
+| Framework | Next.js 14 (App Router) | SSR 옵션, 배포 편의성 |
+| 스타일 | Tailwind CSS v3 | 빠른 UI 구성 |
+| 컴포넌트 | Shadcn/ui | Radix 기반, 접근성 내장 |
+| 상태/API | TanStack Query v5 | 캐싱, 로딩/에러 처리 |
+| 폼 | React Hook Form + Zod | 스키마 재사용 (백엔드 enum 동기화) |
+| 라우팅 | Next.js App Router | 파일 기반 |
+| 패키지 매니저 | pnpm | 전역 컨벤션 |
+
+---
+
+## 디렉터리 구조
+
+```
+frontend/
+  package.json
+  next.config.ts
+  tailwind.config.ts
+  tsconfig.json
+  .env.local.example          # NEXT_PUBLIC_API_URL=http://localhost:8000
+  src/
+    app/
+      layout.tsx              # 루트 레이아웃 (사이드바 포함)
+      page.tsx                # / → Dashboard
+      entities/
+        page.tsx              # /entities → Entity 목록
+        [id]/
+          page.tsx            # /entities/:id → Entity 상세
+          edit/
+            page.tsx          # /entities/:id/edit → 수정 폼
+      review/
+        page.tsx              # /review → Candidate 승인 대기
+      bundle/
+        page.tsx              # /bundle → Context Bundle 탐색기
+      ingest/
+        page.tsx              # /ingest → Batch Ingest (선택적)
+    components/
+      layout/
+        Sidebar.tsx
+        Header.tsx
+        AppLayout.tsx
+      entity/
+        EntityTable.tsx       # 목록 테이블 (정렬, 필터)
+        EntityCard.tsx        # Candidate Review 카드
+        EntityStatusBadge.tsx # active/candidate/deprecated/archived
+        EntityTypeBadge.tsx   # UI_AREA/FEATURE/INFRA_UNIT/API/CODE_SYMBOL
+      alias/
+        AliasList.tsx
+        AliasAddForm.tsx
+      context/
+        ContextList.tsx
+        ContextCard.tsx
+        ContextAddForm.tsx
+      relation/
+        RelationList.tsx
+        RelationGraph.tsx     # 선택적 — react-flow 기반 시각화
+      bundle/
+        BundleForm.tsx
+        BundleResult.tsx
+        TokenBudgetBar.tsx
+      shared/
+        ConfidenceBar.tsx
+        CopyUUID.tsx          # UUID 클릭 시 클립보드 복사
+        JsonViewer.tsx        # context body / bundle JSON 표시
+        EmptyState.tsx
+    lib/
+      api/
+        client.ts             # fetch 래퍼 (baseURL, error envelope 처리)
+        entities.ts           # useEntities, useEntity, useCreateEntity, useUpdateEntity
+        aliases.ts            # useAliases, useAddAlias, useResolveAlias
+        contexts.ts           # useContexts, useAddContext
+        relations.ts          # useRelations
+        search.ts             # useSearch
+        bundle.ts             # useContextBundle
+        ingest.ts             # useBatchIngest
+      constants.ts            # ENTITY_TYPES, ENTITY_STATUSES, CONTEXT_TYPES, RELATION_TYPES
+      utils.ts                # cn(), formatDate(), truncate()
+    types/
+      api.ts                  # 백엔드 스키마 TypeScript 미러 (자동 생성 또는 수동 동기화)
+```
+
+---
+
+## 화면별 상세 설계
+
+### Screen 1: Dashboard (`/`)
+
+**목적**: 레지스트리 전체 상태 한눈에 파악.
+
+**컴포넌트 구성**:
+```
+<DashboardPage>
+  <StatsRow>
+    <StatCard label="Active"      value={counts.active}     color="green" />
+    <StatCard label="Candidate"   value={counts.candidate}  color="yellow" alert={counts.candidate > 0} />
+    <StatCard label="Deprecated"  value={counts.deprecated} color="red" />
+    <StatCard label="전체 Alias"   value={counts.aliases}    color="blue" />
+  </StatsRow>
+  <TypeDistributionBar data={typeBreakdown} />
+  <RecentEntitiesTable limit={10} />
+</DashboardPage>
+```
+
+**API 호출**:
+- `GET /search?limit=0` + 카운트용 별도 쿼리 (또는 `/health` 확장 필요 → 임시: status별 search 4회)
+- `GET /search?limit=10` (최근 항목)
+
+**주의**: 현재 `/health`는 단순 status만 반환. 통계 API가 없으므로 candidate/active 각각
+`GET /search?status=candidate&limit=1` 등으로 total 카운트 추출 필요.
+
+---
+
+### Screen 2: Entity 목록 (`/entities`)
+
+**목적**: 전체 entity 탐색, 필터링, 신규 생성 진입점.
+
+**컴포넌트 구성**:
+```
+<EntityListPage>
+  <EntityListToolbar>
+    <SearchInput />           # debounce 300ms, GET /search?q=
+    <TypeFilter />            # multi-select: UI_AREA | FEATURE | ...
+    <StatusFilter />          # Active | Candidate | Deprecated | Archived
+    <NewEntityButton />       # → /entities/new (모달 또는 별도 페이지)
+  </EntityListToolbar>
+  <EntityTable
+    columns={[canonical_name, type, status, confidence, created_at, actions]}
+    onRowClick={id => router.push(`/entities/${id}`)}
+    pagination={true}
+  />
+</EntityListPage>
+```
+
+**API 호출**:
+- `GET /search?q={q}&types={types}&limit=20&offset={page*20}`
+
+**상태 표시**:
+- `● active` → green dot
+- `⏳ candidate` → yellow clock
+- `⚠️ deprecated` → red warning (replacement_entity_id 있으면 링크 표시)
+- `🗄️ archived` → gray
+
+---
+
+### Screen 3: Entity 상세 (`/entities/:id`)
+
+**목적**: 단일 entity 전체 정보 확인 및 관리.
+
+**컴포넌트 구성**:
+```
+<EntityDetailPage>
+  <EntityHeader>
+    <EntityName />
+    <EntityTypeBadge />
+    <EntityStatusBadge />
+    <CopyUUID />
+    <EditButton />
+    {status === 'active' && <DeprecateButton />}
+    {status === 'candidate' && <ApproveButton />}  // → PATCH status=active
+  </EntityHeader>
+
+  {status === 'deprecated' && (
+    <DeprecationBanner
+      reason={deprecation_reason}
+      replacementId={replacement_entity_id}
+    />
+  )}
+
+  <ConfidenceBar value={confidence} />
+
+  <Tabs defaultValue="alias">
+    <TabsContent value="alias">
+      <AliasList entityId={id} />
+      <AliasAddForm entityId={id} />
+    </TabsContent>
+    <TabsContent value="context">
+      <ContextList entityId={id} />
+      <ContextAddForm entityId={id} />
+    </TabsContent>
+    <TabsContent value="relation">
+      <RelationList entityId={id} />
+    </TabsContent>
+    <TabsContent value="bundle">
+      // 이 entity를 root로 하는 bundle 즉시 조회
+      <QuickBundleView rootId={id} />
+    </TabsContent>
+  </Tabs>
+</EntityDetailPage>
+```
+
+**API 호출**:
+- `GET /entities/:id`
+- `GET /entities/:id/aliases`
+- `GET /entities/:id/contexts`
+- `GET /entities/:id/relations`
+- `PATCH /entities/:id` (Approve / Deprecate)
+
+---
+
+### Screen 4: Candidate 승인 대기 (`/review`)
+
+**목적**: candidate entity를 빠르게 검토하고 active 승인 또는 정보 보완.
+
+**컴포넌트 구성**:
+```
+<CandidateReviewPage>
+  <ReviewHeader count={candidates.length} />
+
+  {candidates.map(entity => (
+    <EntityReviewCard key={entity.id}>
+      <CardHeader>
+        <EntityName />
+        <EntityTypeBadge />
+        <ConfidenceBar value={confidence} />
+      </CardHeader>
+      <CardBody>
+        <p>{entity.description}</p>
+        <AliasChips aliases={entity.aliases} />
+        <ContextSummary contexts={entity.contexts} />
+        <RelationCount count={entity.relations.length} />
+      </CardBody>
+      <CardFooter>
+        <Button onClick={approve} variant="success">↓ Active 승인</Button>
+        <Button onClick={openEdit} variant="outline">수정</Button>
+        <Button onClick={archive} variant="ghost">보류 (archive)</Button>
+      </CardFooter>
+    </EntityReviewCard>
+  ))}
+
+  {candidates.length === 0 && <EmptyState message="검토 대기 entity 없음 ✓" />}
+</CandidateReviewPage>
+```
+
+**API 호출**:
+- `GET /search?status=candidate&limit=50`
+- 각 entity: `GET /entities/:id/aliases`, `GET /entities/:id/contexts`
+- 승인: `PATCH /entities/:id` `{ "status": "active" }`
+- 보류: `PATCH /entities/:id` `{ "status": "archived" }`
+
+**UX 고려**:
+- 승인 후 카드 즉시 사라짐 (optimistic update)
+- 신뢰도 0.7 미만 카드는 노란색 border 경고
+
+---
+
+### Screen 5: Context Bundle 탐색기 (`/bundle`)
+
+**목적**: 특정 entity들의 bundle 결과를 시각적으로 확인. 코딩 에이전트에 넘길 context 미리보기.
+
+**컴포넌트 구성**:
+```
+<BundleExplorerPage>
+  <BundleForm>
+    <RootEntityInput />       # UUID 직접 입력 또는 검색 후 선택
+    <MaxDepthSlider min={0} max={5} />
+    <TokenBudgetInput default={6000} />
+    <IncludeTypesFilter />    # multi-select
+    <IncludeRelationsFilter /> # multi-select
+    <FetchButton />
+  </BundleForm>
+
+  {result && (
+    <BundleResult>
+      <BundleSummaryRow
+        entityCount={result.entities.length}
+        contextCount={result.contexts.length}
+        relationCount={result.relations.length}
+      />
+      <TokenBudgetBar used={estimatedTokens} budget={tokenBudget} />
+
+      {result.warnings.length > 0 && (
+        <DeprecationWarnings warnings={result.warnings} />
+      )}
+
+      <Tabs defaultValue="context">
+        <TabsContent value="context">
+          <ContextList contexts={result.contexts} groupByEntity={true} />
+        </TabsContent>
+        <TabsContent value="entities">
+          <BundleEntityList entities={result.entities} />
+        </TabsContent>
+        <TabsContent value="relations">
+          <BundleRelationList relations={result.relations} />
+        </TabsContent>
+        <TabsContent value="json">
+          <JsonViewer data={result} copyButton={true} />
+        </TabsContent>
+      </Tabs>
+    </BundleResult>
+  )}
+</BundleExplorerPage>
+```
+
+**API 호출**:
+- `POST /context-bundle` `{ root_ids, max_depth, token_budget, ... }`
+
+---
+
+## API 클라이언트 설계 (`lib/api/client.ts`)
+
+```typescript
+// 모든 API 응답은 { ok: boolean, data?: T, error?: { code, message } }
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { "Content-Type": "application/json", ...init?.headers },
+    ...init,
+  });
+  const body = await res.json();
+  if (!body.ok) throw new ApiError(body.error.code, body.error.message);
+  return body.data as T;
+}
+
+class ApiError extends Error {
+  constructor(public code: string, message: string) { super(message); }
+}
+```
+
+---
+
+## 환경 변수
+
+```env
+# frontend/.env.local.example
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+Phase 2 API Key 인증 완료 후:
+```env
+NEXT_PUBLIC_API_KEY=   # 클라이언트 노출 주의 — read-only key만
+```
+
+---
+
+## 브랜치 및 구현 순서
+
+**브랜치**: `feat/ext-review-ui`
+
+### Step 1 — 프로젝트 초기화 (Day 1)
+- [ ] `frontend/` Next.js 14 프로젝트 생성 (`pnpm create next-app`)
+- [ ] Tailwind, Shadcn/ui 설치 및 설정
+- [ ] TanStack Query Provider 설정
+- [ ] `lib/api/client.ts` 구현
+- [ ] `types/api.ts` 백엔드 스키마 TypeScript 미러
+
+### Step 2 — 공통 컴포넌트 + 레이아웃 (Day 1)
+- [ ] `AppLayout.tsx` (Sidebar + Header)
+- [ ] `EntityStatusBadge`, `EntityTypeBadge`, `ConfidenceBar`, `CopyUUID`
+- [ ] `EmptyState`, `JsonViewer`
+
+### Step 3 — Entity 목록 + 상세 (Day 2)
+- [ ] `GET /search` 연동 (`useSearch` hook)
+- [ ] `EntityTable` 컴포넌트 (정렬, 페이지네이션)
+- [ ] Entity 상세 탭 UI (Alias / Context / Relation)
+
+### Step 4 — Candidate Review (Day 2)
+- [ ] `CandidateReviewPage` 구현
+- [ ] Approve / Archive 액션 (optimistic update)
+
+### Step 5 — Bundle 탐색기 + Dashboard (Day 3)
+- [ ] `BundleExplorerPage` 구현
+- [ ] `Dashboard` 통계 카드 + 최근 entity 목록
+
+### Step 6 — docker-compose 통합 (Day 3)
+- [ ] `frontend/Dockerfile` 작성
+- [ ] `docker-compose.yml`에 `frontend` 서비스 추가 (포트 3000)
+
+---
+
+## docker-compose 통합 예시
+
+```yaml
+# docker-compose.yml 추가 서비스
+frontend:
+  build:
+    context: ./frontend
+    dockerfile: Dockerfile
+  ports:
+    - "3000:3000"
+  environment:
+    - NEXT_PUBLIC_API_URL=http://api:8000
+  depends_on:
+    - api
+```
+
+---
+
+## 완료 조건 (DoD)
+
+- [ ] `candidate` entity를 UI에서 `active`로 승인 가능
+- [ ] entity 검색/필터 동작 확인 (alias, canonical_name, type, status)
+- [ ] Entity 상세에서 alias 추가 가능
+- [ ] context bundle 결과를 UI에서 확인 및 JSON 복사 가능
+- [ ] deprecated entity 조회 시 replacement 링크 표시
+- [ ] `docker compose up`으로 전체 스택 (DB + API + Frontend) 기동 확인
+
+---
+
+## 미결 사항
+
+- [ ] Phase 2 API Key 인증 완료 후 프론트에서 `X-API-Key` 헤더 처리 방식 결정
+  (환경 변수 vs 로그인 폼)
+- [ ] Relation 그래프 시각화 포함 여부 (`react-flow` 추가 시 번들 +200KB)

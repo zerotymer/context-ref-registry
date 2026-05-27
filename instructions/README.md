@@ -109,6 +109,23 @@ Step 10  테스트 작성             ✅
 | 240e1460-a7e6-4b0e-a08f-10f9c74c497c | .completed/ | 1 | `completed` 2026-05-25 |
 | ce6d92bf-2c2d-4944-adb3-1089a6530e56 | security_ops.md | 2 | `draft` |
 | 03080220-3b52-4d28-a79d-e2d698e5480f | extensions.md | 3 | `draft` |
+| 6cd788d7-9200-41e2-bda9-06c7b96d5de7 | review_ui.md | 3 | `pending` |
 
 > 완료된 지침은 `instructions/.completed/{uuid}.md`에 보관.
 > 전체 이력은 `instructions/instructions.log` 참고.
+
+---
+
+## 미정 / 백로그
+
+아직 별도 지침 파일로 확정하지 않았거나, 구현 범위가 더 구체화되어야 하는 항목.
+구현 단위가 확정되면 UUID를 발급하고 `instructions/{slug}.md`로 승격한다.
+
+| 항목 | 설명 | 처리 방향 |
+|------|------|-----------|
+| 인증시스템 구현 | API Key 인증을 시작점으로 write/admin 엔드포인트 보호, scope 정책, actor 식별 방식을 확정한다. | Phase 2 `security_ops.md` Step 2-1로 구체화 |
+| 목록 조회 시스템 | entity/search/list 조회 경험을 정리한다. 필터, 페이지네이션, 정렬, total count, status/type 조건을 API와 UI에서 일관되게 제공한다. | 별도 지침 생성 또는 `review_ui.md` 구현 전 선행 정리 |
+| 프로젝트 별 그룹화 | entity/context/relation을 프로젝트 단위로 묶어 조회·관리할 수 있게 한다. 프로젝트 식별자, 필터 기준, UI 그룹 표시 방식을 정의한다. | 목록 조회 시스템 및 관리자 시스템 설계 시 함께 구체화 |
+| 관리자 시스템 구현 | candidate 검토, active 승인, archive/deprecated 처리, alias/context 관리가 가능한 관리자 화면을 구현한다. | `review_ui.md` 기반으로 진행 |
+| README 최신화 | 신규 지침 생성 시 README의 로드맵/현황 표를 함께 갱신한다. | 지침 관리 규칙에 포함 |
+| docker compose 검증 | Phase 1 완료 기준 중 `docker compose up` API + DB 기동 확인이 아직 미체크다. | 환경 실행 후 완료 체크 |
