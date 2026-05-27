@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Reference Registry — 승인 대기</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 text-sm">
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-white border-r border-gray-200 flex flex-col shrink-0">
+    <div class="px-4 py-4 border-b border-gray-100">
+      <div class="font-semibold text-gray-900 text-base leading-tight">LLM Reference<br/>Registry</div>
+      <div class="text-xs text-gray-400 mt-0.5">v0.1.0</div>
+    </div>
+    <nav class="flex-1 px-2 py-3 space-y-0.5">
+      <a href="index.html"      class="flex items-center gap-2 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a href="entities.html"   class="flex items-center gap-2 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        Entity 목록
+      </a>
+      <a href="review.html"     class="flex items-center gap-2 px-3 py-2 rounded-md bg-indigo-50 text-indigo-700 font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        승인 대기
+        <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-semibold px-1.5 py-0.5 rounded-full" id="badge">13</span>
+      </a>
+      <a href="bundle.html"     class="flex items-center gap-2 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        Bundle 탐색기
+      </a>
+    </nav>
+    <div class="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
+      <div class="flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>
+        API 연결됨
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <h1 class="font-semibold text-gray-900">승인 대기</h1>
+        <span class="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full" id="count-label">13개 검토 필요</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <select class="border border-gray-200 rounded-md text-xs px-2 py-1.5 focus:outline-none">
+          <option>신뢰도 낮은순</option>
+          <option>최신순</option>
+          <option>타입별</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Cards -->
+    <main class="flex-1 overflow-y-auto p-6 space-y-4" id="cards">
+
+      <!-- Card 1: Low confidence warning -->
+      <div class="bg-white rounded-lg border-2 border-amber-300 shadow-sm" id="card-1">
+        <div class="px-5 py-4">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold text-gray-900">EntityReviewCard 컴포넌트</span>
+                <span class="px-1.5 py-0.5 rounded text-xs bg-sky-50 text-sky-700 font-medium">CODE_SYMBOL</span>
+                <span class="px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-medium">⚠ 신뢰도 낮음</span>
+              </div>
+              <p class="text-xs text-gray-500 leading-relaxed max-w-2xl">Candidate Review 화면에서 단일 candidate entity를 표시하고 승인/보류 액션을 제공하는 카드 컴포넌트.</p>
+            </div>
+            <div class="flex items-center gap-1.5 ml-4 shrink-0">
+              <div class="w-16 h-1.5 bg-gray-100 rounded-full"><div class="h-1.5 bg-amber-400 rounded-full" style="width:65%"></div></div>
+              <span class="text-xs text-amber-600 font-semibold">0.65</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">ko / EntityReviewCard</span>
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">ko / 검토 카드</span>
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">en / Entity Review Card</span>
+          </div>
+
+          <div class="bg-gray-50 rounded p-2.5 mb-3 text-xs text-gray-600 leading-relaxed">
+            <span class="font-medium text-gray-500">summary · </span>
+            candidate entity의 이름/타입/신뢰도/설명/alias 칩/context 요약/relation 수를 표시하고, Active 승인 / 수정 / 보류(archive) 3개 액션 버튼을 제공하는 카드 컴포넌트.
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-gray-400">Context 2개 · Relation 0개</div>
+            <div class="flex gap-2">
+              <button class="text-xs px-3 py-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">보류 (archive)</button>
+              <button class="text-xs px-3 py-1.5 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50">수정</button>
+              <button onclick="approve('card-1')" class="text-xs px-4 py-1.5 rounded-md bg-green-600 text-white font-medium hover:bg-green-700">✓ Active 승인</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Normal -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm" id="card-2">
+        <div class="px-5 py-4">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold text-gray-900">Dashboard 화면</span>
+                <span class="px-1.5 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700 font-medium">UI_AREA</span>
+              </div>
+              <p class="text-xs text-gray-500 leading-relaxed max-w-2xl">레지스트리 전체 상태를 한눈에 파악하는 메인 화면. 경로: /</p>
+            </div>
+            <div class="flex items-center gap-1.5 ml-4 shrink-0">
+              <div class="w-16 h-1.5 bg-gray-100 rounded-full"><div class="h-1.5 bg-indigo-400 rounded-full w-full"></div></div>
+              <span class="text-xs text-gray-600 font-semibold">1.0</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">ko / 대시보드</span>
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">ko / 홈 화면</span>
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">en / Dashboard</span>
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">en / Overview Screen</span>
+          </div>
+
+          <div class="bg-gray-50 rounded p-2.5 mb-3 text-xs text-gray-600 leading-relaxed">
+            <span class="font-medium text-gray-500">summary · </span>
+            레지스트리 전체 상태를 한눈에 파악하는 메인 화면. entity 상태별 통계 카드(Active/Candidate/Deprecated 수), 타입별 분포 바, 최근 등록 entity 목록을 표시한다.
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-gray-400">Context 3개 · Relation 1개</div>
+            <div class="flex gap-2">
+              <button class="text-xs px-3 py-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">보류 (archive)</button>
+              <button class="text-xs px-3 py-1.5 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50">수정</button>
+              <button onclick="approve('card-2')" class="text-xs px-4 py-1.5 rounded-md bg-green-600 text-white font-medium hover:bg-green-700">✓ Active 승인</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm" id="card-3">
+        <div class="px-5 py-4">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold text-gray-900">Candidate 승인 기능</span>
+                <span class="px-1.5 py-0.5 rounded text-xs bg-violet-50 text-violet-700 font-medium">FEATURE</span>
+              </div>
+              <p class="text-xs text-gray-500 leading-relaxed max-w-2xl">candidate 상태의 entity를 사람이 검토하여 active로 승격하거나 archive 처리하는 기능.</p>
+            </div>
+            <div class="flex items-center gap-1.5 ml-4 shrink-0">
+              <div class="w-16 h-1.5 bg-gray-100 rounded-full"><div class="h-1.5 bg-indigo-400 rounded-full w-full"></div></div>
+              <span class="text-xs text-gray-600 font-semibold">1.0</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">ko / 후보 승인</span>
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">ko / Candidate 승인</span>
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">en / Promote to Active</span>
+          </div>
+
+          <div class="bg-gray-50 rounded p-2.5 mb-3 text-xs text-gray-600 leading-relaxed">
+            <span class="font-medium text-gray-500">summary · </span>
+            외부 파서/에이전트가 ingest한 candidate entity를 사람이 검토하여 active(승인) 또는 archived(보류) 상태로 변경하는 핵심 운영 기능.
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-gray-400">Context 2개 · Relation 2개</div>
+            <div class="flex gap-2">
+              <button class="text-xs px-3 py-1.5 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50">보류 (archive)</button>
+              <button class="text-xs px-3 py-1.5 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50">수정</button>
+              <button onclick="approve('card-3')" class="text-xs px-4 py-1.5 rounded-md bg-green-600 text-white font-medium hover:bg-green-700">✓ Active 승인</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state (hidden by default) -->
+      <div id="empty-state" class="hidden text-center py-20">
+        <div class="text-4xl mb-3">✓</div>
+        <div class="font-medium text-gray-700 text-base">검토 대기 Entity 없음</div>
+        <div class="text-xs text-gray-400 mt-1">모든 candidate entity가 처리되었습니다.</div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+let count = 13;
+function approve(id) {
+  const card = document.getElementById(id);
+  card.style.transition = 'opacity 0.3s, transform 0.3s';
+  card.style.opacity = '0';
+  card.style.transform = 'translateX(20px)';
+  setTimeout(() => {
+    card.remove();
+    count--;
+    document.getElementById('badge').textContent = count;
+    document.getElementById('count-label').textContent = count + '개 검토 필요';
+    if (document.querySelectorAll('#cards > div:not(#empty-state)').length === 0) {
+      document.getElementById('empty-state').classList.remove('hidden');
+    }
+  }, 300);
+}
+</script>
+
+</body>
+</html>

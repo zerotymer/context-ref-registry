@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Reference Registry — Entity 상세</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 text-sm">
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-white border-r border-gray-200 flex flex-col shrink-0">
+    <div class="px-4 py-4 border-b border-gray-100">
+      <div class="font-semibold text-gray-900 text-base leading-tight">LLM Reference<br/>Registry</div>
+      <div class="text-xs text-gray-400 mt-0.5">v0.1.0</div>
+    </div>
+    <nav class="flex-1 px-2 py-3 space-y-0.5">
+      <a href="index.html"      class="flex items-center gap-2 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a href="entities.html"   class="flex items-center gap-2 px-3 py-2 rounded-md bg-indigo-50 text-indigo-700 font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        Entity 목록
+      </a>
+      <a href="review.html"     class="flex items-center gap-2 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        승인 대기
+        <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">13</span>
+      </a>
+      <a href="bundle.html"     class="flex items-center gap-2 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        Bundle 탐색기
+      </a>
+    </nav>
+    <div class="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
+      <div class="flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>
+        API 연결됨
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3 shrink-0">
+      <a href="entities.html" class="text-gray-400 hover:text-gray-600 flex items-center gap-1 text-xs">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        목록
+      </a>
+      <span class="text-gray-300">/</span>
+      <h1 class="font-semibold text-gray-900 flex-1">Dashboard 화면</h1>
+      <div class="flex items-center gap-2">
+        <button onclick="navigator.clipboard?.writeText('46833e6a-55c9-4eec-a6bd-8d9eb5be22cb')" class="text-xs text-gray-400 hover:text-gray-600 font-mono border border-gray-200 rounded px-2 py-1 hover:bg-gray-50">
+          46833e6a… ⎘
+        </button>
+        <button class="text-xs border border-gray-200 rounded px-3 py-1.5 hover:bg-gray-50">수정</button>
+        <button class="text-xs bg-green-600 text-white rounded px-3 py-1.5 hover:bg-green-700 font-medium">✓ Active 승인</button>
+      </div>
+    </header>
+
+    <!-- Entity meta bar -->
+    <div class="bg-white border-b border-gray-100 px-6 py-2 flex items-center gap-4 text-xs shrink-0">
+      <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-medium">UI_AREA</span>
+      <span class="flex items-center gap-1 text-amber-600"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>candidate</span>
+      <span class="text-gray-400">신뢰도</span>
+      <div class="flex items-center gap-1.5">
+        <div class="w-20 h-1.5 bg-gray-100 rounded-full"><div class="h-1.5 bg-indigo-400 rounded-full w-full"></div></div>
+        <span class="text-gray-600 font-medium">1.0</span>
+      </div>
+      <span class="text-gray-300">|</span>
+      <span class="text-gray-400">등록: 2026-05-27</span>
+      <span class="text-gray-400">· 수정: 2026-05-27</span>
+    </div>
+
+    <!-- Description -->
+    <div class="bg-white border-b border-gray-100 px-6 py-3 text-gray-600 text-xs shrink-0">
+      레지스트리 전체 상태를 한눈에 파악하는 메인 화면. 경로: /
+    </div>
+
+    <!-- Tabs + Content -->
+    <div class="flex-1 overflow-hidden flex flex-col">
+
+      <!-- Tab bar -->
+      <div class="bg-white border-b border-gray-200 px-6 flex gap-1 shrink-0" id="tabs">
+        <button onclick="showTab('alias')"   id="tab-alias"   class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-700">Alias <span class="ml-1 text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">7</span></button>
+        <button onclick="showTab('context')" id="tab-context" class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Context <span class="ml-1 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">3</span></button>
+        <button onclick="showTab('relation')" id="tab-relation" class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Relation <span class="ml-1 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">1</span></button>
+        <button onclick="showTab('bundle')"  id="tab-bundle"  class="tab-btn px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Bundle 미리보기</button>
+      </div>
+
+      <!-- Tab: Alias -->
+      <div id="pane-alias" class="flex-1 overflow-y-auto p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-medium text-gray-700 text-sm">등록된 Alias</h3>
+          <button class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-md hover:bg-indigo-100 font-medium">+ Alias 추가</button>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50 border-b border-gray-100">
+              <tr class="text-gray-400">
+                <th class="text-left px-4 py-2 font-medium">언어</th>
+                <th class="text-left px-4 py-2 font-medium">alias</th>
+                <th class="text-left px-4 py-2 font-medium">Primary</th>
+                <th class="text-left px-4 py-2 font-medium">상태</th>
+                <th class="px-4 py-2"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2.5"><span class="font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">ko</span></td>
+                <td class="px-4 py-2.5 font-medium">대시보드</td>
+                <td class="px-4 py-2.5"><span class="text-green-600 font-medium">✓ primary</span></td>
+                <td class="px-4 py-2.5"><span class="flex items-center gap-1 text-green-600"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>active</span></td>
+                <td class="px-4 py-2.5 text-gray-300 hover:text-red-400 cursor-pointer">비활성화</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2.5"><span class="font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">ko</span></td>
+                <td class="px-4 py-2.5">Dashboard</td>
+                <td class="px-4 py-2.5 text-gray-300">—</td>
+                <td class="px-4 py-2.5"><span class="flex items-center gap-1 text-green-600"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>active</span></td>
+                <td class="px-4 py-2.5 text-gray-300 hover:text-red-400 cursor-pointer">비활성화</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2.5"><span class="font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">ko</span></td>
+                <td class="px-4 py-2.5">메인 화면</td>
+                <td class="px-4 py-2.5 text-gray-300">—</td>
+                <td class="px-4 py-2.5"><span class="flex items-center gap-1 text-green-600"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>active</span></td>
+                <td class="px-4 py-2.5 text-gray-300 hover:text-red-400 cursor-pointer">비활성화</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2.5"><span class="font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">en</span></td>
+                <td class="px-4 py-2.5">Dashboard</td>
+                <td class="px-4 py-2.5 text-gray-300">—</td>
+                <td class="px-4 py-2.5"><span class="flex items-center gap-1 text-green-600"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>active</span></td>
+                <td class="px-4 py-2.5 text-gray-300 hover:text-red-400 cursor-pointer">비활성화</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Context -->
+      <div id="pane-context" class="flex-1 overflow-y-auto p-6 hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-medium text-gray-700 text-sm">등록된 Context</h3>
+          <button class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-md hover:bg-indigo-100 font-medium">+ Context 추가</button>
+        </div>
+        <div class="space-y-3">
+          <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 font-medium">summary</span>
+              <span class="text-xs text-gray-400 font-mono">ko</span>
+            </div>
+            <p class="text-xs text-gray-700 leading-relaxed">레지스트리 전체 상태를 한눈에 파악하는 메인 화면. entity 상태별 통계 카드(Active/Candidate/Deprecated 수), 타입별 분포 바, 최근 등록 entity 목록을 표시한다.</p>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 font-medium">business_rule</span>
+              <span class="text-xs text-gray-400 font-mono">ko</span>
+            </div>
+            <p class="text-xs text-gray-700 leading-relaxed">Candidate 수가 0보다 크면 StatCard에 시각적 경고(alert)를 표시하여 검토 필요 상태를 알린다. 최근 entity는 limit=10으로 조회한다.</p>
+          </div>
+          <div class="bg-white rounded-lg border border-gray-200 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-0.5 rounded text-xs bg-purple-50 text-purple-700 font-medium">implementation_hint</span>
+              <span class="text-xs text-gray-400 font-mono">ko</span>
+            </div>
+            <p class="text-xs text-gray-700 leading-relaxed">API: GET /search?status=candidate&amp;limit=1 (카운트 추출), GET /search?limit=10 (최근 항목). 현재 /health는 단순 status만 반환하므로 통계 조회를 위해 status별 search 쿼리를 별도로 호출한다.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Relation -->
+      <div id="pane-relation" class="flex-1 overflow-y-auto p-6 hidden">
+        <h3 class="font-medium text-gray-700 text-sm mb-4">Relations</h3>
+        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50 border-b border-gray-100">
+              <tr class="text-gray-400">
+                <th class="text-left px-4 py-2 font-medium">방향</th>
+                <th class="text-left px-4 py-2 font-medium">관계 타입</th>
+                <th class="text-left px-4 py-2 font-medium">대상 Entity</th>
+                <th class="text-left px-4 py-2 font-medium">설명</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2.5"><span class="text-gray-400">← IN</span></td>
+                <td class="px-4 py-2.5"><span class="font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">CONTAINS</span></td>
+                <td class="px-4 py-2.5 font-medium text-indigo-700">Review UI 프론트엔드 앱</td>
+                <td class="px-4 py-2.5 text-gray-400">프론트엔드 앱이 포함하는 화면</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Bundle preview -->
+      <div id="pane-bundle" class="flex-1 overflow-y-auto p-6 hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-medium text-gray-700 text-sm">Bundle 빠른 조회</h3>
+          <a href="bundle.html" class="text-xs text-indigo-600 hover:underline">Bundle 탐색기에서 열기 →</a>
+        </div>
+        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-700 mb-3">
+          root_id: <span class="font-mono">46833e6a-55c9-4eec-a6bd-8d9eb5be22cb</span> · max_depth: 1 · token_budget: 3000
+        </div>
+        <div class="space-y-2">
+          <div class="bg-white rounded border border-gray-200 p-3">
+            <div class="flex items-center gap-2 mb-1"><span class="px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-700">summary</span><span class="text-xs text-gray-400">Dashboard 화면</span></div>
+            <p class="text-xs text-gray-600">레지스트리 전체 상태를 한눈에 파악하는 메인 화면...</p>
+          </div>
+          <div class="bg-white rounded border border-gray-200 p-3">
+            <div class="flex items-center gap-2 mb-1"><span class="px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-700">business_rule</span><span class="text-xs text-gray-400">Dashboard 화면</span></div>
+            <p class="text-xs text-gray-600">Candidate 수가 0보다 크면 StatCard에 경고 표시...</p>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-2">
+          <div class="flex-1 h-1.5 bg-gray-100 rounded-full"><div class="h-1.5 bg-indigo-400 rounded-full" style="width:12%"></div></div>
+          <span class="text-xs text-gray-400">345 / 3,000 tokens</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(name) {
+  ['alias','context','relation','bundle'].forEach(t => {
+    document.getElementById('pane-' + t).classList.add('hidden');
+    document.getElementById('tab-' + t).classList.remove('border-indigo-600','text-indigo-700');
+    document.getElementById('tab-' + t).classList.add('border-transparent','text-gray-500');
+  });
+  document.getElementById('pane-' + name).classList.remove('hidden');
+  document.getElementById('tab-' + name).classList.add('border-indigo-600','text-indigo-700');
+  document.getElementById('tab-' + name).classList.remove('border-transparent','text-gray-500');
+}
+</script>
+
+</body>
+</html>
