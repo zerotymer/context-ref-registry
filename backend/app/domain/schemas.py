@@ -69,6 +69,13 @@ class EntityRead(BaseModel):
     updated_at: datetime
 
 
+class EntityListResponse(BaseModel):
+    items: list[EntityRead]
+    total: int
+    limit: int
+    offset: int
+
+
 # ---------------------------------------------------------------------------
 # Alias
 # ---------------------------------------------------------------------------

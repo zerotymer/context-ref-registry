@@ -4,6 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.enums import EntityStatus, EntityType
 from app.domain.models import Entity
 from app.domain.schemas import EntityCreate, EntityUpdate
 from app.exceptions import RegistryError
@@ -13,6 +14,17 @@ from app.repository.entity_repository import EntityRepository
 class EntityService:
     def __init__(self, session: AsyncSession) -> None:
         self._repo = EntityRepository(session)
+
+    async def list(
+        self,
+        status: EntityStatus | None,
+        types: list[EntityType] | None,
+        limit: int,
+        offset: int,
+        sort: str,
+        order: str,
+    ) -> tuple[list[Entity], int]:
+        return await self._repo.list(status, types, limit, offset, sort, order)
 
     async def create(self, data: EntityCreate) -> Entity:
         return await self._repo.create(data)

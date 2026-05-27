@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.enums import EntityStatus, EntityType
 from app.domain.models import Entity
 from app.domain.schemas import EntityCreate, EntityUpdate
 
@@ -39,6 +40,38 @@ class EntityRepository:
         await self._session.flush()
         await self._session.refresh(entity)
         return entity
+
+    async def list(
+        self,
+        status: EntityStatus | None = None,
+        types: list[EntityType] | None = None,
+        limit: int = 20,
+        offset: int = 0,
+        sort: str = "created_at",
+        order: str = "desc",
+    ) -> tuple[list[Entity], int]:
+        count_stmt = select(func.count()).select_from(Entity)
+        if status:
+            count_stmt = count_stmt.where(Entity.status == status)
+        if types:
+            count_stmt = count_stmt.where(Entity.type.in_(types))
+        total = (await self._session.execute(count_stmt)).scalar_one()
+
+        sort_col = {
+            "created_at": Entity.created_at,
+            "updated_at": Entity.updated_at,
+            "canonical_name": Entity.canonical_name,
+        }[sort]
+        order_fn = desc if order == "desc" else asc
+        stmt = select(Entity)
+        if status:
+            stmt = stmt.where(Entity.status == status)
+        if types:
+            stmt = stmt.where(Entity.type.in_(types))
+        stmt = stmt.order_by(order_fn(sort_col)).limit(limit).offset(offset)
+        items = (await self._session.execute(stmt)).scalars().all()
+
+        return list(items), total
 
     async def search(
         self,

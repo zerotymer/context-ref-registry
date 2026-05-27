@@ -1,6 +1,53 @@
 # CLAUDE.md — backend/
 
-FastAPI + SQLAlchemy 2.x 백엔드. 루트 CLAUDE.md의 내용을 보완하는 백엔드 전용 가이드.
+FastAPI + SQLAlchemy 2.x 백엔드 전용 가이드.
+
+## 디렉터리 구조
+
+```
+backend/
+  pyproject.toml
+  Dockerfile
+  Makefile
+  alembic.ini
+  .env.example
+  app/
+    main.py                 # FastAPI 진입점, RegistryError 핸들러
+    config.py               # pydantic-settings 환경변수
+    exceptions.py           # RegistryError (code, message, status_code)
+    api/
+      entities.py           # POST/GET/PATCH /entities
+      aliases.py            # POST/GET /entities/{id}/aliases, GET /resolve
+      contexts.py           # POST/GET /entities/{id}/contexts
+      relations.py          # POST /relations, GET /entities/{id}/relations
+      ingest.py             # POST /ingest/batch
+      bundles.py            # POST /context-bundle
+      search.py             # GET /search
+    domain/
+      enums.py              # EntityType, EntityStatus, ContextType, RelationType, Locale
+      models.py             # SQLAlchemy ORM (Entity, EntityAlias, …)
+      schemas.py            # Pydantic v2 request/response
+    repository/             # DB 접근 계층 (entity/alias/context/relation)
+    service/                # 비즈니스 로직 (entity/alias/context/relation/bundle/ingest/search)
+    mcp/
+      server.py             # FastMCP 인스턴스
+      tools.py              # 6개 read-only tool
+    db/
+      session.py            # async_session_factory
+      migrations/           # Alembic (versions/001_initial_schema.py)
+  tests/
+    conftest.py
+    test_entity_api.py
+    test_alias_resolve.py
+    test_context_api.py
+    test_context_bundle.py
+    test_ingest_batch.py
+    test_mcp_tools.py
+    test_relation_api.py
+    test_domain_schemas.py
+    test_examples.py
+    test_search_api.py
+```
 
 ## 개발 환경
 
@@ -48,6 +95,19 @@ domain/     → enums, ORM models, Pydantic schemas. 순수 데이터 정의.
 - **API 에러는 `RegistryError`** (`app/exceptions.py`)를 raise. `main.py`의 핸들러가 표준 JSON으로 변환.
 - **session은 `async with async_session_factory() as session`** 패턴 사용. 커밋은 service에서.
 
+## DB 테이블 요약
+
+| 테이블 | 역할 |
+|--------|------|
+| `entity` | UUID, type, canonical_name, status, confidence |
+| `entity_alias` | locale별 alias (unique 제약 없음, is_active로 비활성화) |
+| `entity_context` | context_type별 텍스트 (RAG 단위) |
+| `entity_relation` | from/to entity 간 관계 (CONTAINS, RELATED_TO, USES 등) |
+| `entity_metadata` | JSONB 타입별 상세 필드 |
+| `source_ref` | 원본 문서 참조 |
+
+Entity status: `candidate` → `active` → `deprecated` / `archived`
+
 ## 도메인 enum 값 (코드 작성 시 참조)
 
 ```python
@@ -79,6 +139,21 @@ Locale:       ko | en
 | POST | `/context-bundle` | BFS context bundle |
 | POST | `/ingest/batch` | 일괄 ingest |
 | GET | `/health` | 헬스체크 |
+
+## MCP Tool 목록
+
+| Tool | 설명 |
+|------|------|
+| `resolve_alias` | alias → entity (not_found/resolved/ambiguous) |
+| `get_entity` | UUID로 entity 조회, deprecated warning 포함 |
+| `search_entities` | alias exact → canonical_name partial → tsvector 순 검색 |
+| `get_related_entities` | 관련 entity 조회 (direction, max_depth) |
+| `get_context_bundle` | 핵심 tool — BFS로 관련 entity/context/relation 묶음 반환 |
+| `validate_references` | ID/alias 유효성 일괄 검증 |
+
+## API 응답 형식
+
+모든 응답: `{"ok": true, "data": {...}}` 또는 `{"ok": false, "error": {"code": "...", "message": "..."}}`.
 
 ## 핵심 불변 규칙
 
