@@ -11,6 +11,17 @@ ref_docs:
   - frontend/src/app/entities/NewEntityModal.tsx
   - backend/app/api/tags.py
 prerequisite: Frontend BFF 전환 완료 (5fa5df8b)
+
+# 레지스트리 엔티티 ID 매핑
+entities:
+  feature:
+    tag_ui:            7f798d9a-780a-427a-90e5-49fb8ad17139  # Entity 태그 관리 UI (FEATURE)
+  ui_area:
+    entity_detail_tagbar:   be0572eb-03ca-4600-9e4f-a39ac0fd6ad5  # Entity 상세 태그 바
+    entity_list_tag_filter: 5978b518-aad8-4e5c-a08b-e72f61ffb916  # Entity 목록 태그 필터
+    new_entity_modal_tag:   eceafad6-beb8-4ea5-8c02-3730df406505  # 새 Entity 모달 태그 입력
+  code_symbol:
+    tags_server_action: 0fb77115-7b90-4b63-84ea-fb00ddba245d  # tags Server Action (addTag/deleteTag)
 ---
 
 # Tag UI — Entity 태그 관리 화면 구현
@@ -81,6 +92,8 @@ export interface EntityRead {
 
 ## Step 2. Server Action — tags.ts
 
+> **entity**: `0fb77115-7b90-4b63-84ea-fb00ddba245d` (CODE_SYMBOL — tags Server Action)
+
 **파일**: `frontend/src/lib/actions/tags.ts` (신규)
 
 ```ts
@@ -107,6 +120,8 @@ export async function deleteTag(entityId: string, tag: string): Promise<void> {
 ---
 
 ## Step 3. EntityDetail — 메타바 인라인 태그 관리
+
+> **entity**: `be0572eb-03ca-4600-9e4f-a39ac0fd6ad5` (UI_AREA — Entity 상세 태그 바)
 
 **파일**: `frontend/src/app/entities/[id]/EntityDetail.tsx`
 
@@ -208,6 +223,8 @@ function TagBar({ entityId, initialTags }: { entityId: string; initialTags: stri
 
 ## Step 4. EntityList — 태그 필터 + 행 내 태그 chip
 
+> **entity**: `5978b518-aad8-4e5c-a08b-e72f61ffb916` (UI_AREA — Entity 목록 태그 필터)
+
 **파일**: `frontend/src/app/entities/EntityList.tsx`
 
 ### 4-A. 필터바 태그 input
@@ -301,6 +318,8 @@ export default async function EntitiesPage({ searchParams }) {
 ---
 
 ## Step 5. NewEntityModal — 태그 입력 필드
+
+> **entity**: `eceafad6-beb8-4ea5-8c02-3730df406505` (UI_AREA — 새 Entity 모달 태그 입력)
 
 **파일**: `frontend/src/app/entities/NewEntityModal.tsx`
 
