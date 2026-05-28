@@ -16,12 +16,15 @@ from app.domain.schemas import (
 )
 from app.exceptions import RegistryError
 from app.repository.entity_repository import EntityRepository
+from app.repository.history_repository import HistoryRepository
+from app.service.entity_service import _entity_to_snapshot
 
 
 class IngestService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._entity_repo = EntityRepository(session)
+        self._hist_repo = HistoryRepository(session)
 
     async def batch_ingest(self, req: BatchIngestRequest) -> BatchIngestResult:
         source_ref = await self._upsert_source_ref(req.source)
@@ -38,7 +41,7 @@ class IngestService:
         batch_entity_ids: set[uuid.UUID] = set(assigned_ids)
 
         for item, entity_id in zip(req.entities, assigned_ids):
-            was_created = await self._upsert_entity(item, entity_id)
+            was_created, entity = await self._upsert_entity(item, entity_id)
             if was_created:
                 created.entities += 1
             else:
@@ -55,6 +58,15 @@ class IngestService:
 
             if item.tags:
                 await self._upsert_tags(entity_id, item.tags)
+
+            rev_no = await self._hist_repo.next_revision_no(entity_id)
+            await self._hist_repo.create(
+                entity_id=entity_id,
+                revision_no=rev_no,
+                snapshot=_entity_to_snapshot(entity),
+                change_type="create" if was_created else "update",
+                changed_by=req.source.name,
+            )
 
         for rel_item in req.relations:
             await self._validate_relation_target(rel_item.from_entity_id, "from_entity_id", batch_entity_ids)
@@ -79,8 +91,8 @@ class IngestService:
             warnings=warnings,
         )
 
-    async def _upsert_entity(self, item: IngestEntityInput, entity_id: uuid.UUID) -> bool:
-        """Returns True if created, False if updated."""
+    async def _upsert_entity(self, item: IngestEntityInput, entity_id: uuid.UUID) -> tuple[bool, "Entity"]:
+        """Returns (was_created, entity)."""
         from app.domain.models import Entity
 
         existing = await self._entity_repo.get_by_id(entity_id)
@@ -95,7 +107,8 @@ class IngestService:
             )
             self._session.add(entity)
             await self._session.flush()
-            return True
+            await self._session.refresh(entity)
+            return True, entity
 
         if existing.type != item.type.value:
             raise RegistryError(
@@ -109,7 +122,7 @@ class IngestService:
         existing.status = item.status
         existing.confidence = item.confidence
         await self._session.flush()
-        return False
+        return False, existing
 
     async def _validate_relation_target(
         self,

@@ -52,6 +52,9 @@ class Entity(Base):
     incoming_relations: Mapped[list["EntityRelation"]] = relationship(
         "EntityRelation", foreign_keys="EntityRelation.to_entity_id", back_populates="to_entity", lazy="selectin"
     )
+    history: Mapped[list["EntityHistory"]] = relationship(
+        "EntityHistory", back_populates="entity", lazy="noload"
+    )
 
 
 class EntityAlias(Base):
@@ -138,6 +141,25 @@ class EntityMetadata(Base):
     )
 
     entity: Mapped["Entity"] = relationship("Entity", back_populates="metadata_entries")
+
+
+class EntityHistory(Base):
+    __tablename__ = "entity_history"
+    __table_args__ = (UniqueConstraint("entity_id", "revision_no", name="uq_entity_history_rev"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    entity_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("entity.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    revision_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    changed_fields: Mapped[dict | None] = mapped_column(JSONB)
+    change_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    change_reason: Mapped[str | None] = mapped_column(Text)
+    changed_by: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    entity: Mapped["Entity"] = relationship("Entity", back_populates="history")
 
 
 class SourceRef(Base):

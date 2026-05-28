@@ -54,6 +54,7 @@ class EntityUpdate(BaseModel):
     replacement_entity_id: uuid.UUID | None = None
     deprecation_reason: str | None = None
     tags: list[str] | None = None
+    change_reason: str | None = None
 
 
 class EntityRead(BaseModel):
@@ -89,6 +90,30 @@ class EntityListResponse(BaseModel):
 class TagRead(BaseModel):
     tag: str
     count: int
+
+
+# ---------------------------------------------------------------------------
+# Entity History
+# ---------------------------------------------------------------------------
+
+
+class EntityHistoryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    entity_id: uuid.UUID
+    revision_no: int
+    snapshot: dict
+    changed_fields: dict | None
+    change_type: str
+    change_reason: str | None
+    changed_by: str | None
+    created_at: datetime
+
+
+class EntityHistoryListResponse(BaseModel):
+    items: list[EntityHistoryRead]
+    total: int
 
 
 # ---------------------------------------------------------------------------

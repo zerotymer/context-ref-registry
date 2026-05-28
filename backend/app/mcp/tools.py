@@ -326,6 +326,44 @@ async def get_context_bundle(
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# get_entity_history
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    description="Retrieve the change history for an entity. Returns revision list in descending order."
+)
+async def get_entity_history(id: str, limit: int = 20) -> dict:
+    entity_id = uuid.UUID(id)
+
+    async with async_session_factory() as session:
+        from app.repository.history_repository import HistoryRepository
+        hist_repo = HistoryRepository(session)
+        items, total = await hist_repo.list_by_entity(entity_id, limit=limit)
+
+    return {
+        "entity_id": id,
+        "total": total,
+        "items": [
+            {
+                "revision_no": h.revision_no,
+                "change_type": h.change_type,
+                "changed_fields": h.changed_fields,
+                "change_reason": h.change_reason,
+                "changed_by": h.changed_by,
+                "created_at": h.created_at.isoformat(),
+            }
+            for h in items
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# validate_references
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool(
     description=(
         "Validate a list of entity references (UUIDs or aliases). "

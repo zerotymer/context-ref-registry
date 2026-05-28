@@ -3,12 +3,21 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Body, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 from app.domain.enums import EntityStatus, EntityType
-from app.domain.schemas import EntityCreate, EntityListResponse, EntityRead, EntityUpdate, OkResponse, TagRead
+from app.domain.schemas import (
+    EntityCreate,
+    EntityHistoryListResponse,
+    EntityHistoryRead,
+    EntityListResponse,
+    EntityRead,
+    EntityUpdate,
+    OkResponse,
+    TagRead,
+)
 from app.service.entity_service import EntityService
 
 router = APIRouter(prefix="/entities", tags=["entities"])
@@ -37,8 +46,12 @@ async def list_entities(
 
 
 @router.post("", status_code=201, response_model=OkResponse[dict[str, str]])
-async def create_entity(body: EntityCreate, session: SessionDep) -> OkResponse[dict[str, str]]:
-    entity = await EntityService(session).create(body)
+async def create_entity(
+    body: EntityCreate,
+    session: SessionDep,
+    x_changed_by: str | None = Header(default=None),
+) -> OkResponse[dict[str, str]]:
+    entity = await EntityService(session).create(body, changed_by=x_changed_by)
     return OkResponse(data={"id": str(entity.id)})
 
 
@@ -50,9 +63,12 @@ async def get_entity(entity_id: uuid.UUID, session: SessionDep) -> OkResponse[En
 
 @router.patch("/{entity_id}", response_model=OkResponse[EntityRead])
 async def update_entity(
-    entity_id: uuid.UUID, body: EntityUpdate, session: SessionDep
+    entity_id: uuid.UUID,
+    body: EntityUpdate,
+    session: SessionDep,
+    x_changed_by: str | None = Header(default=None),
 ) -> OkResponse[EntityRead]:
-    entity = await EntityService(session).update(entity_id, body)
+    entity = await EntityService(session).update(entity_id, body, changed_by=x_changed_by)
     return OkResponse(data=EntityRead.model_validate(entity))
 
 
@@ -85,3 +101,28 @@ async def remove_entity_tag(
     return OkResponse(data={"removed": tag})
 
 
+# ---------------------------------------------------------------------------
+# History sub-endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{entity_id}/history", response_model=OkResponse[EntityHistoryListResponse])
+async def list_entity_history(
+    entity_id: uuid.UUID,
+    session: SessionDep,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> OkResponse[EntityHistoryListResponse]:
+    items, total = await EntityService(session).list_history(entity_id, limit, offset)
+    return OkResponse(data=EntityHistoryListResponse(
+        items=[EntityHistoryRead.model_validate(h) for h in items],
+        total=total,
+    ))
+
+
+@router.get("/{entity_id}/history/{revision_no}", response_model=OkResponse[EntityHistoryRead])
+async def get_entity_history_revision(
+    entity_id: uuid.UUID, revision_no: int, session: SessionDep
+) -> OkResponse[EntityHistoryRead]:
+    history = await EntityService(session).get_history_revision(entity_id, revision_no)
+    return OkResponse(data=EntityHistoryRead.model_validate(history))
