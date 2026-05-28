@@ -1,0 +1,388 @@
+---
+uuid: 7f798d9a-780a-427a-90e5-49fb8ad17139
+title: Tag UI — Entity 태그 관리 화면 구현
+status: pending
+created: 2026-05-28
+ref_docs:
+  - output/tag-ui-mockup/entity-detail.html
+  - output/tag-ui-mockup/entities.html
+  - frontend/src/app/entities/EntityList.tsx
+  - frontend/src/app/entities/[id]/EntityDetail.tsx
+  - frontend/src/app/entities/NewEntityModal.tsx
+  - backend/app/api/tags.py
+prerequisite: Frontend BFF 전환 완료 (5fa5df8b)
+---
+
+# Tag UI — Entity 태그 관리 화면 구현
+
+> **목적**: 백엔드에 이미 구현된 태그 기능(`entity_tag` 테이블, `app/api/tags.py`)을
+> 프론트엔드에 노출한다. 3개 화면에 태그 표시·추가·삭제·필터링 UI를 추가한다.
+
+목업 경로: `output/tag-ui-mockup/` (entity-detail.html, entities.html)
+
+---
+
+## 백엔드 현황
+
+| 구성 요소 | 경로 | 상태 |
+|-----------|------|------|
+| DB 테이블 | `entity_tag` | 완료 |
+| REST API | `app/api/tags.py` | 완료 |
+| MCP tool | `search_entities` — tags 파라미터 | 완료 |
+
+### 태그 관련 엔드포인트 (추정)
+
+```
+POST   /entities/{id}/tags          태그 추가
+DELETE /entities/{id}/tags/{tag}    태그 삭제
+GET    /entities/{id}/tags          태그 목록
+```
+
+> 구현 전 `app/api/tags.py` 실제 경로를 확인할 것.
+
+---
+
+## 변경 범위
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `types/api.ts` | `EntityRead`에 `tags: string[]` 필드 추가 |
+| `lib/actions/tags.ts` | `addTag`, `deleteTag` Server Action 신규 |
+| `app/entities/EntityList.tsx` | 필터바 태그 input, 목록 행 태그 chip |
+| `app/entities/[id]/EntityDetail.tsx` | 메타바 인라인 태그 표시·추가·삭제 |
+| `app/entities/NewEntityModal.tsx` | 생성 폼 태그 입력 필드 추가 |
+| `lib/actions/entities.ts` | `createEntity` 호출 시 tags 전달 |
+
+---
+
+## Step 1. 타입 확장
+
+**파일**: `frontend/src/types/api.ts`
+
+`EntityRead` 인터페이스에 `tags` 필드를 추가한다.
+
+```ts
+export interface EntityRead {
+  id: string;
+  type: EntityType;
+  canonical_name: string;
+  status: EntityStatus;
+  confidence: number;
+  description?: string;
+  deprecation_reason?: string;
+  replacement_entity_id?: string;
+  created_at: string;
+  updated_at: string;
+  tags: string[];           // ← 추가
+}
+```
+
+---
+
+## Step 2. Server Action — tags.ts
+
+**파일**: `frontend/src/lib/actions/tags.ts` (신규)
+
+```ts
+"use server";
+
+import { backendFetch } from "@/lib/api/server";
+
+export async function addTag(entityId: string, tag: string): Promise<void> {
+  await backendFetch(`/entities/${entityId}/tags`, {
+    method: "POST",
+    body: JSON.stringify({ tag }),
+  });
+}
+
+export async function deleteTag(entityId: string, tag: string): Promise<void> {
+  await backendFetch(`/entities/${entityId}/tags/${encodeURIComponent(tag)}`, {
+    method: "DELETE",
+  });
+}
+```
+
+> 실제 백엔드 엔드포인트 경로를 `app/api/tags.py`에서 확인 후 맞출 것.
+
+---
+
+## Step 3. EntityDetail — 메타바 인라인 태그 관리
+
+**파일**: `frontend/src/app/entities/[id]/EntityDetail.tsx`
+
+### 목표 UI
+
+```
+[ UI_AREA ] [ active ] 신뢰도 ████░  |  #auth ×  #login ×  [+ 태그]
+```
+
+### 변경 내용
+
+1. props에 `tags: string[]` 추가 (page.tsx에서 `entity.tags` 전달).
+2. 메타바의 `|` 구분선 이후에 `TagBar` 인라인 컴포넌트를 삽입한다.
+
+**`TagBar` 컴포넌트 (같은 파일에 정의)**:
+
+```tsx
+function TagBar({ entityId, initialTags }: { entityId: string; initialTags: string[] }) {
+  const router = useRouter();
+  const [tags, setTags] = useState(initialTags);
+  const [editing, setEditing] = useState(false);
+  const [input, setInput] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  function handleAdd() {
+    const val = input.trim().replace(/^#+/, "");
+    if (!val || tags.includes(val)) return;
+    startTransition(async () => {
+      await addTag(entityId, val);
+      setTags((prev) => [...prev, val]);
+      setInput("");
+      setEditing(false);
+      router.refresh();
+    });
+  }
+
+  function handleDelete(tag: string) {
+    startTransition(async () => {
+      await deleteTag(entityId, tag);
+      setTags((prev) => prev.filter((t) => t !== tag));
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {tags.map((tag) => (
+        <span key={tag}
+          className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full text-xs">
+          #{tag}
+          <button onClick={() => handleDelete(tag)}
+            disabled={isPending}
+            className="hover:text-violet-900 disabled:opacity-40">×</button>
+        </span>
+      ))}
+      {editing ? (
+        <input
+          autoFocus
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
+            if (e.key === "Escape") { setEditing(false); setInput(""); }
+          }}
+          onBlur={() => { if (!input.trim()) setEditing(false); }}
+          className="border border-indigo-400 rounded-full px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+          placeholder="태그 입력 후 Enter"
+        />
+      ) : (
+        <button onClick={() => setEditing(true)}
+          className="inline-flex items-center gap-0.5 text-gray-400 hover:text-indigo-600 border border-dashed border-gray-300 hover:border-indigo-400 px-2 py-0.5 rounded-full text-xs">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+          </svg>
+          태그
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+### page.tsx 연동
+
+`app/entities/[id]/page.tsx` Server Component에서 `entity.tags`를 `EntityDetail`에 전달한다.
+
+```tsx
+<EntityDetail
+  entity={entity}
+  aliases={aliases}
+  contexts={contexts}
+  relations={relations}
+/>
+```
+
+> `entity.tags`는 `EntityRead.tags`로 자동 포함된다 (Step 1 타입 확장 후).
+
+---
+
+## Step 4. EntityList — 태그 필터 + 행 내 태그 chip
+
+**파일**: `frontend/src/app/entities/EntityList.tsx`
+
+### 4-A. 필터바 태그 input
+
+기존 type/status 필터 `<select>` 옆에 태그 필터를 추가한다.
+
+```tsx
+// 상태
+const tagFilter = searchParams.get("tags") ?? "";
+const [tagInput, setTagInput] = useState("");
+const [activeTags, setActiveTags] = useState<string[]>(
+  tagFilter ? tagFilter.split(",").filter(Boolean) : []
+);
+
+// 태그 추가
+function addTagFilter(tag: string) {
+  const next = [...activeTags, tag];
+  setActiveTags(next);
+  setFilter("tags", next.join(","));
+}
+
+// 태그 제거
+function removeTagFilter(tag: string) {
+  const next = activeTags.filter((t) => t !== tag);
+  setActiveTags(next);
+  setFilter("tags", next.join(","));
+}
+```
+
+**UI**: 태그 chip + input이 한 줄에 표시된다.
+
+```tsx
+<div className="flex items-center gap-1.5 flex-wrap">
+  {activeTags.map((tag) => (
+    <span key={tag}
+      className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 px-2 py-1 rounded-md text-xs">
+      <TagIcon /> #{tag}
+      <button onClick={() => removeTagFilter(tag)}>×</button>
+    </span>
+  ))}
+  <input
+    value={tagInput}
+    onChange={(e) => setTagInput(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        const val = tagInput.trim().replace(/^#+/, "").replace(",", "");
+        if (val && !activeTags.includes(val)) addTagFilter(val);
+        setTagInput("");
+      }
+    }}
+    placeholder="태그 필터..."
+    className="border border-gray-200 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+  />
+</div>
+```
+
+### 4-B. 목록 행 태그 chip
+
+테이블에 `태그` 컬럼을 추가한다.
+
+```tsx
+// thead
+<th className="text-left px-3 py-2.5 font-medium">태그</th>
+
+// tbody row
+<td className="px-3 py-3">
+  <div className="flex items-center gap-1 flex-wrap">
+    {(entity.tags ?? []).map((tag) => (
+      <span key={tag}
+        className="inline-flex items-center bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded-full text-xs">
+        #{tag}
+      </span>
+    ))}
+  </div>
+</td>
+```
+
+### 4-C. page.tsx URL 파라미터 전달
+
+`app/entities/page.tsx`의 쿼리스트링 구성에 `tags`를 포함시킨다.
+
+```tsx
+export default async function EntitiesPage({ searchParams }) {
+  const qs = new URLSearchParams(searchParams).toString(); // tags 자동 포함
+  const data = await getEntities(qs);
+  return <EntityList data={data} pageSize={PAGE_SIZE} />;
+}
+```
+
+---
+
+## Step 5. NewEntityModal — 태그 입력 필드
+
+**파일**: `frontend/src/app/entities/NewEntityModal.tsx`
+
+폼 하단(설명 필드 아래)에 태그 입력 영역을 추가한다.
+
+```tsx
+const [tags, setTags] = useState<string[]>([]);
+const [tagInput, setTagInput] = useState("");
+
+function addTag(val: string) {
+  const clean = val.trim().replace(/^#+/, "").replace(",", "");
+  if (clean && !tags.includes(clean)) setTags((prev) => [...prev, clean]);
+}
+
+function removeTag(tag: string) {
+  setTags((prev) => prev.filter((t) => t !== tag));
+}
+```
+
+**UI**:
+
+```tsx
+<div>
+  <label className="block text-xs text-gray-500 mb-1 font-medium">
+    태그 <span className="text-gray-400 font-normal">(선택 · Enter로 추가)</span>
+  </label>
+  <div onClick={() => inputRef.current?.focus()}
+    className="min-h-9 w-full border border-gray-200 rounded-md px-2 py-1.5 flex items-center gap-1.5 flex-wrap cursor-text focus-within:ring-1 focus-within:ring-indigo-400">
+    {tags.map((tag) => (
+      <span key={tag}
+        className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full text-xs">
+        #{tag}
+        <button type="button" onClick={() => removeTag(tag)}>×</button>
+      </span>
+    ))}
+    <input
+      ref={inputRef}
+      value={tagInput}
+      onChange={(e) => setTagInput(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === ",") {
+          e.preventDefault();
+          addTag(tagInput);
+          setTagInput("");
+        }
+      }}
+      placeholder="태그 입력..."
+      className="flex-1 min-w-20 text-xs focus:outline-none bg-transparent"
+    />
+  </div>
+  <p className="text-xs text-gray-400 mt-1">Enter 또는 쉼표(,)로 추가</p>
+</div>
+```
+
+**제출 시**: `createEntity` 호출에 `tags` 포함 여부는 백엔드 `POST /entities` 스키마 확인 후 결정.
+태그 API가 별도라면 entity 생성 후 `addTag`를 순차 호출한다.
+
+---
+
+## Step 6. 검증
+
+### 정적 확인
+
+- [ ] `EntityRead.tags` 타입이 `string[]`으로 선언되어 있다.
+- [ ] `lib/actions/tags.ts` 파일 상단에 `"use server"` 선언이 있다.
+- [ ] `EntityList`의 `setFilter("tags", ...)` 호출 시 URL에 `?tags=` 파라미터가 반영된다.
+
+### 수동 확인
+
+- [ ] Entity 상세 → 태그 chip 목록 표시 확인
+- [ ] `[+ 태그]` 클릭 → input 등장 → Enter → 태그 추가 확인
+- [ ] 태그 `×` 버튼 → 삭제 확인 (새로고침 후 반영 여부)
+- [ ] Entity 목록 → 태그 input에 입력 → Enter → URL에 `?tags=` 파라미터 추가 확인
+- [ ] 태그 필터 적용 시 목록이 해당 태그 엔티티만 표시하는지 확인
+- [ ] 새 Entity 모달 → 태그 입력 후 등록 → 상세 페이지에서 태그 확인
+
+---
+
+## 완료 기준
+
+- [ ] Entity 상세 페이지에서 태그 목록을 인라인으로 표시·추가·삭제할 수 있다.
+- [ ] Entity 목록에서 태그 chip이 행 내에 표시된다.
+- [ ] Entity 목록에서 태그 입력으로 필터링이 동작한다 (AND 조건).
+- [ ] 새 Entity 생성 시 태그를 함께 등록할 수 있다.
+- [ ] 태그 추가/삭제 후 `router.refresh()`로 Server Component가 최신 데이터를 반영한다.
