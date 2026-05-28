@@ -1,10 +1,10 @@
 ---
 name: llm-reference-registry
 description: Active usage guide for the LLM Reference Registry — a UUID-based persistent reference store for UI areas, features, infra units, APIs, and code symbols. Teaches LLMs how to use MCP tools and REST API to look up, resolve, and cross-reference entities during coding tasks.
-version: 1.0.0
+version: 1.1.0
 language: en
 status: active
-last_updated: 2026-05-27
+last_updated: 2026-05-28
 source_project: context-ref-registry
 ---
 
@@ -315,6 +315,117 @@ When you encounter a **deprecated** entity:
 2. POST /ingest/batch with the result
 3. Check response for warnings and counts
 ```
+
+### Pattern E: Register new entities and map back to source document
+
+Use this pattern when you write a new instruction file, screen spec, or
+design document that contains multiple identifiable units (screens, features,
+code symbols). The goal is to assign stable UUIDs **before** implementation
+starts and embed them directly into the source document.
+
+**Step 1 — Identify units to register**
+
+Scan the document and classify each identifiable unit by type:
+
+| What you find | Entity type |
+|---------------|-------------|
+| Screen area / UI section | `UI_AREA` |
+| User-facing functionality | `FEATURE` |
+| API endpoint | `API` |
+| Class / function / component | `CODE_SYMBOL` |
+| Infrastructure component | `INFRA_UNIT` |
+
+**Step 2 — Generate UUIDs**
+
+Generate one UUID per unit before uploading:
+
+```bash
+python3 -c "import uuid; print(uuid.uuid4())"
+```
+
+**Step 3 — Upload via batch ingest**
+
+Upload all units in a single `POST /ingest/batch` call.
+Include the generated `id` explicitly so the UUID is pinned.
+Add `aliases` (ko + en), `contexts` (at minimum `summary` + `implementation_hint`),
+and `relations` (CONTAINS / USES / DEPENDS_ON between the units).
+
+```json
+{
+  "source": {
+    "type": "screen_spec",
+    "name": "my_instruction.md",
+    "uri": "file://instructions/my_instruction.md",
+    "version": "2026-05-28"
+  },
+  "entities": [
+    {
+      "id": "<generated-uuid>",
+      "type": "FEATURE",
+      "canonical_name": "My Feature",
+      "status": "candidate",
+      "aliases": {"ko": ["내 기능"], "en": ["My Feature"]},
+      "contexts": [
+        {"context_type": "summary", "body": "...", "language": "ko"},
+        {"context_type": "implementation_hint", "body": "File: src/...", "language": "ko"}
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "from_entity_id": "<parent-uuid>",
+      "to_entity_id": "<child-uuid>",
+      "relation_type": "CONTAINS"
+    }
+  ]
+}
+```
+
+**Step 4 — Write UUIDs back into the source document**
+
+After successful upload, embed the UUIDs into the document so future
+agents can resolve them without guessing.
+
+*Instruction file frontmatter (`entities:` block):*
+
+```yaml
+---
+uuid: <instruction-uuid>        # the instruction itself
+entities:
+  feature:
+    my_feature: <uuid>          # FEATURE entity
+  ui_area:
+    main_screen: <uuid>         # UI_AREA entity
+    filter_bar:  <uuid>         # UI_AREA entity
+  code_symbol:
+    my_service: <uuid>          # CODE_SYMBOL entity
+---
+```
+
+*Per-step inline annotation (inside the document body):*
+
+```markdown
+## Step 3. Main Screen Implementation
+
+> **entity**: `<uuid>` (UI_AREA — Main Screen)
+
+File: src/app/...
+```
+
+*Screen spec or design document:*
+
+```markdown
+## 로그인 화면  <!-- entity: <uuid> (UI_AREA) -->
+```
+
+**Why this matters**
+
+- Any agent reading the document later can directly reference the entity
+  by UUID — no alias resolution ambiguity.
+- Relations uploaded in Step 3 let `get_context_bundle` traverse the
+  full feature graph automatically.
+- Promotes to `active` after human review; all downstream references
+  remain stable because the UUID never changes.
 
 ---
 

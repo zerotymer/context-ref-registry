@@ -1,12 +1,12 @@
 ---
 name: llm-reference-registry
 description: LLM Reference Registry 활성 사용 가이드 — UI 영역, 기능, 인프라 단위, API, 코드 심볼의 UUID 기반 영구 참조 저장소. 코딩 에이전트가 MCP 도구와 REST API를 활용해 엔티티를 조회, resolve, 상호참조하는 방법을 설명한다.
-version: 1.0.0
+version: 1.1.0
 language: ko
 source_language: en
 source_file: SKILL.md
 status: active
-last_updated: 2026-05-27
+last_updated: 2026-05-28
 source_project: context-ref-registry
 ---
 
@@ -310,6 +310,113 @@ candidate ──▶ active ──▶ deprecated ──▶ archived
 2. POST /ingest/batch 로 결과 전송
 3. 응답에서 경고와 카운트 확인
 ```
+
+### 패턴 E: 신규 엔티티 등록 후 원본 문서에 매핑
+
+지침서, 화면 설계서, 설계 문서를 새로 작성할 때 사용한다.
+문서에 포함된 식별 가능한 단위(화면, 기능, 코드 심볼)에 안정적인 UUID를
+**구현 전에** 발급하고, 그 ID를 문서에 직접 삽입한다.
+
+**1단계 — 등록 대상 단위 식별**
+
+문서를 스캔해 각 단위를 타입으로 분류한다:
+
+| 발견한 것 | 엔티티 타입 |
+|-----------|-------------|
+| 화면 영역 / UI 섹션 | `UI_AREA` |
+| 사용자 대상 기능 | `FEATURE` |
+| API 엔드포인트 | `API` |
+| 클래스 / 함수 / 컴포넌트 | `CODE_SYMBOL` |
+| 인프라 컴포넌트 | `INFRA_UNIT` |
+
+**2단계 — UUID 발급**
+
+단위마다 UUID를 하나씩 생성한다:
+
+```bash
+python3 -c "import uuid; print(uuid.uuid4())"
+```
+
+**3단계 — batch ingest로 업로드**
+
+모든 단위를 `POST /ingest/batch` 한 번으로 업로드한다.
+생성한 UUID를 `id`에 명시해 고정한다.
+`aliases`(ko + en), `contexts`(최소 `summary` + `implementation_hint`),
+`relations`(단위 간 CONTAINS / USES / DEPENDS_ON)을 함께 포함한다.
+
+```json
+{
+  "source": {
+    "type": "screen_spec",
+    "name": "my_instruction.md",
+    "uri": "file://instructions/my_instruction.md",
+    "version": "2026-05-28"
+  },
+  "entities": [
+    {
+      "id": "<생성한-uuid>",
+      "type": "FEATURE",
+      "canonical_name": "내 기능",
+      "status": "candidate",
+      "aliases": {"ko": ["내 기능"], "en": ["My Feature"]},
+      "contexts": [
+        {"context_type": "summary", "body": "...", "language": "ko"},
+        {"context_type": "implementation_hint", "body": "파일: src/...", "language": "ko"}
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "from_entity_id": "<부모-uuid>",
+      "to_entity_id": "<자식-uuid>",
+      "relation_type": "CONTAINS"
+    }
+  ]
+}
+```
+
+**4단계 — UUID를 원본 문서에 기록**
+
+업로드 성공 후 UUID를 문서에 삽입한다. 이후 에이전트가
+alias 추측 없이 UUID로 직접 참조할 수 있다.
+
+*지침서 frontmatter (`entities:` 블록):*
+
+```yaml
+---
+uuid: <지침서-uuid>
+entities:
+  feature:
+    my_feature: <uuid>          # FEATURE 엔티티
+  ui_area:
+    main_screen: <uuid>         # UI_AREA 엔티티
+    filter_bar:  <uuid>         # UI_AREA 엔티티
+  code_symbol:
+    my_service:  <uuid>         # CODE_SYMBOL 엔티티
+---
+```
+
+*문서 본문 Step별 인라인 주석:*
+
+```markdown
+## Step 3. 메인 화면 구현
+
+> **entity**: `<uuid>` (UI_AREA — 메인 화면)
+
+파일: src/app/...
+```
+
+*화면 설계서 섹션 헤더:*
+
+```markdown
+## 로그인 화면  <!-- entity: <uuid> (UI_AREA) -->
+```
+
+**이 패턴이 중요한 이유**
+
+- 문서를 나중에 읽는 에이전트가 alias 중복 없이 UUID로 직접 참조할 수 있다.
+- 3단계에서 등록한 관계 덕분에 `get_context_bundle`이 전체 기능 그래프를 자동으로 탐색한다.
+- 사람 검토 후 `active`로 승격해도 UUID는 변경되지 않으므로 하위 참조가 모두 유지된다.
 
 ---
 
