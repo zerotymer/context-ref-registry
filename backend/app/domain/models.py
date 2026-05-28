@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -41,6 +42,7 @@ class Entity(Base):
 
     aliases: Mapped[list["EntityAlias"]] = relationship("EntityAlias", back_populates="entity", lazy="selectin")
     contexts: Mapped[list["EntityContext"]] = relationship("EntityContext", back_populates="entity", lazy="selectin")
+    tags: Mapped[list["EntityTag"]] = relationship("EntityTag", back_populates="entity", lazy="selectin")
     metadata_entries: Mapped[list["EntityMetadata"]] = relationship(
         "EntityMetadata", back_populates="entity", lazy="selectin"
     )
@@ -64,6 +66,20 @@ class EntityAlias(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     entity: Mapped["Entity"] = relationship("Entity", back_populates="aliases")
+
+
+class EntityTag(Base):
+    __tablename__ = "entity_tag"
+    __table_args__ = (UniqueConstraint("entity_id", "tag", name="uq_entity_tag"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    entity_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("entity.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    tag: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    entity: Mapped["Entity"] = relationship("Entity", back_populates="tags")
 
 
 class EntityContext(Base):

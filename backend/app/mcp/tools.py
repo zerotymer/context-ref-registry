@@ -120,6 +120,8 @@ async def get_entity(id: str) -> dict:
             w["replacement_entity_id"] = str(entity.replacement_entity_id)
         warnings.append(w)
 
+    tags = [t.tag for t in entity.tags] if entity.tags else []
+
     return {
         "entity": {
             "id": str(entity.id),
@@ -128,6 +130,7 @@ async def get_entity(id: str) -> dict:
             "description": entity.description,
             "status": status_val,
             "confidence": entity.confidence,
+            "tags": tags,
             "replacement_entity_id": (
                 str(entity.replacement_entity_id) if entity.replacement_entity_id else None
             ),
@@ -145,19 +148,20 @@ async def get_entity(id: str) -> dict:
 @mcp.tool(
     description=(
         "Search for entities by keyword. Searches alias (exact) then canonical_name (partial). "
-        "Optionally filter by entity types."
+        "Optionally filter by entity types or tags (AND logic)."
     )
 )
 async def search_entities(
     query: str,
     types: list[str] | None = None,
+    tags: list[str] | None = None,
     limit: int = 10,
 ) -> dict:
     type_enums = [EntityType(t) for t in types] if types else None
 
     async with async_session_factory() as session:
         repo = EntityRepository(session)
-        hits = await repo.search(query, type_enums, limit)
+        hits = await repo.search(query, type_enums, tags, limit)
 
     results = []
     for entity, match_reason in hits:

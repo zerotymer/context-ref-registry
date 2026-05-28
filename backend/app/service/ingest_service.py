@@ -5,7 +5,9 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models import EntityAlias, EntityContext, EntityMetadata, EntityRelation, SourceRef
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from app.domain.models import EntityAlias, EntityContext, EntityMetadata, EntityRelation, EntityTag, SourceRef
 from app.domain.schemas import (
     BatchIngestRequest,
     BatchIngestResult,
@@ -50,6 +52,9 @@ class IngestService:
 
             if item.metadata:
                 await self._upsert_metadata(entity_id, item.metadata)
+
+            if item.tags:
+                await self._upsert_tags(entity_id, item.tags)
 
         for rel_item in req.relations:
             await self._validate_relation_target(rel_item.from_entity_id, "from_entity_id", batch_entity_ids)
@@ -185,6 +190,17 @@ class IngestService:
         if contexts:
             await self._session.flush()
         return len(contexts)
+
+    async def _upsert_tags(self, entity_id: uuid.UUID, tags: list[str]) -> None:
+        """tags 있으면 ON CONFLICT DO NOTHING으로 삽입 (기존 태그 유지)."""
+        for tag in tags:
+            stmt = (
+                pg_insert(EntityTag)
+                .values(entity_id=entity_id, tag=tag)
+                .on_conflict_do_nothing(constraint="uq_entity_tag")
+            )
+            await self._session.execute(stmt)
+        await self._session.flush()
 
     async def _upsert_metadata(self, entity_id: uuid.UUID, metadata: dict) -> None:
         result = await self._session.execute(

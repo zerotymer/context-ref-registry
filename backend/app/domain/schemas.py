@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.domain.enums import ContextType, EntityStatus, EntityType, Locale, RelationType
 
@@ -43,6 +43,7 @@ class EntityCreate(BaseModel):
     description: str | None = None
     status: EntityStatus = EntityStatus.CANDIDATE
     confidence: float = Field(1.0, ge=0.0, le=1.0)
+    tags: list[str] = Field(default_factory=list)
 
 
 class EntityUpdate(BaseModel):
@@ -52,6 +53,7 @@ class EntityUpdate(BaseModel):
     confidence: float | None = Field(None, ge=0.0, le=1.0)
     replacement_entity_id: uuid.UUID | None = None
     deprecation_reason: str | None = None
+    tags: list[str] | None = None
 
 
 class EntityRead(BaseModel):
@@ -67,6 +69,14 @@ class EntityRead(BaseModel):
     deprecation_reason: str | None
     created_at: datetime
     updated_at: datetime
+    tags: list[str] = Field(default_factory=list)
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def _extract_tag_strings(cls, v: Any) -> list[str]:
+        if not v:
+            return []
+        return [t.tag if hasattr(t, "tag") else t for t in v]
 
 
 class EntityListResponse(BaseModel):
@@ -74,6 +84,11 @@ class EntityListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class TagRead(BaseModel):
+    tag: str
+    count: int
 
 
 # ---------------------------------------------------------------------------
@@ -236,6 +251,7 @@ class IngestEntityInput(BaseModel):
     aliases: dict[Locale, list[str]] = Field(default_factory=dict)
     contexts: list[IngestContextInput] = Field(default_factory=list)
     metadata: dict[str, Any] | None = None
+    tags: list[str] = Field(default_factory=list)
 
 
 class IngestRelationInput(BaseModel):
