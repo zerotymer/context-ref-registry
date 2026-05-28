@@ -22,3 +22,6 @@ c6794b7d-f36b-4697-b6ee-77a978615456 | Entity 목록 조회 API — GET /entitie
 5fa5df8b-61e9-4da7-86d5-9802e748c405 | Frontend BFF — Server Actions + Server Components로 Backend API 호출 구조 전환 | 2026-05-28T00:00:00+09:00 | completed
 7f798d9a-780a-427a-90e5-49fb8ad17139 | Tag UI — Entity 태그 관리 화면 구현 | 2026-05-28T13:02:46+09:00 | created
 7f798d9a-780a-427a-90e5-49fb8ad17139 | Tag UI — Entity 태그 관리 화면 구현 | 2026-05-28T13:30:00+09:00 | completed
+1a2a9bf8-c772-4d6e-8bb9-469bb211e8c8 | 인증 시스템 1 — 사용자 계정, 로그인, API Key 병행 | 2026-05-28T23:01:43+09:00 | created
+8c36e2c4-4273-472d-964e-7febf9d2428e | 인증 시스템 2 — 프로젝트, 멤버십, 조회·수정 권한 | 2026-05-28T23:01:43+09:00 | created
+1285a04e-652a-4b95-a3a9-160dfc897ef2 | 인증 시스템 3 — 관리자·프로젝트 관리자 기능 | 2026-05-28T23:01:43+09:00 | created

@@ -26,6 +26,7 @@ Phase 1.6 — Frontend BFF 전환     ✅ 완료 (2026-05-28)
 Phase 1.7 — Tag & History         ✅ 완료 (2026-05-28)
 Phase 1.8 — Tag UI                ✅ 완료 (2026-05-28)
 Phase 2   — 운영 준비 (Post-MVP)  ← 다음
+Phase 2.1 — 인증/프로젝트 권한     ← 설계 지침 작성
 Phase 3   — 확장 기능 (Future)    ← 운영 후 필요 시
 ```
 
@@ -47,11 +48,14 @@ Phase 3   — 확장 기능 (Future)    ← 운영 후 필요 시
 
 ## Phase 2 — 운영 준비 (Post-MVP)
 
-**목표**: 인증 추가, 감사 로그, 백업, 모니터링
+**목표**: 인증 추가, 프로젝트 권한, 감사 로그, 백업, 모니터링
 
 | 순서 | UUID | 지침 파일 | 상태 |
 |------|------|-----------|------|
 | 2 | ce6d92bf | security_ops.md | `draft` |
+| 2.1 | 1a2a9bf8 | auth_identity.md | `draft` |
+| 2.2 | 8c36e2c4 | project_access_control.md | `draft` |
+| 2.3 | 1285a04e | admin_project_console.md | `draft` |
 
 ### 포함 범위 (`docs/09` 기반)
 
@@ -60,6 +64,22 @@ Phase 3   — 확장 기능 (Future)    ← 운영 후 필요 시
 2-2   Audit Log             entity create/update/status 변경 이력 기록
 2-3   Backup                pg_dump daily, docker volume backup
 2-4   Observability         요청 수, 레이턴시, ambiguous 비율, MCP call 수
+```
+
+### 인증/프로젝트 권한 분할 지침
+
+```
+2.1   사용자 인증           관리자 발급 계정, 이메일/비밀번호 로그인, API Key 병행
+2.2   프로젝트 권한         project_id, 프로젝트 멤버십, 조회/수정 권한 정책
+2.3   관리자 기능           사용자/프로젝트/팀원/API Key 운영 화면과 감사 로그
+```
+
+### Registry 등록 범위
+
+```
+문서 루트 엔티티 3개
+세부 엔티티 24개: FEATURE 10, API 2, UI_AREA 5, INFRA_UNIT 4, CODE_SYMBOL 3
+관계 35개: 문서→세부 CONTAINS 및 세부 기능 간 DEPENDS_ON/USES/IMPLEMENTED_BY
 ```
 
 ---
@@ -89,10 +109,13 @@ Phase 3   — 확장 기능 (Future)    ← 운영 후 필요 시
 
 > 완료 지침은 최근 3건만 표시. 전체 이력은 `instructions/instructions.log` 참고.
 
-| UUID | 파일 | Phase | 상태 |
-|------|------|-------|------|
-| ce6d92bf-2c2d-4944-adb3-1089a6530e56 | security_ops.md | 2 | `pending` |
-| 03080220-3b52-4d28-a79d-e2d698e5480f | extensions.md | 3 | `pending` |
+| UUID | 파일 | Phase | 상태 | Registry Entity |
+|------|------|-------|------|-----------------|
+| ce6d92bf-2c2d-4944-adb3-1089a6530e56 | security_ops.md | 2 | `pending` | — |
+| 1a2a9bf8-c772-4d6e-8bb9-469bb211e8c8 | auth_identity.md | 2.1 | `pending` | eb3bb01a-a210-4420-aed2-52c4f729819e |
+| 8c36e2c4-4273-472d-964e-7febf9d2428e | project_access_control.md | 2.2 | `pending` | f16f5245-658e-4202-9f7b-60755e2090d0 |
+| 1285a04e-652a-4b95-a3a9-160dfc897ef2 | admin_project_console.md | 2.3 | `pending` | 775c9218-05eb-4cd0-969a-212d673835d7 |
+| 03080220-3b52-4d28-a79d-e2d698e5480f | extensions.md | 3 | `pending` | — |
 | 36ab4117-e0cc-4a30-813e-129f0835b540 | .completed/ | 1.7 | `completed` 2026-05-28 |
 | 5fa5df8b-61e9-4da7-86d5-9802e748c405 | .completed/ | 1.6 | `completed` 2026-05-28 |
 | 7f798d9a-780a-427a-90e5-49fb8ad17139 | .completed/ | 1.8 | `completed` 2026-05-28 |
@@ -108,9 +131,9 @@ Phase 3   — 확장 기능 (Future)    ← 운영 후 필요 시
 
 | 항목 | 설명 | 처리 방향 |
 |------|------|-----------|
-| 인증시스템 구현 | API Key 인증을 시작점으로 write/admin 엔드포인트 보호, scope 정책, actor 식별 방식을 확정한다. | Phase 2 `security_ops.md` Step 2-1로 구체화 |
-| 프로젝트 별 그룹화 | entity/context/relation을 프로젝트 단위로 묶어 조회·관리할 수 있게 한다. 프로젝트 식별자, 필터 기준, UI 그룹 표시 방식을 정의한다. | 관리자 시스템 설계 시 함께 구체화 |
-| 관리자 시스템 구현 | candidate 검토, active 승인, archive/deprecated 처리, alias/context 관리가 가능한 관리자 화면을 구현한다. | `review_ui.md` 기반으로 진행 |
-| Frontend BFF 전환 | 브라우저에서 backend `:8000` 직접 호출을 제거하고 Next.js BFF route를 통해 호출한다. | `frontend_bff_proxy.md` 기반으로 진행 |
+| 인증시스템 구현 | 관리자 발급 계정, 이메일/비밀번호 로그인, API Key 병행, actor 식별 방식을 정의한다. | `auth_identity.md`로 승격 |
+| 프로젝트 별 그룹화 | entity/context/relation을 프로젝트 단위로 묶고, project_id 기반 조회·수정 권한을 정의한다. | `project_access_control.md`로 승격 |
+| 관리자 시스템 구현 | 사용자/프로젝트/팀원/API Key 운영 및 프로젝트 관리자 기능을 구현한다. | `admin_project_console.md`로 승격 |
+| 화면설계 엔티티 목업 서비스 | 화면설계 엔티티(`UI_AREA`)를 위한 목업 서비스를 제공한다. | 화면설계 도메인 범위 확정 후 지침화 |
+| 화면설계 하위 식별자 목업 서비스 | 화면설계를 위한 자동 하위 식별자를 포함한 목업 서비스를 제공한다. | `UI_AREA` 식별 체계와 함께 구체화 |
 | README 최신화 | 신규 지침 생성 시 README의 로드맵/현황 표를 함께 갱신한다. | 지침 관리 규칙에 포함 |
-| docker compose 검증 | Phase 1 완료 기준 중 `docker compose up` API + DB 기동 확인이 아직 미체크다. | 환경 실행 후 완료 체크 |
