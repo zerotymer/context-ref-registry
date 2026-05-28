@@ -77,13 +77,12 @@ docker compose up -d
 
 ### 현재 지침
 
+> 완료 지침은 최근 3건만 표시. 전체 이력은 `instructions/instructions.log` 참고.
+
 | UUID | 파일 | 상태 |
 |------|------|------|
-| 240e1460-a7e6-4b0e-a08f-10f9c74c497c | .completed/ | completed (2026-05-25) |
 | ce6d92bf-2c2d-4944-adb3-1089a6530e56 | instructions/security_ops.md | pending |
 | 03080220-3b52-4d28-a79d-e2d698e5480f | instructions/extensions.md | pending |
-| 6cd788d7-9200-41e2-bda9-06c7b96d5de7 | .completed/ | completed (2026-05-27) |
-| c6794b7d-f36b-4697-b6ee-77a978615456 | .completed/ | completed (2026-05-27) |
 | 36ab4117-e0cc-4a30-813e-129f0835b540 | .completed/ | completed (2026-05-28) |
 | 5fa5df8b-61e9-4da7-86d5-9802e748c405 | .completed/ | completed (2026-05-28) |
 | 7f798d9a-780a-427a-90e5-49fb8ad17139 | .completed/ | completed (2026-05-28) |
