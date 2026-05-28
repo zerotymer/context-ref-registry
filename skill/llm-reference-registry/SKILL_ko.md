@@ -1,7 +1,7 @@
 ---
 name: llm-reference-registry
 description: LLM Reference Registry 활성 사용 가이드 — UI 영역, 기능, 인프라 단위, API, 코드 심볼의 UUID 기반 영구 참조 저장소. 코딩 에이전트가 MCP 도구와 REST API를 활용해 엔티티를 조회, resolve, 상호참조하는 방법을 설명한다.
-version: 1.1.0
+version: 1.2.0
 language: ko
 source_language: en
 source_file: SKILL.md
@@ -117,7 +117,8 @@ UUID나 정확한 alias를 모를 때 사용한다.
 get_related_entities(id="uuid-...", direction="both", max_depth=2)
 ```
 
-의존 관계 파악에 유용하다. 방향: `outgoing`, `incoming`, `both`.
+의존 관계 파악에 유용하다. MCP 방향: `outgoing`, `incoming`, `both`.
+REST API 방향은 `out`, `in`, `both`를 사용한다.
 
 ### 6. `validate_references` — 일괄 참조 검증
 
@@ -141,7 +142,7 @@ MCP를 사용할 수 없거나 데이터를 써야 할 때 REST API를 사용한
 | `GET` | `/resolve?alias=...&locale=ko&type=UI_AREA` | Alias 해소 |
 | `GET` | `/entities/{id}` | UUID로 엔티티 조회 |
 | `GET` | `/search?q=...&types=FEATURE,API&limit=10` | 검색 |
-| `GET` | `/entities/{id}/relations?direction=both&max_depth=1` | 관계 조회 |
+| `GET` | `/entities/{id}/relations?direction=both&max_depth=1` | 관계 조회 (`direction`: `out`, `in`, `both`) |
 | `GET` | `/entities/{id}/aliases` | 별칭 목록 |
 | `GET` | `/entities/{id}/contexts` | 컨텍스트 목록 |
 | `POST` | `/context-bundle` | 컨텍스트 번들 (MCP 도구와 동일 파라미터) |
@@ -170,6 +171,39 @@ MCP를 사용할 수 없거나 데이터를 써야 할 때 REST API를 사용한
 
 문서(화면설계서, API 문서 등)를 파싱한 후 결과를 저장하려면 `POST /ingest/batch`를 사용한다.
 
+### 등록 단위 분해 원칙
+
+문서 전체를 엔티티 1개로만 등록하지 말고, 문서 루트와 세부 단위를 함께 등록한다.
+사용자가 "업로드", "엔티티 ID 받아와", "매핑"을 요청하면 아래 단위까지 자동으로 쪼갠다.
+
+| 단위 | 타입 | 예시 |
+|------|------|------|
+| 문서/지침 루트 | `FEATURE` 또는 가장 가까운 타입 | "인증 시스템 설계 지침" |
+| 세부 기능 | `FEATURE` | 로그인, 프로젝트 멤버십, 수정 권한 정책 |
+| 화면/화면요소 | `UI_AREA` | 로그인 화면, 사용자 관리 화면, 프로젝트 필터 |
+| API/서비스 경계 | `API` | Auth Session API, Project Access API Policy |
+| 인프라/운영 단위 | `INFRA_UNIT` | 초기 관리자 bootstrap, 감사 로그 연동 |
+| 스키마/코드 심볼 | `CODE_SYMBOL` | `user_account table`, Authorization Policy Service |
+
+문서 루트는 세부 엔티티를 `CONTAINS` 관계로 연결한다.
+세부 엔티티 간에는 필요에 따라 `DEPENDS_ON`, `USES`, `IMPLEMENTED_BY`, `CALLS`, `READS_FROM`, `WRITES_TO`를 연결한다.
+
+### ID 매핑 규칙
+
+현재 `POST /ingest/batch` 응답은 생성된 entity id 목록을 즉시 반환하지 않을 수 있다.
+따라서 매핑이 필요한 업로드에서는 **에이전트가 UUID를 먼저 발급하고 각 entity의 `id` 필드에 명시한다.**
+
+절차:
+
+1. 문서 루트와 세부 기능/API/UI/인프라/코드 심볼 후보를 뽑는다.
+2. 각 엔티티에 UUID를 선발급한다.
+3. batch payload의 모든 entity에 `id`를 넣는다.
+4. relations는 선발급 UUID를 사용해 같은 batch 안에서 연결한다.
+5. 업로드 후 `GET /entities/{id}` 또는 `GET /entities/{id}/relations?direction=out`으로 검증한다.
+6. 원본 지침/문서에 `Registry Entity 매핑` 표를 추가한다.
+
+이 방식이면 서버가 ID 목록을 반환하지 않아도 업로드 직후 정확한 매핑을 보유할 수 있다.
+
 ```json
 {
   "source": {
@@ -180,6 +214,7 @@ MCP를 사용할 수 없거나 데이터를 써야 할 때 REST API를 사용한
   },
   "entities": [
     {
+      "id": "uuid-preassigned-by-agent",
       "type": "UI_AREA",
       "canonical_name": "사용자 검색 조건 영역",
       "description": "...",
@@ -202,6 +237,7 @@ MCP를 사용할 수 없거나 데이터를 써야 할 때 REST API를 사용한
 
 **규칙:**
 - `id`는 선택사항. 생략하면 서버가 생성한다.
+- 하지만 ID 매핑이 필요한 작업에서는 생략하지 말고 에이전트가 UUID를 선발급한다.
 - `id`가 존재하면 해당 엔티티를 **업데이트**한다 (단, type은 변경 불가).
 - relations의 `from_entity_id` / `to_entity_id`는 배치 내부나 DB에 존재해야 한다.
 - 기본 status는 `candidate` — 사람 검토 후 `active`로 승격한다.

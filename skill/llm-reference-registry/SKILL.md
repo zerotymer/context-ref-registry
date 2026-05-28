@@ -1,7 +1,7 @@
 ---
 name: llm-reference-registry
 description: Active usage guide for the LLM Reference Registry — a UUID-based persistent reference store for UI areas, features, infra units, APIs, and code symbols. Teaches LLMs how to use MCP tools and REST API to look up, resolve, and cross-reference entities during coding tasks.
-version: 1.1.0
+version: 1.2.0
 language: en
 status: active
 last_updated: 2026-05-28
@@ -119,8 +119,8 @@ Use when you don't have a UUID or exact alias.
 get_related_entities(id="uuid-...", direction="both", max_depth=2)
 ```
 
-Good for understanding dependencies. Direction: `outgoing`, `incoming`, or
-`both`.
+Good for understanding dependencies. MCP direction values are `outgoing`,
+`incoming`, or `both`. REST API direction values are `out`, `in`, or `both`.
 
 ### 6. `validate_references` — Bulk validation
 
@@ -145,7 +145,7 @@ Use REST when MCP is unavailable or you need to write data.
 | `GET` | `/resolve?alias=...&locale=ko&type=UI_AREA` | Alias resolve |
 | `GET` | `/entities/{id}` | Entity by UUID |
 | `GET` | `/search?q=...&types=FEATURE,API&limit=10` | Search |
-| `GET` | `/entities/{id}/relations?direction=both&max_depth=1` | Relations |
+| `GET` | `/entities/{id}/relations?direction=both&max_depth=1` | Relations (`direction`: `out`, `in`, `both`) |
 | `GET` | `/entities/{id}/aliases` | Aliases |
 | `GET` | `/entities/{id}/contexts` | Contexts |
 | `POST` | `/context-bundle` | Context bundle (same params as MCP tool) |
@@ -175,6 +175,43 @@ Use REST when MCP is unavailable or you need to write data.
 When you parse a document (screen spec, API doc, etc.) and want to store
 the result, use `POST /ingest/batch`. The request format:
 
+### Decompose Registration Units
+
+Do not register a whole document as only one entity. Register a document/root
+entity and the detailed units inside it. When the user asks to upload, get
+entity IDs, or map IDs, automatically split into these units.
+
+| Unit | Type | Example |
+|------|------|---------|
+| Document/instruction root | `FEATURE` or closest type | "Auth system design instruction" |
+| Detailed feature | `FEATURE` | Login, project membership, mutation policy |
+| Screen/screen element | `UI_AREA` | Login screen, user management screen, project filter |
+| API/service boundary | `API` | Auth Session API, Project Access API Policy |
+| Infrastructure/ops unit | `INFRA_UNIT` | Initial admin bootstrap, audit log integration |
+| Schema/code symbol | `CODE_SYMBOL` | `user_account table`, Authorization Policy Service |
+
+Connect the root entity to detailed entities with `CONTAINS`.
+Connect detailed entities with `DEPENDS_ON`, `USES`, `IMPLEMENTED_BY`,
+`CALLS`, `READS_FROM`, or `WRITES_TO` when useful.
+
+### ID Mapping Rules
+
+`POST /ingest/batch` may not immediately return the list of generated entity
+IDs. For uploads that require mapping, **pre-generate UUIDs and include each
+entity's `id` field in the batch payload.**
+
+Procedure:
+
+1. Extract the document root and detailed feature/API/UI/infra/code-symbol candidates.
+2. Pre-generate one UUID per entity.
+3. Put the UUID in every entity's `id` field.
+4. Build relations using those UUIDs inside the same batch.
+5. Verify with `GET /entities/{id}` or `GET /entities/{id}/relations?direction=out`.
+6. Add a `Registry Entity Mapping` table back to the source instruction/document.
+
+This preserves exact mappings immediately after upload even when the server
+does not return generated IDs.
+
 ```json
 {
   "source": {
@@ -185,6 +222,7 @@ the result, use `POST /ingest/batch`. The request format:
   },
   "entities": [
     {
+      "id": "uuid-preassigned-by-agent",
       "type": "UI_AREA",
       "canonical_name": "사용자 검색 조건 영역",
       "description": "...",
@@ -207,6 +245,7 @@ the result, use `POST /ingest/batch`. The request format:
 
 **Rules:**
 - `id` is optional; if omitted the server generates one.
+- When ID mapping is required, do not omit it. Pre-generate UUIDs.
 - If `id` is provided and already exists, the entity is **updated** (but type cannot change).
 - `from_entity_id` / `to_entity_id` in relations must exist in the batch or DB.
 - Default status is `candidate` — promote to `active` after human review.
