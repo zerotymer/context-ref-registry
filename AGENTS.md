@@ -59,3 +59,5 @@ Step별 `feat/step{N}-{slug}` 브랜치 → PR → main 머지.
 | `dbdfdbab-77ed-49fe-b70e-1f1708fc7aab` | 프론트엔드 완료 보고 |
 | `69a9089b-a444-4f44-89ab-5d58210906ae` | PR 템플릿 |
 | `ed847c29-b20a-420b-9314-c16dce184d62` | 코드 리뷰 |
+| `e6274b24-2c08-4367-8859-b5a92bd98d59` | 정적 목업 확인용 서버 기동 (`static-mockup-preview-server`) |
+| `e6274b24-2c08-4367-8859-b5a92bd98d59` | 정적 목업 확인용 서버 기동 (`static-mockup-preview-server`) |
