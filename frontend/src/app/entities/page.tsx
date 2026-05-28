@@ -7,6 +7,7 @@ const PAGE_SIZE = 20;
 interface SearchParams {
   status?: string;
   types?: string | string[];
+  tags?: string;
   offset?: string;
 }
 
@@ -19,6 +20,9 @@ function buildQs(params: SearchParams): string {
       : [params.types]
     : [];
   types.forEach((t) => qs.append("types", t));
+  if (params.tags) {
+    params.tags.split(",").filter(Boolean).forEach((tag) => qs.append("tags", tag));
+  }
   qs.set("limit", String(PAGE_SIZE));
   if (params.offset) qs.set("offset", params.offset);
   qs.set("sort", "created_at");

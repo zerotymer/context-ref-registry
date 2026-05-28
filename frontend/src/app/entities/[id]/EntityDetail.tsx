@@ -6,6 +6,7 @@ import Link from "next/link";
 import { updateEntity } from "@/lib/actions/entities";
 import { addAlias } from "@/lib/actions/aliases";
 import { addContext } from "@/lib/actions/contexts";
+import { addTag, deleteTag } from "@/lib/actions/tags";
 import { EntityStatusBadge } from "@/components/shared/EntityStatusBadge";
 import { EntityTypeBadge } from "@/components/shared/EntityTypeBadge";
 import { ConfidenceBar } from "@/components/shared/ConfidenceBar";
@@ -103,6 +104,8 @@ export function EntityDetail({
         <span className="text-gray-400">신뢰도</span>
         <ConfidenceBar value={entity.confidence} />
         <span className="text-gray-300">|</span>
+        <TagBar entityId={entity.id} initialTags={entity.tags ?? []} />
+        <span className="text-gray-300">|</span>
         <span className="text-gray-400">등록: {formatDate(entity.created_at)}</span>
         <span className="text-gray-400">· 수정: {formatDate(entity.updated_at)}</span>
       </div>
@@ -184,6 +187,70 @@ export function EntityDetail({
         </div>
       </div>
     </>
+  );
+}
+
+function TagBar({ entityId, initialTags }: { entityId: string; initialTags: string[] }) {
+  const router = useRouter();
+  const [tags, setTags] = useState(initialTags);
+  const [editing, setEditing] = useState(false);
+  const [input, setInput] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  function handleAdd() {
+    const val = input.trim().replace(/^#+/, "");
+    if (!val || tags.includes(val)) return;
+    startTransition(async () => {
+      await addTag(entityId, val);
+      setTags((prev) => [...prev, val]);
+      setInput("");
+      setEditing(false);
+      router.refresh();
+    });
+  }
+
+  function handleDelete(tag: string) {
+    startTransition(async () => {
+      await deleteTag(entityId, tag);
+      setTags((prev) => prev.filter((t) => t !== tag));
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {tags.map((tag) => (
+        <span key={tag}
+          className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full text-xs">
+          #{tag}
+          <button onClick={() => handleDelete(tag)}
+            disabled={isPending}
+            className="hover:text-violet-900 disabled:opacity-40">×</button>
+        </span>
+      ))}
+      {editing ? (
+        <input
+          autoFocus
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
+            if (e.key === "Escape") { setEditing(false); setInput(""); }
+          }}
+          onBlur={() => { if (!input.trim()) setEditing(false); }}
+          className="border border-indigo-400 rounded-full px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+          placeholder="태그 입력 후 Enter"
+        />
+      ) : (
+        <button onClick={() => setEditing(true)}
+          className="inline-flex items-center gap-0.5 text-gray-400 hover:text-indigo-600 border border-dashed border-gray-300 hover:border-indigo-400 px-2 py-0.5 rounded-full text-xs">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+          </svg>
+          태그
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { createEntity } from "@/lib/actions/entities";
+import { addTag } from "@/lib/actions/tags";
 import { ENTITY_TYPES } from "@/lib/constants";
 import type { EntityType } from "@/types/api";
 
@@ -9,15 +10,28 @@ export function NewEntityModal({ onClose }: { onClose: () => void }) {
   const [type, setType] = useState<EntityType>("UI_AREA");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const tagInputRef = useRef<HTMLInputElement>(null);
+
+  function addTagItem(val: string) {
+    const clean = val.trim().replace(/^#+/, "").replace(",", "");
+    if (clean && !tags.includes(clean)) setTags((prev) => [...prev, clean]);
+  }
+
+  function removeTagItem(tag: string) {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
       try {
-        await createEntity({ type, canonical_name: name, description: description || undefined });
+        const { id } = await createEntity({ type, canonical_name: name, description: description || undefined });
+        await Promise.all(tags.map((tag) => addTag(id, tag)));
         onClose();
       } catch (e) {
         setError((e as Error).message);
@@ -60,6 +74,36 @@ export function NewEntityModal({ onClose }: { onClose: () => void }) {
               rows={2}
               className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
             />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1 font-medium">
+              태그 <span className="text-gray-400 font-normal">(선택 · Enter로 추가)</span>
+            </label>
+            <div onClick={() => tagInputRef.current?.focus()}
+              className="min-h-9 w-full border border-gray-200 rounded-md px-2 py-1.5 flex items-center gap-1.5 flex-wrap cursor-text focus-within:ring-1 focus-within:ring-indigo-400">
+              {tags.map((tag) => (
+                <span key={tag}
+                  className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full text-xs">
+                  #{tag}
+                  <button type="button" onClick={() => removeTagItem(tag)}>×</button>
+                </span>
+              ))}
+              <input
+                ref={tagInputRef}
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addTagItem(tagInput);
+                    setTagInput("");
+                  }
+                }}
+                placeholder="태그 입력..."
+                className="flex-1 min-w-20 text-xs focus:outline-none bg-transparent"
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Enter 또는 쉼표(,)로 추가</p>
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
           <div className="flex gap-2 justify-end pt-2">

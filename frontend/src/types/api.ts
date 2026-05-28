@@ -38,6 +38,7 @@ export interface EntityRead {
   deprecation_reason: string | null;
   created_at: string;
   updated_at: string;
+  tags: string[];
 }
 
 export interface EntityListResponse {

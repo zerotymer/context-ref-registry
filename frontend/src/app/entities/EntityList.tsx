@@ -25,7 +25,25 @@ export function EntityList({
 
   const status = searchParams.get("status") ?? "";
   const typeFilter = searchParams.get("types") ?? "";
+  const tagFilter = searchParams.get("tags") ?? "";
   const offset = parseInt(searchParams.get("offset") ?? "0");
+
+  const [tagInput, setTagInput] = useState("");
+  const [activeTags, setActiveTags] = useState<string[]>(
+    tagFilter ? tagFilter.split(",").filter(Boolean) : []
+  );
+
+  function addTagFilter(tag: string) {
+    const next = [...activeTags, tag];
+    setActiveTags(next);
+    setFilter("tags", next.join(","));
+  }
+
+  function removeTagFilter(tag: string) {
+    const next = activeTags.filter((t) => t !== tag);
+    setActiveTags(next);
+    setFilter("tags", next.join(","));
+  }
 
   const total = data.total;
   const page = Math.floor(offset / pageSize);
@@ -85,6 +103,32 @@ export function EntityList({
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {activeTags.map((tag) => (
+            <span key={tag}
+              className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 px-2 py-1 rounded-md text-xs">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              #{tag}
+              <button onClick={() => removeTagFilter(tag)} className="hover:text-violet-900">×</button>
+            </span>
+          ))}
+          <input
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                const val = tagInput.trim().replace(/^#+/, "").replace(",", "");
+                if (val && !activeTags.includes(val)) addTagFilter(val);
+                setTagInput("");
+              }
+            }}
+            placeholder="태그 필터..."
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+          />
+        </div>
         <div className="text-xs text-gray-400 ml-auto">{total}개 결과</div>
       </div>
 
@@ -96,6 +140,7 @@ export function EntityList({
               <th className="text-left px-3 py-2.5 font-medium">타입</th>
               <th className="text-left px-3 py-2.5 font-medium">상태</th>
               <th className="text-left px-3 py-2.5 font-medium">신뢰도</th>
+              <th className="text-left px-3 py-2.5 font-medium">태그</th>
               <th className="text-left px-3 py-2.5 font-medium">등록일</th>
               <th className="px-3 py-2.5" />
             </tr>
@@ -128,6 +173,16 @@ export function EntityList({
                 <td className="px-3 py-3">
                   <ConfidenceBar value={entity.confidence} />
                 </td>
+                <td className="px-3 py-3">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {(entity.tags ?? []).map((tag) => (
+                      <span key={tag}
+                        className="inline-flex items-center bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded-full text-xs">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </td>
                 <td className="px-3 py-3 text-gray-400">{formatDate(entity.created_at)}</td>
                 <td className="px-3 py-3">
                   <Link
@@ -144,7 +199,7 @@ export function EntityList({
             ))}
             {!data.items.length && (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-gray-400">
+                <td colSpan={7} className="py-12 text-center text-gray-400">
                   등록된 entity 없음
                 </td>
               </tr>
