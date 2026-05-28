@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useTransition, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useContextBundle } from "@/lib/api/bundle";
+import { fetchContextBundle } from "@/lib/actions/bundle";
 import { JsonViewer } from "@/components/shared/JsonViewer";
 import { ENTITY_TYPES, CONTEXT_TYPE_COLORS, ENTITY_TYPE_COLORS } from "@/lib/constants";
 import type { ContextBundleResponse, EntityType } from "@/types/api";
@@ -33,8 +33,9 @@ function BundlePageInner() {
     new Set(ENTITY_TYPES.filter((t) => t !== "API")),
   );
   const [resultTab, setResultTab] = useState<ResultTab>("context");
-
-  const bundle = useContextBundle();
+  const [result, setResult] = useState<ContextBundleResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function toggleType(type: EntityType) {
     setIncludeTypes((prev) => {
@@ -45,23 +46,29 @@ function BundlePageInner() {
     });
   }
 
-  function fetch() {
+  function runFetch() {
     if (!rootId.trim()) return;
-    bundle.mutate({
-      root_ids: [rootId.trim()],
-      max_depth: maxDepth,
-      token_budget: tokenBudget,
-      include_types: includeTypes.size > 0 ? Array.from(includeTypes) : undefined,
+    setError(null);
+    startTransition(async () => {
+      try {
+        const data = await fetchContextBundle({
+          root_ids: [rootId.trim()],
+          max_depth: maxDepth,
+          token_budget: tokenBudget,
+          include_types: includeTypes.size > 0 ? Array.from(includeTypes) : undefined,
+        });
+        setResult(data);
+      } catch (e) {
+        setError((e as Error).message);
+      }
     });
   }
 
-  // auto-fetch if root is pre-filled
   useEffect(() => {
-    if (searchParams.get("root")) fetch();
+    if (searchParams.get("root")) runFetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const result = bundle.data;
   const estimatedTokens = result ? estimateTokens(result) : 0;
 
   return (
@@ -74,7 +81,6 @@ function BundlePageInner() {
       </header>
 
       <div className="flex-1 overflow-hidden flex">
-        {/* Left panel */}
         <div className="w-72 border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto">
           <div className="p-4 border-b border-gray-100">
             <div className="text-xs font-medium text-gray-600 mb-3">조회 설정</div>
@@ -132,24 +138,21 @@ function BundlePageInner() {
             </div>
 
             <button
-              onClick={fetch}
-              disabled={bundle.isPending || !rootId.trim()}
+              onClick={runFetch}
+              disabled={isPending || !rootId.trim()}
               className="w-full bg-indigo-600 text-white text-xs font-medium py-2 rounded-md hover:bg-indigo-700 disabled:opacity-60"
             >
-              {bundle.isPending ? "조회 중..." : "Bundle 조회"}
+              {isPending ? "조회 중..." : "Bundle 조회"}
             </button>
 
-            {bundle.error && (
-              <p className="mt-2 text-xs text-red-500">
-                {(bundle.error as Error).message}
-              </p>
+            {error && (
+              <p className="mt-2 text-xs text-red-500">{error}</p>
             )}
           </div>
         </div>
 
-        {/* Right panel */}
         <div className="flex-1 overflow-y-auto">
-          {!result && !bundle.isPending && (
+          {!result && !isPending && (
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 p-8">
               <svg className="w-12 h-12 mb-3 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -159,15 +162,14 @@ function BundlePageInner() {
             </div>
           )}
 
-          {bundle.isPending && (
+          {isPending && (
             <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
               조회 중...
             </div>
           )}
 
-          {result && (
+          {result && !isPending && (
             <div className="p-5 space-y-4">
-              {/* Summary bar */}
               <div className="bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 flex items-center justify-between">
                 <div className="flex gap-6 text-xs">
                   <span>
@@ -197,7 +199,6 @@ function BundlePageInner() {
                 </div>
               </div>
 
-              {/* Deprecation warnings */}
               {result.warnings.length > 0 && (
                 <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-xs text-red-700">
                   <div className="font-medium mb-1">경고: Deprecated entity 포함</div>
@@ -207,7 +208,6 @@ function BundlePageInner() {
                 </div>
               )}
 
-              {/* Result tabs */}
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="flex border-b border-gray-100 px-1 pt-1">
                   {(["context", "entities", "relations", "json"] as ResultTab[]).map((t) => {

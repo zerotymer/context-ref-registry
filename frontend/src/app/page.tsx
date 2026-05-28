@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { useEntities } from "@/lib/api/entities";
+import { getEntities } from "@/lib/actions/entities";
 import { EntityStatusBadge } from "@/components/shared/EntityStatusBadge";
 import { EntityTypeBadge } from "@/components/shared/EntityTypeBadge";
 import { formatDate } from "@/lib/utils";
@@ -26,7 +24,7 @@ function StatCard({
       className={`bg-white rounded-lg border p-4 ${alert ? "border-amber-200 bg-amber-50" : "border-gray-200"}`}
     >
       <div className={`text-xs mb-1 ${alert ? "text-amber-600 font-medium" : "text-gray-500"}`}>
-        {alert && (
+        {alert ? (
           <span className="inline-flex items-center gap-1">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path
@@ -37,8 +35,7 @@ function StatCard({
             </svg>
             {label}
           </span>
-        )}
-        {!alert && label}
+        ) : label}
       </div>
       <div className={`text-3xl font-bold ${color}`}>{value}</div>
       <div className={`text-xs mt-1 ${alert ? "text-amber-500" : "text-gray-400"}`}>{sub}</div>
@@ -46,19 +43,19 @@ function StatCard({
   );
 }
 
-export default function DashboardPage() {
-  const { data: activeData } = useEntities({ status: "active", limit: 1 });
-  const { data: candidateData } = useEntities({ status: "candidate", limit: 1 });
-  const { data: deprecatedData } = useEntities({ status: "deprecated", limit: 1 });
-  const { data: recentData } = useEntities({ limit: 10, sort: "created_at", order: "desc" });
+export default async function DashboardPage() {
+  const [activeData, candidateData, deprecatedData, recentData, allData] = await Promise.all([
+    getEntities("status=active&limit=1"),
+    getEntities("status=candidate&limit=1"),
+    getEntities("status=deprecated&limit=1"),
+    getEntities("limit=10&sort=created_at&order=desc"),
+    getEntities("limit=100"),
+  ]);
 
-  // type distribution: fetch all with limit=100
-  const { data: allData } = useEntities({ limit: 100 });
-
-  const activeCount = activeData?.total ?? 0;
-  const candidateCount = candidateData?.total ?? 0;
-  const deprecatedCount = deprecatedData?.total ?? 0;
-  const totalAliases = 0; // alias count requires separate API, skip for now
+  const activeCount = activeData.total;
+  const candidateCount = candidateData.total;
+  const deprecatedCount = deprecatedData.total;
+  const totalAll = allData.total;
 
   const typeCounts: Record<EntityType, number> = {
     UI_AREA: 0,
@@ -67,8 +64,7 @@ export default function DashboardPage() {
     API: 0,
     CODE_SYMBOL: 0,
   };
-  const totalAll = allData?.total ?? 0;
-  allData?.items.forEach((e) => {
+  allData.items.forEach((e) => {
     typeCounts[e.type] = (typeCounts[e.type] ?? 0) + 1;
   });
 
@@ -79,7 +75,6 @@ export default function DashboardPage() {
       </header>
 
       <main className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Stats row */}
         <div className="grid grid-cols-4 gap-4">
           <StatCard label="Active" value={activeCount} color="text-green-600" sub="승인 완료" />
           <StatCard
@@ -94,7 +89,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          {/* Type distribution */}
           <div className="bg-white rounded-lg border border-gray-200 p-4 col-span-1">
             <div className="font-medium text-gray-700 mb-3 text-sm">타입별 분포</div>
             <div className="space-y-2.5">
@@ -119,7 +113,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Recent entities */}
           <div className="bg-white rounded-lg border border-gray-200 p-4 col-span-2">
             <div className="flex items-center justify-between mb-3">
               <div className="font-medium text-gray-700 text-sm">최근 등록 Entity</div>
@@ -137,7 +130,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {recentData?.items.map((entity) => (
+                {recentData.items.map((entity) => (
                   <tr key={entity.id} className="hover:bg-gray-50">
                     <td className="py-2 font-medium text-indigo-700">
                       <Link href={`/entities/${entity.id}`} className="hover:underline">
@@ -153,7 +146,7 @@ export default function DashboardPage() {
                     <td className="py-2 text-gray-400">{formatDate(entity.created_at)}</td>
                   </tr>
                 ))}
-                {!recentData?.items.length && (
+                {!recentData.items.length && (
                   <tr>
                     <td colSpan={4} className="py-6 text-center text-gray-400">
                       등록된 entity 없음
@@ -165,7 +158,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Alert banner */}
         {candidateCount > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-amber-700 text-sm">

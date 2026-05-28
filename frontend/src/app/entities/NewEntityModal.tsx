@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useCreateEntity } from "@/lib/api/entities";
+import { useState, useTransition } from "react";
+import { createEntity } from "@/lib/actions/entities";
 import { ENTITY_TYPES } from "@/lib/constants";
 import type { EntityType } from "@/types/api";
 
@@ -9,14 +9,20 @@ export function NewEntityModal({ onClose }: { onClose: () => void }) {
   const [type, setType] = useState<EntityType>("UI_AREA");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const { mutate, isPending, error } = useCreateEntity();
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    mutate(
-      { type, canonical_name: name, description: description || undefined },
-      { onSuccess: onClose },
-    );
+    setError(null);
+    startTransition(async () => {
+      try {
+        await createEntity({ type, canonical_name: name, description: description || undefined });
+        onClose();
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    });
   }
 
   return (
@@ -32,9 +38,7 @@ export function NewEntityModal({ onClose }: { onClose: () => void }) {
               className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
             >
               {ENTITY_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
+                <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
@@ -57,9 +61,7 @@ export function NewEntityModal({ onClose }: { onClose: () => void }) {
               className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
             />
           </div>
-          {error && (
-            <p className="text-xs text-red-500">{(error as Error).message}</p>
-          )}
+          {error && <p className="text-xs text-red-500">{error}</p>}
           <div className="flex gap-2 justify-end pt-2">
             <button
               type="button"

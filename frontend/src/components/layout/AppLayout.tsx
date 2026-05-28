@@ -1,11 +1,9 @@
-"use client";
-
 import { Sidebar } from "./Sidebar";
-import { useEntities } from "@/lib/api/entities";
+import { getEntities } from "@/lib/actions/entities";
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { data } = useEntities({ status: "candidate", limit: 1 });
-  const candidateCount = data?.total ?? 0;
+export async function AppLayout({ children }: { children: React.ReactNode }) {
+  const data = await getEntities("status=candidate&limit=1");
+  const candidateCount = data.total;
 
   return (
     <div className="flex h-screen overflow-hidden">
