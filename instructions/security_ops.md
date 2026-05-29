@@ -1,7 +1,7 @@
 ---
 uuid: ce6d92bf-2c2d-4944-adb3-1089a6530e56
 title: 운영 준비 — 보안 & 모니터링
-status: draft
+status: in-progress
 created: 2026-05-25
 completed:
 ref_docs:

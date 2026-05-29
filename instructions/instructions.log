@@ -29,3 +29,4 @@ c6794b7d-f36b-4697-b6ee-77a978615456 | Entity 목록 조회 API — GET /entitie
 8c36e2c4-4273-472d-964e-7febf9d2428e | 인증 시스템 2 — 프로젝트, 멤버십, 조회·수정 권한 | 2026-05-29T00:00:00+09:00 | completed
 0ac0d3e0-f558-4b6a-9aed-3b09ad1e953e | 관리자 콘솔 UI — 로그인·사용자·프로젝트·멤버 관리 화면 | 2026-05-29T00:00:00+09:00 | created
 ce6d92bf-2c2d-4944-adb3-1089a6530e56 | 운영 준비 — 보안 & 모니터링 (Step 2-2 Audit Log) | 2026-05-29T12:35:32Z | completed
+ce6d92bf-2c2d-4944-adb3-1089a6530e56 | 운영 준비 — 보안 & 모니터링 (Step 2-3 Backup) | 2026-05-29T21:43:39+09:00 | step_completed
