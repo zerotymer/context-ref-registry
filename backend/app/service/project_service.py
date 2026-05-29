@@ -147,3 +147,32 @@ class ProjectService:
     async def list_members(self, project_id: str) -> list[ProjectMember]:
         await self.get_project(project_id)
         return await self._member_repo.list_by_project(project_id)
+
+    async def list_all_projects(
+        self,
+        *,
+        is_active: bool | None = None,
+        search: str | None = None,
+    ) -> list[Project]:
+        return await self._repo.list_all(is_active=is_active, search=search)
+
+    async def update_project(
+        self,
+        project_id: str,
+        *,
+        alias: str | None = None,
+        description: str | None = None,
+        is_active: bool | None = None,
+    ) -> Project:
+        project = await self.get_project(project_id)
+        if alias is not None:
+            alias = alias.strip()
+            if not alias or len(alias) > 50:
+                raise RegistryError(
+                    "INVALID_ALIAS",
+                    "Project alias must be 1-50 characters after trimming",
+                    status_code=422,
+                )
+        updated = await self._repo.update(project, alias=alias, description=description, is_active=is_active)
+        await self._session.commit()
+        return updated

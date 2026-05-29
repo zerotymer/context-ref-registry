@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app.api.admin_projects import router as admin_projects_router
 from app.api.admin_users import router as admin_users_router
 from app.api.aliases import router as aliases_router
 from app.api.auth import router as auth_router
@@ -37,6 +38,7 @@ async def _registry_error_handler(request: Request, exc: RegistryError) -> JSONR
 
 app.include_router(auth_router)
 app.include_router(admin_users_router)
+app.include_router(admin_projects_router)
 app.include_router(projects_router)
 app.include_router(entities_router)
 app.include_router(aliases_router)
