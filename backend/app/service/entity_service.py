@@ -40,8 +40,9 @@ class EntityService:
         offset: int,
         sort: str,
         order: str,
+        visible_project_ids: list[str] | None = None,
     ) -> tuple[list[Entity], int]:
-        return await self._repo.list(status, types, tags, limit, offset, sort, order)
+        return await self._repo.list(status, types, tags, limit, offset, sort, order, visible_project_ids)
 
     async def create(self, data: EntityCreate, changed_by: str | None = None) -> Entity:
         entity = await self._repo.create(data)

@@ -2,10 +2,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.api.aliases import router as aliases_router
+from app.api.auth import router as auth_router
 from app.api.bundles import router as bundles_router
 from app.api.contexts import router as contexts_router
 from app.api.entities import router as entities_router
 from app.api.ingest import router as ingest_router
+from app.api.projects import router as projects_router
 from app.api.relations import router as relations_router
 from app.api.search import router as search_router
 from app.api.tags import router as tags_router
@@ -25,6 +27,8 @@ async def _registry_error_handler(request: Request, exc: RegistryError) -> JSONR
     )
 
 
+app.include_router(auth_router)
+app.include_router(projects_router)
 app.include_router(entities_router)
 app.include_router(aliases_router)
 app.include_router(contexts_router)
