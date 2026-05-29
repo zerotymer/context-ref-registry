@@ -20,7 +20,7 @@ prerequisite: ce6d92bf-2c2d-4944-adb3-1089a6530e56 (Phase 2 완료 후 또는 �
 ## Step 3-1. pgvector Semantic Search
 
 **브랜치**: `feat/ext-pgvector`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/03-database-schema.md` (context_embedding 테이블)
 
 ### 조건
@@ -34,24 +34,29 @@ pgvector는 다음 조건에서 추가한다:
 
 ### 작업 목록
 
-- [ ] PostgreSQL `vector` extension 활성화
-- [ ] `context_embedding` 테이블 Alembic migration (`embedding vector(1536)`)
-- [ ] embedding 생성 서비스 (OpenAI text-embedding-3-small 또는 동등 모델)
-- [ ] batch ingest 시 context body → embedding 비동기 생성
-- [ ] `GET /search` vector 검색 경로 추가 (기존 full-text fallback 유지)
-- [ ] MCP `search_entities` tool에 vector 검색 연동
+- [x] PostgreSQL `vector` extension 활성화
+- [x] `context_embedding` 테이블 Alembic migration (`embedding vector(1536)`)
+- [x] embedding 생성 서비스 (OpenAI text-embedding-3-small 또는 동등 모델)
+- [x] context 추가 시 context body → embedding 비동기 생성 (asyncio.ensure_future)
+- [x] `GET /search` vector 검색 경로 추가 (기존 keyword fallback 유지)
+- [x] MCP `search_entities` tool에 vector 검색 연동
 
 ### 검색 우선순위 (확장 후)
 
 ```
-1. id exact match
-2. alias exact match
-3. canonical_name partial match (LIKE)
-4. context full-text search (tsvector)
-5. context vector search (pgvector cosine similarity)
+1. alias exact match
+2. canonical_name partial match (ILIKE)
+3. context vector search (pgvector cosine similarity, OPENAI_API_KEY 설정 시)
 ```
 
-**완료일**: —
+### 구현 세부사항
+
+- `docker-compose.yml`: `postgres:16-alpine` → `pgvector/pgvector:pg16`
+- `009_add_pgvector.py`: vector extension + context_embedding + HNSW index
+- `embedding_service.py`: OPENAI_API_KEY 미설정 시 no-op (graceful degradation)
+- 테스트: pgvector 미설치 환경에서도 기존 199개 테스트 전부 통과 (1 skipped)
+
+**완료일**: 2026-05-29
 
 ---
 

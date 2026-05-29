@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import ContextType, Locale
-from app.domain.models import EntityContext
+from app.domain.models import ContextEmbedding, EntityContext
 from app.domain.schemas import ContextCreate
 
 
@@ -27,6 +27,21 @@ class ContextRepository:
         await self._session.flush()
         await self._session.refresh(ctx)
         return ctx
+
+    async def get_by_id(self, context_id: uuid.UUID) -> EntityContext | None:
+        result = await self._session.execute(
+            select(EntityContext).where(EntityContext.id == context_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def upsert_embedding(self, context_id: uuid.UUID, embedding: list[float], model: str) -> None:
+        existing = await self._session.get(ContextEmbedding, context_id)
+        if existing is not None:
+            existing.embedding = embedding
+            existing.embedding_model = model
+        else:
+            self._session.add(ContextEmbedding(context_id=context_id, embedding=embedding, embedding_model=model))
+        await self._session.flush()
 
     async def list_by_entity(
         self,

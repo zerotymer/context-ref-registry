@@ -8,6 +8,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.domain.models import Base
@@ -17,21 +18,54 @@ from app.db.session import async_session_factory
 
 _test_engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
 
+# Tables that require pgvector extension
+_PGVECTOR_TABLES = {"context_embedding"}
+
+_pgvector_enabled: bool = False
+
+
+async def _try_enable_pgvector() -> bool:
+    """Try enabling pgvector in an isolated connection; returns True on success."""
+    from sqlalchemy.ext.asyncio import create_async_engine as _make_engine
+    engine = _make_engine(os.environ["DATABASE_URL"], echo=False, isolation_level="AUTOCOMMIT")
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        return True
+    except Exception:
+        return False
+    finally:
+        await engine.dispose()
+
 
 @pytest.fixture(scope="session", autouse=True)
 async def _create_schema():
+    global _pgvector_enabled
+    _pgvector_enabled = await _try_enable_pgvector()
+
     async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        if _pgvector_enabled:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
+        else:
+            tables = [t for t in Base.metadata.sorted_tables if t.name not in _PGVECTOR_TABLES]
+            await conn.run_sync(lambda c: Base.metadata.drop_all(c, tables=tables))
+            await conn.run_sync(lambda c: Base.metadata.create_all(c, tables=tables))
     yield
     async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        if _pgvector_enabled:
+            await conn.run_sync(Base.metadata.drop_all)
+        else:
+            tables = [t for t in Base.metadata.sorted_tables if t.name not in _PGVECTOR_TABLES]
+            await conn.run_sync(lambda c: Base.metadata.drop_all(c, tables=tables))
 
 
 @pytest.fixture(autouse=True)
 async def _clean_tables():
     async with _test_engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
+            if not _pgvector_enabled and table.name in _PGVECTOR_TABLES:
+                continue
             await conn.execute(table.delete())
 
 

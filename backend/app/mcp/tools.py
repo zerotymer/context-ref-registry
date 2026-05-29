@@ -147,7 +147,8 @@ async def get_entity(id: str) -> dict:
 
 @mcp.tool(
     description=(
-        "Search for entities by keyword. Searches alias (exact) then canonical_name (partial). "
+        "Search for entities by keyword. Searches alias (exact) → canonical_name (partial) → "
+        "vector similarity (when OpenAI embedding is configured). "
         "Optionally filter by entity types or tags (AND logic)."
     )
 )
@@ -157,6 +158,8 @@ async def search_entities(
     tags: list[str] | None = None,
     limit: int = 10,
 ) -> dict:
+    from app.service.embedding_service import get_embedding_service
+
     type_enums = [EntityType(t) for t in types] if types else None
 
     async with async_session_factory() as session:
@@ -164,13 +167,29 @@ async def search_entities(
         hits = await repo.search(query, type_enums, tags, limit)
 
     results = []
+    seen_ids: set = set()
     for entity, match_reason in hits:
         score = 1.0 if match_reason == "alias_exact" else 0.7
-        results.append({
-            **_entity_summary(entity),
-            "score": score,
-            "match_reason": match_reason,
-        })
+        results.append({**_entity_summary(entity), "score": score, "match_reason": match_reason})
+        seen_ids.add(entity.id)
+
+    remaining = limit - len(results)
+    if remaining > 0:
+        emb_svc = get_embedding_service()
+        if emb_svc.enabled:
+            embedding = await emb_svc.embed(query)
+            if embedding:
+                async with async_session_factory() as session:
+                    repo = EntityRepository(session)
+                    vector_hits = await repo.search_by_vector(
+                        embedding, type_enums, tags, remaining, exclude_ids=seen_ids
+                    )
+                for entity, match_reason, dist in vector_hits:
+                    results.append({
+                        **_entity_summary(entity),
+                        "score": round(1.0 - dist, 4),
+                        "match_reason": match_reason,
+                    })
 
     return {"results": results}
 

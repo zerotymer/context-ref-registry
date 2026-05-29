@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     bootstrap_admin_password: str = ""
     bootstrap_admin_display_name: str = "Admin"
 
+    # pgvector / embedding
+    openai_api_key: str = ""
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dim: int = 1536
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

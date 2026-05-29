@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import asc, delete, desc, func, or_, select
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import asc, delete, desc, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import EntityStatus, EntityType
@@ -192,3 +193,37 @@ class EntityRepository:
                     results.append((entity, "canonical_name_partial"))
 
         return results
+
+    async def search_by_vector(
+        self,
+        embedding: list[float],
+        types: list | None = None,
+        tags: list[str] | None = None,
+        limit: int = 10,
+        visible_project_ids: list[str] | None = None,
+        exclude_ids: set[uuid.UUID] | None = None,
+    ) -> list[tuple[Entity, str, float]]:
+        from app.domain.models import ContextEmbedding, EntityContext
+
+        emb_col = func.cast(embedding, Vector(1536))
+        distance_expr = ContextEmbedding.embedding.op("<=>")(emb_col)
+
+        stmt = (
+            select(Entity, distance_expr.label("distance"))
+            .join(EntityContext, EntityContext.entity_id == Entity.id)
+            .join(ContextEmbedding, ContextEmbedding.context_id == EntityContext.id)
+            .order_by(distance_expr)
+        )
+        stmt = _apply_visibility(stmt, visible_project_ids)
+        if types:
+            stmt = stmt.where(Entity.type.in_(types))
+        if tags:
+            for tag in tags:
+                sub = select(EntityTag.entity_id).where(EntityTag.tag == tag).scalar_subquery()
+                stmt = stmt.where(Entity.id.in_(sub))
+        if exclude_ids:
+            stmt = stmt.where(Entity.id.notin_(exclude_ids))
+
+        stmt = stmt.distinct(Entity.id).limit(limit)
+        rows = (await self._session.execute(stmt)).all()
+        return [(row.Entity, "vector_search", float(row.distance)) for row in rows]
