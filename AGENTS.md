@@ -14,8 +14,8 @@
 | 관리자 UI (Next.js + Tailwind) | ✅ 완료 |
 | 인증 시스템 (JWT + API Key + 프로젝트 권한) | ✅ 완료 |
 | 운영 준비 (API Key 인증, Audit Log, Backup, Observability) | ✅ 완료 |
-| 관리자 콘솔 UI (로그인·사용자·프로젝트·멤버 화면) | 🔲 pending |
-| 인증 고급 (관리자·프로젝트 관리자 기능) | 🔲 pending |
+| 관리자 콘솔 UI (로그인·사용자·프로젝트·멤버 화면) | ✅ 완료 |
+| 인증 고급 (관리자·프로젝트 관리자 기능) | ✅ 완료 |
 | 확장 기능 (pgvector, Revision, Export) | 🔲 pending |
 
 테스트: **199 passed** (`backend/.venv/bin/pytest tests/`)
