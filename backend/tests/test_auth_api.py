@@ -195,6 +195,22 @@ async def test_api_key_auth_success(client: AsyncClient):
     assert resp2.json()["data"]["email"] == "admin@test.com"
 
 
+async def test_api_key_x_api_key_header(client: AsyncClient):
+    await _create_user(client, email="admin@test.com", password="pw", role="admin")
+    await _login(client, "admin@test.com", "pw")
+
+    resp = await client.post("/auth/api-keys", json={"name": "test-key", "scopes": ["read"]})
+    assert resp.status_code == 201
+    raw_key = resp.json()["data"]["key"]
+
+    await client.post("/auth/logout")
+
+    # X-API-Key header works the same as Authorization: Bearer
+    resp2 = await client.get("/auth/me", headers={"X-API-Key": raw_key})
+    assert resp2.status_code == 200
+    assert resp2.json()["data"]["email"] == "admin@test.com"
+
+
 async def test_api_key_invalid(client: AsyncClient):
     resp = await client.get("/health")  # just checking health still works
     assert resp.status_code == 200

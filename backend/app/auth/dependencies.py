@@ -17,6 +17,7 @@ async def _resolve_actor(
     session: AsyncSession,
     access_token: str | None,
     authorization: str | None,
+    x_api_key: str | None,
     *,
     raise_on_missing: bool,
 ) -> tuple[UserAccount | None, ApiKey | None]:
@@ -31,6 +32,10 @@ async def _resolve_actor(
         user, api_key = await svc.get_user_by_api_key(raw_key)
         return user, api_key
 
+    if x_api_key:
+        user, api_key = await svc.get_user_by_api_key(x_api_key)
+        return user, api_key
+
     if raise_on_missing:
         raise RegistryError("UNAUTHORIZED", "Authentication required", status_code=401)
     return None, None
@@ -40,16 +45,18 @@ async def _get_current_actor(
     session: Annotated[AsyncSession, Depends(get_session)],
     access_token: Annotated[str | None, Cookie(alias=_COOKIE_NAME)] = None,
     authorization: Annotated[str | None, Header()] = None,
+    x_api_key: Annotated[str | None, Header(alias="x-api-key")] = None,
 ) -> tuple[UserAccount | None, ApiKey | None]:
-    return await _resolve_actor(session, access_token, authorization, raise_on_missing=True)
+    return await _resolve_actor(session, access_token, authorization, x_api_key, raise_on_missing=True)
 
 
 async def _get_optional_actor(
     session: Annotated[AsyncSession, Depends(get_session)],
     access_token: Annotated[str | None, Cookie(alias=_COOKIE_NAME)] = None,
     authorization: Annotated[str | None, Header()] = None,
+    x_api_key: Annotated[str | None, Header(alias="x-api-key")] = None,
 ) -> tuple[UserAccount | None, ApiKey | None]:
-    return await _resolve_actor(session, access_token, authorization, raise_on_missing=False)
+    return await _resolve_actor(session, access_token, authorization, x_api_key, raise_on_missing=False)
 
 
 async def get_current_user(
