@@ -6,11 +6,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import EntityStatus, EntityType
 from app.domain.models import Entity
-from app.domain.schemas import EntityCreate, EntityHistoryListResponse, EntityHistoryRead, EntityUpdate
+from app.domain.schemas import EntityCreate, EntityHistoryListResponse, EntityHistoryRead, EntityUpdate, RevisionCompareResponse, RevisionDiffField
 from app.exceptions import RegistryError
 from app.repository.entity_repository import EntityRepository
 from app.repository.history_repository import HistoryRepository
 from app.service.audit_service import AuditService
+
+
+def _effective_state(history) -> dict:
+    """Compute entity state AFTER the revision was applied.
+
+    Snapshot stores the before-image for updates; apply changed_fields["after"]
+    to get the actual post-revision state.
+    """
+    state = dict(history.snapshot)
+    if history.changed_fields:
+        for field, diff in history.changed_fields.items():
+            state[field] = diff["after"]
+    return state
 
 
 def _entity_to_snapshot(entity: Entity) -> dict:
@@ -160,3 +173,28 @@ class EntityService:
                 status_code=404,
             )
         return history
+
+    async def compare_revisions(
+        self, entity_id: uuid.UUID, rev_a_no: int, rev_b_no: int
+    ) -> RevisionCompareResponse:
+        rev_a = await self.get_history_revision(entity_id, rev_a_no)
+        rev_b = await self.get_history_revision(entity_id, rev_b_no)
+
+        state_a = _effective_state(rev_a)
+        state_b = _effective_state(rev_b)
+
+        all_keys = set(state_a.keys()) | set(state_b.keys())
+        diff = {
+            key: RevisionDiffField(
+                before=state_a.get(key),
+                after=state_b.get(key),
+                changed=state_a.get(key) != state_b.get(key),
+            )
+            for key in sorted(all_keys)
+        }
+        return RevisionCompareResponse(
+            entity_id=entity_id,
+            rev_a=EntityHistoryRead.model_validate(rev_a),
+            rev_b=EntityHistoryRead.model_validate(rev_b),
+            diff=diff,
+        )

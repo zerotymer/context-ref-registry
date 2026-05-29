@@ -58,21 +58,27 @@ pgvector는 다음 조건에서 추가한다:
 ## Step 3-2. Entity Revision History
 
 **브랜치**: `feat/ext-revision`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 **참조**: `docs/03-database-schema.md` (entity_revision 테이블)
 
 ### 작업 목록
 
-- [ ] `entity_revision` 테이블 Alembic migration
-  ```sql
-  entity_id, revision_no, snapshot (JSONB), created_at, created_by, change_reason
-  UNIQUE (entity_id, revision_no)
-  ```
-- [ ] entity update 시 자동 revision 생성 (EntityService에 후킹)
-- [ ] `GET /entities/{id}/revisions` 엔드포인트 추가
-- [ ] revision 비교 API (선택적)
+- [x] `entity_history` 테이블 Alembic migration (`003_add_entity_history.py`)
+  — entity_id, revision_no, snapshot (JSONB), changed_fields (JSONB), change_type, change_reason, changed_by, created_at
+  — UNIQUE (entity_id, revision_no)
+- [x] entity create/update 시 자동 revision 생성 (EntityService 후킹)
+- [x] `GET /entities/{id}/history` 엔드포인트 + `GET /entities/{id}/history/{revision_no}` 단건 조회
+- [x] revision 비교 API — `GET /entities/{id}/history/{rev_a}/compare/{rev_b}`
+  — `_effective_state()` 로 before-image snapshot + changed_fields["after"] 적용 후 field-level diff 반환
 
-**완료일**: —
+### 구현 세부사항
+
+- `entity_history` 테이블은 `entity_revision`과 동등 (changed_fields, change_type 추가 포함)
+- snapshot = before-image (update 시) 또는 created state (create 시)
+- `RevisionCompareResponse`: `diff[field] = {before, after, changed}` 구조
+- 테스트: `test_history_api.py` 15개 + `test_revision_compare_api.py` 6개 → 전체 236 passed
+
+**완료일**: 2026-05-30
 
 ---
 
