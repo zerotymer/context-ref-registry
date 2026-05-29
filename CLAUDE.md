@@ -84,8 +84,8 @@ docker compose up -d
 |------|------|------|
 | ce6d92bf-2c2d-4944-adb3-1089a6530e56 | instructions/security_ops.md | pending |
 | 03080220-3b52-4d28-a79d-e2d698e5480f | instructions/extensions.md | pending |
-| 7f798d9a-780a-427a-90e5-49fb8ad17139 | .completed/ | completed (2026-05-28) |
 | 1a2a9bf8-c772-4d6e-8bb9-469bb211e8c8 | .completed/ | completed (2026-05-29) |
+| 8c36e2c4-4273-472d-964e-7febf9d2428e | .completed/ | completed (2026-05-29) |
 
 ## Git Branch 전략
 
