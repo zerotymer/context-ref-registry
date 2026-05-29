@@ -91,17 +91,15 @@ secret 값, 인증 토큰, context body 전체 (길이 초과 시)
 ## Step 2-3. Backup
 
 **브랜치**: `feat/ops-backup`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 
 ### MVP 백업 구성
 
-- [ ] `docker-compose.yml`에 backup 서비스 추가 또는 cron script 작성
-- [ ] `pg_dump` daily 스크립트
-- [ ] 백업 파일 보관 경로 정의 (로컬 볼륨 또는 minio)
+- [x] `docker-compose.yml`에 backup 서비스 추가 또는 cron script 작성
+- [x] `pg_dump` daily 스크립트
+- [x] 백업 파일 보관 경로 정의 (로컬 볼륨 — `backup_data` Docker named volume)
 
-**미결**: minio 포함 여부에 따라 백업 대상 변경 (→ README 미결 사항 참고)
-
-**완료일**: —
+**완료일**: 2026-05-29
 
 ---
 

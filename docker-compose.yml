@@ -57,5 +57,24 @@ services:
     depends_on:
       - api
 
+  backup:
+    build:
+      context: ./backup
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGUSER=llmref
+      - PGPASSWORD=llmref
+      - PGDATABASE=llmref
+      - BACKUP_SCHEDULE=0 2 * * *
+      - BACKUP_RETAIN_DAYS=7
+    volumes:
+      - backup_data:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  backup_data:
