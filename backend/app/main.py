@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.api.aliases import router as aliases_router
 from app.api.auth import router as auth_router
@@ -11,9 +12,15 @@ from app.api.projects import router as projects_router
 from app.api.relations import router as relations_router
 from app.api.search import router as search_router
 from app.api.tags import router as tags_router
+from app.db.session import async_session_factory
 from app.exceptions import RegistryError
+from app.logging_config import configure_logging
+from app.middleware import RequestLoggingMiddleware
+
+configure_logging()
 
 app = FastAPI(title="LLM Reference Registry", version="0.1.0")
+app.add_middleware(RequestLoggingMiddleware)
 
 
 @app.exception_handler(RegistryError)
@@ -40,5 +47,22 @@ app.include_router(tags_router)
 
 
 @app.get("/health")
-async def health():
-    return {"ok": True, "data": {"status": "healthy"}}
+async def health() -> JSONResponse:
+    db_status = "ok"
+    try:
+        async with async_session_factory() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+
+    ok = db_status == "ok"
+    return JSONResponse(
+        status_code=200 if ok else 503,
+        content={
+            "ok": ok,
+            "data": {
+                "status": "healthy" if ok else "degraded",
+                "db": db_status,
+            },
+        },
+    )
