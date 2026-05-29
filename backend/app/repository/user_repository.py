@@ -50,3 +50,48 @@ class UserRepository:
         await self._session.flush()
         await self._session.refresh(user)
         return user
+
+    async def list_all(
+        self,
+        *,
+        role: str | None = None,
+        is_active: bool | None = None,
+        search: str | None = None,
+    ) -> list[UserAccount]:
+        from sqlalchemy import and_, func as sqlfunc
+
+        conditions = []
+        if role is not None:
+            conditions.append(UserAccount.role == role)
+        if is_active is not None:
+            conditions.append(UserAccount.is_active.is_(is_active))
+        if search:
+            conditions.append(UserAccount.email.ilike(f"%{search}%"))
+
+        stmt = select(UserAccount)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        stmt = stmt.order_by(sqlfunc.lower(UserAccount.email))
+        result = await self._session.execute(stmt)
+        return list(result.scalars())
+
+    async def update(
+        self,
+        user: UserAccount,
+        *,
+        display_name: str | None = None,
+        role: str | None = None,
+        is_active: bool | None = None,
+        password_hash: str | None = None,
+    ) -> UserAccount:
+        if display_name is not None:
+            user.display_name = display_name
+        if role is not None:
+            user.role = role
+        if is_active is not None:
+            user.is_active = is_active
+        if password_hash is not None:
+            user.password_hash = password_hash
+        await self._session.flush()
+        await self._session.refresh(user)
+        return user

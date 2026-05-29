@@ -52,6 +52,9 @@ def _hash_api_key(raw_key: str) -> str:
     return hashlib.sha256(raw_key.encode()).hexdigest()
 
 
+_VALID_ROLES = {"admin", "project_admin", "user"}
+
+
 class AuthService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -129,6 +132,45 @@ class AuthService:
         )
         await self._session.commit()
         return api_key, raw_key
+
+    async def list_users(
+        self,
+        *,
+        role: str | None = None,
+        is_active: bool | None = None,
+        search: str | None = None,
+    ) -> list[UserAccount]:
+        return await self._user_repo.list_all(role=role, is_active=is_active, search=search)
+
+    async def update_user(
+        self,
+        user_id: uuid.UUID,
+        *,
+        display_name: str | None = None,
+        role: str | None = None,
+        is_active: bool | None = None,
+    ) -> UserAccount:
+        user = await self._user_repo.get_by_id(user_id)
+        if user is None:
+            raise RegistryError("NOT_FOUND", "User not found", status_code=404)
+        if role is not None and role not in _VALID_ROLES:
+            raise RegistryError("INVALID_ROLE", f"Role must be one of {sorted(_VALID_ROLES)}", status_code=422)
+        updated = await self._user_repo.update(
+            user,
+            display_name=display_name,
+            role=role,
+            is_active=is_active,
+        )
+        await self._session.commit()
+        return updated
+
+    async def reset_password(self, user_id: uuid.UUID, new_password: str) -> None:
+        user = await self._user_repo.get_by_id(user_id)
+        if user is None:
+            raise RegistryError("NOT_FOUND", "User not found", status_code=404)
+        pw_hash = hash_password(new_password)
+        await self._user_repo.update(user, password_hash=pw_hash)
+        await self._session.commit()
 
     async def bootstrap_admin(self) -> None:
         """Create initial admin account if credentials are configured and no admin exists."""
