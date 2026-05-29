@@ -42,8 +42,9 @@ class AliasService:
         alias: str,
         locale: Locale | None = None,
         entity_type: EntityType | None = None,
+        visible_project_ids: list[str] | None = None,
     ) -> ResolveResult:
-        entities = await self._alias_repo.resolve(alias, locale, entity_type)
+        entities = await self._alias_repo.resolve(alias, locale, entity_type, visible_project_ids=visible_project_ids)
 
         if not entities:
             return ResolveResult(result="not_found")

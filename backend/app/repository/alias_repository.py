@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import EntityType, Locale
@@ -39,6 +39,7 @@ class AliasRepository:
         alias: str,
         locale: Locale | None = None,
         entity_type: EntityType | None = None,
+        visible_project_ids: list[str] | None = None,
     ) -> list[Entity]:
         stmt = (
             select(Entity)
@@ -49,6 +50,13 @@ class AliasRepository:
             stmt = stmt.where(EntityAlias.locale == locale)
         if entity_type is not None:
             stmt = stmt.where(Entity.type == entity_type)
+        if visible_project_ids is not None:
+            if not visible_project_ids:
+                stmt = stmt.where(Entity.project_id.is_(None))
+            else:
+                stmt = stmt.where(
+                    or_(Entity.project_id.is_(None), Entity.project_id.in_(visible_project_ids))
+                )
 
         result = await self._session.execute(stmt.distinct())
         return list(result.scalars().all())

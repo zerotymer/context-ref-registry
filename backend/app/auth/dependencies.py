@@ -13,16 +13,13 @@ from app.service.auth_service import AuthService
 _COOKIE_NAME = "access_token"
 
 
-async def _get_current_actor(
-    session: Annotated[AsyncSession, Depends(get_session)],
-    access_token: Annotated[str | None, Cookie(alias=_COOKIE_NAME)] = None,
-    authorization: Annotated[str | None, Header()] = None,
+async def _resolve_actor(
+    session: AsyncSession,
+    access_token: str | None,
+    authorization: str | None,
+    *,
+    raise_on_missing: bool,
 ) -> tuple[UserAccount | None, ApiKey | None]:
-    """Resolve actor from cookie (user session) or Authorization header (API key).
-
-    Priority: user session cookie > API key header.
-    Returns (user, api_key) — exactly one will be non-None for authenticated requests.
-    """
     svc = AuthService(session)
 
     if access_token:
@@ -34,7 +31,25 @@ async def _get_current_actor(
         user, api_key = await svc.get_user_by_api_key(raw_key)
         return user, api_key
 
-    raise RegistryError("UNAUTHORIZED", "Authentication required", status_code=401)
+    if raise_on_missing:
+        raise RegistryError("UNAUTHORIZED", "Authentication required", status_code=401)
+    return None, None
+
+
+async def _get_current_actor(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    access_token: Annotated[str | None, Cookie(alias=_COOKIE_NAME)] = None,
+    authorization: Annotated[str | None, Header()] = None,
+) -> tuple[UserAccount | None, ApiKey | None]:
+    return await _resolve_actor(session, access_token, authorization, raise_on_missing=True)
+
+
+async def _get_optional_actor(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    access_token: Annotated[str | None, Cookie(alias=_COOKIE_NAME)] = None,
+    authorization: Annotated[str | None, Header()] = None,
+) -> tuple[UserAccount | None, ApiKey | None]:
+    return await _resolve_actor(session, access_token, authorization, raise_on_missing=False)
 
 
 async def get_current_user(
@@ -44,6 +59,14 @@ async def get_current_user(
     user, _ = actor
     if user is None:
         raise RegistryError("UNAUTHORIZED", "Authentication required", status_code=401)
+    return user
+
+
+async def get_optional_user(
+    actor: Annotated[tuple, Depends(_get_optional_actor)],
+) -> UserAccount | None:
+    """Return the authenticated user or None if not authenticated."""
+    user, _ = actor
     return user
 
 

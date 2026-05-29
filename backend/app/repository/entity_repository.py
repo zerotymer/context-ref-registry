@@ -2,13 +2,27 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import asc, delete, desc, func, select
+from sqlalchemy import asc, delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import EntityStatus, EntityType
 from app.domain.models import Entity, EntityTag
 from app.domain.schemas import EntityCreate, EntityUpdate
 from app.exceptions import RegistryError
+
+
+def _apply_visibility(stmt, visible_project_ids: list[str] | None):
+    """Apply project visibility filter to a SELECT statement.
+
+    visible_project_ids=None  → admin, no filter
+    visible_project_ids=[]    → public only (project_id IS NULL)
+    visible_project_ids=[...] → public OR in the given projects
+    """
+    if visible_project_ids is None:
+        return stmt
+    if not visible_project_ids:
+        return stmt.where(Entity.project_id.is_(None))
+    return stmt.where(or_(Entity.project_id.is_(None), Entity.project_id.in_(visible_project_ids)))
 
 
 class EntityRepository:
@@ -23,6 +37,7 @@ class EntityRepository:
             description=data.description,
             status=data.status,
             confidence=data.confidence,
+            project_id=data.project_id,
         )
         self._session.add(entity)
         await self._session.flush()
@@ -51,8 +66,9 @@ class EntityRepository:
         offset: int = 0,
         sort: str = "created_at",
         order: str = "desc",
+        visible_project_ids: list[str] | None = None,
     ) -> tuple[list[Entity], int]:
-        count_stmt = select(func.count()).select_from(Entity)
+        count_stmt = _apply_visibility(select(func.count()).select_from(Entity), visible_project_ids)
         if status:
             count_stmt = count_stmt.where(Entity.status == status)
         if types:
@@ -69,7 +85,7 @@ class EntityRepository:
             "canonical_name": Entity.canonical_name,
         }[sort]
         order_fn = desc if order == "desc" else asc
-        stmt = select(Entity)
+        stmt = _apply_visibility(select(Entity), visible_project_ids)
         if status:
             stmt = stmt.where(Entity.status == status)
         if types:
@@ -129,6 +145,7 @@ class EntityRepository:
         types: list | None = None,
         tags: list[str] | None = None,
         limit: int = 10,
+        visible_project_ids: list[str] | None = None,
     ) -> list[tuple[Entity, str]]:
         from app.domain.models import EntityAlias
 
@@ -148,6 +165,7 @@ class EntityRepository:
             .join(EntityAlias, EntityAlias.entity_id == Entity.id)
             .where(EntityAlias.alias == query, EntityAlias.is_active == True)  # noqa: E712
         )
+        stmt = _apply_visibility(stmt, visible_project_ids)
         if types:
             stmt = stmt.where(Entity.type.in_(types))
         stmt = _apply_tag_filter(stmt)
@@ -160,7 +178,10 @@ class EntityRepository:
         # 2. canonical_name partial match (ILIKE)
         remaining = limit - len(results)
         if remaining > 0:
-            stmt2 = select(Entity).where(Entity.canonical_name.ilike(f"%{query}%"))
+            stmt2 = _apply_visibility(
+                select(Entity).where(Entity.canonical_name.ilike(f"%{query}%")),
+                visible_project_ids,
+            )
             if types:
                 stmt2 = stmt2.where(Entity.type.in_(types))
             stmt2 = _apply_tag_filter(stmt2)

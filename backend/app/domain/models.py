@@ -24,6 +24,41 @@ def _uuid() -> uuid.UUID:
     return uuid.uuid4()
 
 
+class Project(Base):
+    __tablename__ = "project"
+
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    alias: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_account.id"), nullable=False
+    )
+
+    members: Mapped[list["ProjectMember"]] = relationship(
+        "ProjectMember", back_populates="project", lazy="selectin"
+    )
+
+
+class ProjectMember(Base):
+    __tablename__ = "project_member"
+
+    project_id: Mapped[str] = mapped_column(String(20), ForeignKey("project.id"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user_account.id"), primary_key=True)
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="member")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_account.id"), nullable=False
+    )
+
+    project: Mapped["Project"] = relationship("Project", back_populates="members")
+
+
 class Entity(Base):
     __tablename__ = "entity"
 
@@ -35,6 +70,7 @@ class Entity(Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     replacement_entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("entity.id"))
     deprecation_reason: Mapped[str | None] = mapped_column(Text)
+    project_id: Mapped[str | None] = mapped_column(String(20), ForeignKey("project.id"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -95,6 +131,7 @@ class EntityContext(Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(String(10), nullable=False, default="ko")
     source_ref_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("source_ref.id"))
+    project_id: Mapped[str | None] = mapped_column(String(20), ForeignKey("project.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -117,6 +154,7 @@ class EntityRelation(Base):
     relation_type: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    project_id: Mapped[str | None] = mapped_column(String(20), ForeignKey("project.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     from_entity: Mapped["Entity"] = relationship(
