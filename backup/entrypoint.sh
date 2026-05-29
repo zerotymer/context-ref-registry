@@ -1,15 +1,30 @@
 #!/bin/sh
 set -e
 
-# Allow direct command override (e.g. docker compose run backup /backup.sh)
 if [ $# -gt 0 ]; then
     exec "$@"
 fi
 
-# Install crontab entry for the backup job
-echo "${BACKUP_SCHEDULE:-0 2 * * *} PGPASSWORD=\"${PGPASSWORD}\" PGHOST=\"${PGHOST}\" PGPORT=\"${PGPORT:-5432}\" PGUSER=\"${PGUSER}\" PGDATABASE=\"${PGDATABASE}\" BACKUP_RETAIN_DAYS=\"${BACKUP_RETAIN_DAYS:-7}\" /backup.sh >> /var/log/backup.log 2>&1" | crontab -
+SCHEDULE="${BACKUP_SCHEDULE:-0 2 * * *}"
 
-echo "Backup scheduler started (schedule: ${BACKUP_SCHEDULE:-0 2 * * *})"
+# Write wrapper that bakes in env vars at startup time
+cat > /run-backup.sh << EOF
+#!/bin/sh
+PGPASSWORD="${PGPASSWORD}" \
+PGHOST="${PGHOST}" \
+PGPORT="${PGPORT:-5432}" \
+PGUSER="${PGUSER}" \
+PGDATABASE="${PGDATABASE}" \
+BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-7}" \
+/backup.sh >> /var/log/backup.log 2>&1
+EOF
+chmod +x /run-backup.sh
 
-# Run crond in foreground
-exec crond -f -l 2
+# busybox crond reads from /var/spool/cron/crontabs/root
+mkdir -p /var/spool/cron/crontabs
+echo "${SCHEDULE} /run-backup.sh" > /var/spool/cron/crontabs/root
+chmod 600 /var/spool/cron/crontabs/root
+
+echo "Backup scheduler started (schedule: ${SCHEDULE})"
+
+exec crond -f -d 8
