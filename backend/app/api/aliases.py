@@ -6,7 +6,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user, get_optional_user
+from app.auth.dependencies import get_actor, get_current_user, get_optional_user
+from app.service.audit_service import actor_identifier
 from app.auth.policy import AccessPolicy
 from app.db.session import get_session
 from app.domain.enums import EntityType, Locale
@@ -25,13 +26,15 @@ async def add_alias(
     entity_id: uuid.UUID,
     body: AliasCreate,
     session: SessionDep,
-    user: Annotated[UserAccount, Depends(get_current_user)],
+    auth: Annotated[tuple, Depends(get_actor)],
 ) -> OkResponse[AliasRead]:
+    user, api_key = auth
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
     entity = await EntityService(session).get_by_id(entity_id)
     policy.check_can_mutate_entity(entity.project_id, user, user_project_ids)
-    alias = await AliasService(session).add_alias(entity_id, body)
+    actor = actor_identifier(user, api_key)
+    alias = await AliasService(session).add_alias(entity_id, body, actor=actor)
     return OkResponse(data=AliasRead.model_validate(alias))
 
 

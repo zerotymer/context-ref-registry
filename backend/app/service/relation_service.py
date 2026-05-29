@@ -10,14 +10,18 @@ from app.domain.schemas import RelationCreate
 from app.exceptions import RegistryError
 from app.repository.entity_repository import EntityRepository
 from app.repository.relation_repository import RelationRepository
+from app.service.audit_service import AuditService
 
 
 class RelationService:
     def __init__(self, session: AsyncSession) -> None:
         self._relation_repo = RelationRepository(session)
         self._entity_repo = EntityRepository(session)
+        self._audit = AuditService(session)
 
-    async def create_relation(self, data: RelationCreate) -> EntityRelation:
+    async def create_relation(
+        self, data: RelationCreate, actor: str | None = None
+    ) -> EntityRelation:
         from_entity = await self._entity_repo.get_by_id(data.from_entity_id)
         if from_entity is None:
             raise RegistryError(
@@ -32,7 +36,21 @@ class RelationService:
                 message=f"Entity {data.to_entity_id} not found",
                 status_code=404,
             )
-        return await self._relation_repo.add(data)
+        relation = await self._relation_repo.add(data)
+        await self._audit.log(
+            actor=actor or "system",
+            action="relation_create",
+            target_type="relation",
+            target_id=str(relation.id),
+            after_snapshot={
+                "id": str(relation.id),
+                "from_entity_id": str(relation.from_entity_id),
+                "to_entity_id": str(relation.to_entity_id),
+                "relation_type": relation.relation_type if isinstance(relation.relation_type, str) else relation.relation_type.value,
+                "confidence": relation.confidence,
+            },
+        )
+        return relation
 
     async def list_relations(
         self,

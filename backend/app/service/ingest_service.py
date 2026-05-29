@@ -17,6 +17,7 @@ from app.domain.schemas import (
 from app.exceptions import RegistryError
 from app.repository.entity_repository import EntityRepository
 from app.repository.history_repository import HistoryRepository
+from app.service.audit_service import AuditService
 from app.service.entity_service import _entity_to_snapshot
 
 
@@ -25,8 +26,9 @@ class IngestService:
         self._session = session
         self._entity_repo = EntityRepository(session)
         self._hist_repo = HistoryRepository(session)
+        self._audit = AuditService(session)
 
-    async def batch_ingest(self, req: BatchIngestRequest) -> BatchIngestResult:
+    async def batch_ingest(self, req: BatchIngestRequest, actor: str | None = None) -> BatchIngestResult:
         source_ref = await self._upsert_source_ref(req.source)
 
         created = IngestCounts()
@@ -84,12 +86,25 @@ class IngestService:
             await self._session.flush()
             created.relations += 1
 
-        return BatchIngestResult(
+        result = BatchIngestResult(
             source_ref_id=source_ref.id,
             created=created,
             updated=updated,
             warnings=warnings,
         )
+        await self._audit.log(
+            actor=actor or "system",
+            action="batch_ingest",
+            target_type="batch",
+            target_id=str(source_ref.id),
+            after_snapshot={
+                "source_uri": req.source.uri,
+                "source_name": req.source.name,
+                "created": created.model_dump(),
+                "updated": updated.model_dump(),
+            },
+        )
+        return result
 
     async def _upsert_entity(self, item: IngestEntityInput, entity_id: uuid.UUID) -> tuple[bool, "Entity"]:
         """Returns (was_created, entity)."""

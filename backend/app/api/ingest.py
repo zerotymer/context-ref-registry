@@ -5,10 +5,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_actor, get_current_user
+from app.service.audit_service import actor_identifier
 from app.auth.policy import AccessPolicy
 from app.db.session import get_session
-from app.domain.models import UserAccount
 from app.domain.schemas import BatchIngestRequest, BatchIngestResult, OkResponse
 from app.service.ingest_service import IngestService
 
@@ -21,11 +21,13 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 async def batch_ingest(
     body: BatchIngestRequest,
     session: SessionDep,
-    user: Annotated[UserAccount, Depends(get_current_user)],
+    auth: Annotated[tuple, Depends(get_actor)],
 ) -> OkResponse[BatchIngestResult]:
+    user, api_key = auth
     policy = AccessPolicy(session)
     for item in body.entities:
         project_id = getattr(item, "project_id", None)
         await policy.check_can_assign_project(project_id, user)
-    result = await IngestService(session).batch_ingest(body)
+    actor = actor_identifier(user, api_key)
+    result = await IngestService(session).batch_ingest(body, actor=actor)
     return OkResponse(data=result)

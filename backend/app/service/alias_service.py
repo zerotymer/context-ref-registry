@@ -10,14 +10,18 @@ from app.domain.schemas import AliasCreate, EntityRead, ResolveResult
 from app.exceptions import RegistryError
 from app.repository.alias_repository import AliasRepository
 from app.repository.entity_repository import EntityRepository
+from app.service.audit_service import AuditService
 
 
 class AliasService:
     def __init__(self, session: AsyncSession) -> None:
         self._alias_repo = AliasRepository(session)
         self._entity_repo = EntityRepository(session)
+        self._audit = AuditService(session)
 
-    async def add_alias(self, entity_id: uuid.UUID, data: AliasCreate) -> EntityAlias:
+    async def add_alias(
+        self, entity_id: uuid.UUID, data: AliasCreate, actor: str | None = None
+    ) -> EntityAlias:
         entity = await self._entity_repo.get_by_id(entity_id)
         if entity is None:
             raise RegistryError(
@@ -25,7 +29,21 @@ class AliasService:
                 message=f"Entity {entity_id} not found",
                 status_code=404,
             )
-        return await self._alias_repo.add(entity_id, data)
+        alias = await self._alias_repo.add(entity_id, data)
+        await self._audit.log(
+            actor=actor or "system",
+            action="alias_add",
+            target_type="alias",
+            target_id=str(alias.id),
+            after_snapshot={
+                "id": str(alias.id),
+                "entity_id": str(alias.entity_id),
+                "locale": alias.locale,
+                "alias": alias.alias,
+                "is_primary": alias.is_primary,
+            },
+        )
+        return alias
 
     async def list_aliases(self, entity_id: uuid.UUID) -> list[EntityAlias]:
         entity = await self._entity_repo.get_by_id(entity_id)

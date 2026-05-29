@@ -52,7 +52,7 @@ admin   → status 변경, entity 삭제 등
 ## Step 2-2. Audit Log
 
 **브랜치**: `feat/security-audit-log`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
 
 ### 기록 대상 (`docs/09` 기준)
 
@@ -73,10 +73,10 @@ before_snapshot (JSONB), after_snapshot (JSONB), created_at
 
 ### 작업 목록
 
-- [ ] `entity_audit_log` 테이블 Alembic migration
-- [ ] `AuditService` 구현 — 서비스 레이어에서 자동 기록
-- [ ] actor: MVP에서는 API key 식별자 또는 `"system"` 고정
-- [ ] before/after snapshot은 핵심 필드만 포함 (context body 전체 제외)
+- [x] `entity_audit_log` 테이블 Alembic migration
+- [x] `AuditService` 구현 — 서비스 레이어에서 자동 기록
+- [x] actor: MVP에서는 API key 식별자 또는 `"system"` 고정
+- [x] before/after snapshot은 핵심 필드만 포함 (context body 전체 제외)
 
 ### 로그에 기록하지 않는 것
 
@@ -84,7 +84,7 @@ before_snapshot (JSONB), after_snapshot (JSONB), created_at
 secret 값, 인증 토큰, context body 전체 (길이 초과 시)
 ```
 
-**완료일**: —
+**완료일**: 2026-05-29
 
 ---
 

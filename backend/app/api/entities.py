@@ -6,7 +6,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Body, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user, get_optional_user
+from app.auth.dependencies import get_actor, get_current_user, get_optional_user
+from app.service.audit_service import actor_identifier
 from app.auth.policy import AccessPolicy
 from app.db.session import get_session
 from app.domain.enums import EntityStatus, EntityType
@@ -56,12 +57,14 @@ async def list_entities(
 async def create_entity(
     body: EntityCreate,
     session: SessionDep,
-    user: Annotated[UserAccount, Depends(get_current_user)],
+    auth: Annotated[tuple, Depends(get_actor)],
     x_changed_by: str | None = Header(default=None),
 ) -> OkResponse[dict[str, str]]:
+    user, api_key = auth
     policy = AccessPolicy(session)
     await policy.check_can_assign_project(body.project_id, user)
-    entity = await EntityService(session).create(body, changed_by=x_changed_by or str(user.id))
+    actor = actor_identifier(user, api_key)
+    entity = await EntityService(session).create(body, changed_by=x_changed_by or actor)
     return OkResponse(data={"id": str(entity.id)})
 
 
@@ -83,14 +86,16 @@ async def update_entity(
     entity_id: uuid.UUID,
     body: EntityUpdate,
     session: SessionDep,
-    user: Annotated[UserAccount, Depends(get_current_user)],
+    auth: Annotated[tuple, Depends(get_actor)],
     x_changed_by: str | None = Header(default=None),
 ) -> OkResponse[EntityRead]:
+    user, api_key = auth
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
     entity = await EntityService(session).get_by_id(entity_id)
     policy.check_can_mutate_entity(entity.project_id, user, user_project_ids)
-    entity = await EntityService(session).update(entity_id, body, changed_by=x_changed_by or str(user.id))
+    actor = actor_identifier(user, api_key)
+    entity = await EntityService(session).update(entity_id, body, changed_by=x_changed_by or actor)
     return OkResponse(data=EntityRead.model_validate(entity))
 
 

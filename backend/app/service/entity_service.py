@@ -10,6 +10,7 @@ from app.domain.schemas import EntityCreate, EntityHistoryListResponse, EntityHi
 from app.exceptions import RegistryError
 from app.repository.entity_repository import EntityRepository
 from app.repository.history_repository import HistoryRepository
+from app.service.audit_service import AuditService
 
 
 def _entity_to_snapshot(entity: Entity) -> dict:
@@ -30,6 +31,7 @@ class EntityService:
         self._session = session
         self._repo = EntityRepository(session)
         self._hist_repo = HistoryRepository(session)
+        self._audit = AuditService(session)
 
     async def list(
         self,
@@ -56,6 +58,13 @@ class EntityService:
             snapshot=_entity_to_snapshot(entity),
             change_type="create",
             changed_by=changed_by,
+        )
+        await self._audit.log(
+            actor=changed_by or "system",
+            action="entity_create",
+            target_type="entity",
+            target_id=str(entity.id),
+            after_snapshot=_entity_to_snapshot(entity),
         )
         return entity
 
@@ -107,6 +116,17 @@ class EntityService:
             changed_fields=changed_fields,
             change_reason=data.change_reason,
             changed_by=changed_by,
+        )
+        audit_action = (
+            "entity_status_change" if changed_fields and "status" in changed_fields else "entity_update"
+        )
+        await self._audit.log(
+            actor=changed_by or "system",
+            action=audit_action,
+            target_type="entity",
+            target_id=str(entity_id),
+            before_snapshot=before_snapshot,
+            after_snapshot=_entity_to_snapshot(entity),
         )
 
         return entity
