@@ -90,10 +90,10 @@ docker compose up -d
 |------|------|------|
 | 0ac0d3e0-f558-4b6a-9aed-3b09ad1e953e | instructions/admin_console_ui.md | pending |
 | 1285a04e-652a-4b95-a3a9-160dfc897ef2 | instructions/admin_project_console.md | pending |
-| ce6d92bf-2c2d-4944-adb3-1089a6530e56 | .completed/ | completed (2026-05-29) |
 | 03080220-3b52-4d28-a79d-e2d698e5480f | instructions/extensions.md | pending |
-| 1a2a9bf8-c772-4d6e-8bb9-469bb211e8c8 | .completed/ | completed (2026-05-29) |
+| ce6d92bf-2c2d-4944-adb3-1089a6530e56 | .completed/ | completed (2026-05-29) |
 | 8c36e2c4-4273-472d-964e-7febf9d2428e | .completed/ | completed (2026-05-29) |
+| 1a2a9bf8-c772-4d6e-8bb9-469bb211e8c8 | .completed/ | completed (2026-05-29) |
 
 ## Git Branch 전략
 
