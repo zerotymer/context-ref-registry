@@ -15,32 +15,63 @@ backend/
     main.py                 # FastAPI 진입점, RegistryError 핸들러
     config.py               # pydantic-settings 환경변수
     exceptions.py           # RegistryError (code, message, status_code)
+    dependencies.py         # FastAPI Depends — 인증 미들웨어 (get_current_user 등)
+    policy.py               # 접근 정책 — 프로젝트 멤버십 기반 권한 검사
     api/
+      auth.py               # POST /auth/login, /logout, /users, /api-keys; GET /auth/me
+      projects.py           # CRUD /projects, /projects/{id}/members
       entities.py           # POST/GET/PATCH /entities
       aliases.py            # POST/GET /entities/{id}/aliases, GET /resolve
       contexts.py           # POST/GET /entities/{id}/contexts
       relations.py          # POST /relations, GET /entities/{id}/relations
+      tags.py               # POST/DELETE /entities/{id}/tags, GET /tags
       ingest.py             # POST /ingest/batch
       bundles.py            # POST /context-bundle
       search.py             # GET /search
+    auth/
+      dependencies.py       # 인증 Depends 구현체 (JWT 검증, API Key 조회)
+      policy.py             # 역할 기반 접근 제어
     domain/
       enums.py              # EntityType, EntityStatus, ContextType, RelationType, Locale
-      models.py             # SQLAlchemy ORM (Entity, EntityAlias, …)
+      models.py             # SQLAlchemy ORM (Entity, EntityAlias, User, Project, …)
       schemas.py            # Pydantic v2 request/response
-    repository/             # DB 접근 계층 (entity/alias/context/relation)
-    service/                # 비즈니스 로직 (entity/alias/context/relation/bundle/ingest/search)
+    repository/             # DB 접근 계층
+      entity_repository.py
+      alias_repository.py
+      context_repository.py
+      relation_repository.py
+      user_repository.py
+      api_key_repository.py
+      project_repository.py
+      project_member_repository.py
+      history_repository.py
+    service/                # 비즈니스 로직
+      entity_service.py
+      alias_service.py
+      context_service.py
+      relation_service.py
+      auth_service.py       # 로그인, JWT 발급, API Key 관리
+      project_service.py    # 프로젝트 생성, 멤버 초대, 권한 검사
+      bundle_service.py
+      ingest_service.py
+      search_service.py
     mcp/
       server.py             # FastMCP 인스턴스
       tools.py              # 6개 read-only tool
     db/
       session.py            # async_session_factory
-      migrations/           # Alembic (versions/001_initial_schema.py)
+      migrations/           # Alembic (versions/)
   tests/
     conftest.py
+    test_auth_api.py
+    test_project_api.py
     test_entity_api.py
+    test_entity_list_api.py
     test_alias_resolve.py
     test_context_api.py
     test_context_bundle.py
+    test_tag_api.py
+    test_history_api.py
     test_ingest_batch.py
     test_mcp_tools.py
     test_relation_api.py
@@ -99,11 +130,18 @@ domain/     → enums, ORM models, Pydantic schemas. 순수 데이터 정의.
 
 | 테이블 | 역할 |
 |--------|------|
-| `entity` | UUID, type, canonical_name, status, confidence |
+| `users` | 사용자 계정 (email, hashed_password, role) |
+| `sessions` | JWT 세션 (token, expires_at) |
+| `api_keys` | API Key (key_hash, name, user_id) |
+| `projects` | 프로젝트 (name, owner_id) |
+| `project_members` | 프로젝트 멤버십 (project_id, user_id, role: viewer/editor/admin) |
+| `entity` | UUID, type, canonical_name, status, confidence, project_id |
 | `entity_alias` | locale별 alias (unique 제약 없음, is_active로 비활성화) |
 | `entity_context` | context_type별 텍스트 (RAG 단위) |
 | `entity_relation` | from/to entity 간 관계 (CONTAINS, RELATED_TO, USES 등) |
 | `entity_metadata` | JSONB 타입별 상세 필드 |
+| `entity_tag` | entity ↔ tag 다중 부착 |
+| `entity_history` | entity 변경 이력 (field, old_value, new_value) |
 | `source_ref` | 원본 문서 참조 |
 
 Entity status: `candidate` → `active` → `deprecated` / `archived`
@@ -123,9 +161,34 @@ Locale:       ko | en
 
 ## API 엔드포인트 목록
 
+### 인증
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/auth/users` | 사용자 등록 |
+| POST | `/auth/login` | 로그인 (JWT 발급) |
+| POST | `/auth/logout` | 로그아웃 (세션 무효화) |
+| GET | `/auth/me` | 현재 사용자 조회 |
+| POST | `/auth/api-keys` | API Key 발급 |
+
+### 프로젝트
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/projects` | 프로젝트 생성 |
+| GET | `/projects` | 프로젝트 목록 |
+| GET | `/projects/{id}` | 프로젝트 조회 |
+| GET | `/projects/{id}/members` | 멤버 목록 |
+| POST | `/projects/{id}/members` | 멤버 추가 |
+| PUT | `/projects/{id}/members/{user_id}` | 멤버 역할 변경 |
+| DELETE | `/projects/{id}/members/{user_id}` | 멤버 제거 |
+
+### Registry
+
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
 | POST | `/entities` | entity 생성 (id 지정 가능) |
+| GET | `/entities` | entity 목록 조회 (필터·페이징) |
 | GET | `/entities/{id}` | entity 조회 |
 | PATCH | `/entities/{id}` | entity 수정 (id·type 변경 불가) |
 | POST | `/entities/{id}/aliases` | alias 추가 |
@@ -133,9 +196,12 @@ Locale:       ko | en
 | GET | `/resolve` | alias → entity resolve |
 | POST | `/entities/{id}/contexts` | context 추가 |
 | GET | `/entities/{id}/contexts` | context 목록 |
+| POST | `/entities/{id}/tags` | tag 부착 |
+| DELETE | `/entities/{id}/tags/{tag}` | tag 제거 |
+| GET | `/entities/{id}/history` | 변경 이력 |
 | POST | `/relations` | relation 생성 |
 | GET | `/entities/{id}/relations` | relation 목록 (direction, max_depth) |
-| GET | `/search?q=&types=&limit=` | entity 검색 (alias exact → canonical partial) |
+| GET | `/search?q=&types=&limit=` | entity 검색 |
 | POST | `/context-bundle` | BFS context bundle |
 | POST | `/ingest/batch` | 일괄 ingest |
 | GET | `/health` | 헬스체크 |
@@ -189,16 +255,22 @@ Locale:       ko | en
 ## 테스트 구조
 
 ```
-conftest.py          DB 픽스처 (schema drop/create, table clean), docs/10 예제 shared fixture
-test_entity_api.py   Entity CRUD, PATCH 제한, deprecated
-test_alias_resolve.py ambiguous/resolved/not_found, locale/type 필터
-test_context_api.py  Context 추가/조회, 필터
+conftest.py            DB 픽스처 (schema drop/create, table clean), 공유 fixture
+test_auth_api.py       로그인, 로그아웃, 사용자 등록, API Key 발급
+test_project_api.py    프로젝트 CRUD, 멤버 초대/제거, 역할 변경
+test_entity_api.py     Entity CRUD, PATCH 제한, deprecated
+test_entity_list_api.py GET /entities 목록 조회, 필터·페이징
+test_alias_resolve.py  ambiguous/resolved/not_found, locale/type 필터
+test_context_api.py    Context 추가/조회, 필터
 test_context_bundle.py depth, token_budget, deprecated warning
-test_ingest_batch.py upsert, type 변경 금지, relation 검증
-test_mcp_tools.py    MCP 6개 tool 직접 호출
+test_tag_api.py        tag 부착/제거, 다중 tag
+test_history_api.py    entity 변경 이력 조회
+test_ingest_batch.py   upsert, type 변경 금지, relation 검증
+test_mcp_tools.py      MCP 6개 tool 직접 호출
+test_relation_api.py   relation 생성/조회, direction/depth
 test_domain_schemas.py Pydantic 스키마 검증
-test_examples.py     docs/10 예제 기반 DoD 통합 테스트
-test_search_api.py   GET /search (alias exact, canonical partial, type filter)
+test_examples.py       docs/10 예제 기반 DoD 통합 테스트
+test_search_api.py     GET /search (alias exact, canonical partial, type filter)
 ```
 
 테스트는 **실제 PostgreSQL**(TEST_DATABASE_URL)에서 실행. mock DB 사용 금지.

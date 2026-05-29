@@ -44,6 +44,7 @@ class EntityCreate(BaseModel):
     status: EntityStatus = EntityStatus.CANDIDATE
     confidence: float = Field(1.0, ge=0.0, le=1.0)
     tags: list[str] = Field(default_factory=list)
+    project_id: str | None = None
 
 
 class EntityUpdate(BaseModel):
@@ -68,6 +69,7 @@ class EntityRead(BaseModel):
     confidence: float
     replacement_entity_id: uuid.UUID | None
     deprecation_reason: str | None
+    project_id: str | None = None
     created_at: datetime
     updated_at: datetime
     tags: list[str] = Field(default_factory=list)
