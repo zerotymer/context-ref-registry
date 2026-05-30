@@ -37,3 +37,4 @@ ce6d92bf-2c2d-4944-adb3-1089a6530e56 | 운영 준비 — 보안 & 모니터링 (
 03080220-3b52-4d28-a79d-e2d698e5480f | 확장 기능 Step 3-2 — Entity Revision History + 비교 API | 2026-05-30T00:00:00+09:00 | step_completed
 03080220-3b52-4d28-a79d-e2d698e5480f | 확장 기능 Step 3-3 — Review UI (alias 비활성화 + deprecated 처리 모달) | 2026-05-30T00:00:00+09:00 | step_completed
 03080220-3b52-4d28-a79d-e2d698e5480f | 확장 기능 Step 3-4 — AGENTS.md Export | 2026-05-30T00:00:00+09:00 | step_completed
+03080220-3b52-4d28-a79d-e2d698e5480f | 확장 기능 Step 3-5 — GitHub PR 검증 | 2026-05-30T00:00:00+09:00 | step_completed
