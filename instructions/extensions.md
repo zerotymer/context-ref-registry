@@ -114,7 +114,8 @@ pgvector는 다음 조건에서 추가한다:
 ## Step 3-4. AGENTS.md Export
 
 **브랜치**: `feat/ext-agents-export`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
+**참조**: `backend/app/api/export.py`, `backend/app/service/export_service.py`
 
 ### 목적
 
@@ -122,12 +123,21 @@ pgvector는 다음 조건에서 추가한다:
 
 ### 작업 목록
 
-- [ ] `GET /export/agents-md?root_ids=&max_depth=&token_budget=` 엔드포인트
-- [ ] Context Bundle을 Markdown 형식으로 변환
-- [ ] entity type별 섹션 구분
-- [ ] deprecated warning 포함
+- [x] `GET /export/agents-md?root_ids=&max_depth=&token_budget=` 엔드포인트
+- [x] Context Bundle을 Markdown 형식으로 변환
+- [x] entity type별 섹션 구분
+- [x] deprecated warning 포함
 
-**완료일**: —
+### 구현 세부사항
+
+- `ExportService.generate_agents_md()` — BundleService 재사용 후 Markdown 변환
+- entity type 순서: UI_AREA → FEATURE → INFRA_UNIT → API → CODE_SYMBOL
+- deprecated entity → `⚠️ Deprecated Entities` 섹션, replacement_entity_id 포함
+- relations → Markdown table 형태로 출력
+- 응답 Content-Type: `text/plain`
+- 테스트: `test_export_agents_md.py` 9개 → 전체 251 passed
+
+**완료일**: 2026-05-30
 
 ---
 
