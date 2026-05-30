@@ -7,6 +7,7 @@ class EntityType(str, Enum):
     INFRA_UNIT = "INFRA_UNIT"
     API = "API"
     CODE_SYMBOL = "CODE_SYMBOL"
+    ISSUE = "ISSUE"
 
 
 class EntityStatus(str, Enum):

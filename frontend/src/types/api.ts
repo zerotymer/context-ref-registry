@@ -1,4 +1,4 @@
-export type EntityType = "UI_AREA" | "FEATURE" | "INFRA_UNIT" | "API" | "CODE_SYMBOL";
+export type EntityType = "UI_AREA" | "FEATURE" | "INFRA_UNIT" | "API" | "CODE_SYMBOL" | "ISSUE";
 export type EntityStatus = "candidate" | "active" | "deprecated" | "archived";
 export type ContextType =
   | "summary"

@@ -262,3 +262,28 @@ async def test_batch_ingest_source_ref_dedup(admin_client: AsyncClient):
     res1 = await admin_client.post("/ingest/batch", json=payload)
     res2 = await admin_client.post("/ingest/batch", json=payload)
     assert res1.json()["data"]["source_ref_id"] == res2.json()["data"]["source_ref_id"]
+
+
+ISSUE_ENTITY_ID = "2e4f7a1b-8c3d-4e5f-9a0b-1c2d3e4f5a6b"
+
+
+@pytest.mark.asyncio
+async def test_batch_ingest_issue_type(admin_client: AsyncClient):
+    """ISSUE entity type should be ingested successfully."""
+    payload = {
+        "source": SAMPLE_SOURCE,
+        "entities": [
+            _make_entity(
+                ISSUE_ENTITY_ID,
+                "ISSUE",
+                canonical_name="로그인 버튼 비활성화 버그",
+                contexts=[{"context_type": "summary", "body": "특정 조건에서 버튼 비활성화", "language": "ko"}],
+            )
+        ],
+        "relations": [],
+    }
+    res = await admin_client.post("/ingest/batch", json=payload)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ok"] is True
+    assert body["data"]["created"]["entities"] == 1

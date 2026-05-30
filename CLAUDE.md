@@ -88,9 +88,8 @@ docker compose up -d
 
 | UUID | 파일 | 상태 |
 |------|------|------|
-| b42a0b82-cf20-4de0-9af3-a76ca03b2e86 | .completed/ | completed (2026-05-30) — [BUG] 승인 대기 Entity 승인 불가 및 오류 표시 누락 |
 | 5d40172a-2f4b-4224-964a-ad5e7e30c0ed | .completed/ | completed (2026-05-30) — [BUG] project_admin 계정 프로젝트 관리 화면 접근 오류 |
-| da294ef0-436c-4884-85ae-221369c72f97 | instructions/da294ef0-436c-4884-85ae-221369c72f97.md | open — ISSUE EntityType 추가 및 타입별 CSS 색상 정상화 |
+| da294ef0-436c-4884-85ae-221369c72f97 | .completed/ | completed (2026-05-30) — ISSUE EntityType 추가 및 타입별 CSS 색상 정상화 |
 
 ## Git Branch 전략
 
