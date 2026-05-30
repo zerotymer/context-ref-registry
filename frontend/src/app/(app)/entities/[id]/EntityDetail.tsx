@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { updateEntity } from "@/lib/actions/entities";
-import { addAlias } from "@/lib/actions/aliases";
+import { addAlias, deactivateAlias } from "@/lib/actions/aliases";
 import { addContext } from "@/lib/actions/contexts";
 import { addTag, deleteTag } from "@/lib/actions/tags";
 import { EntityStatusBadge } from "@/components/shared/EntityStatusBadge";
@@ -38,6 +38,7 @@ export function EntityDetail({
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("alias");
   const [isPending, startTransition] = useTransition();
+  const [showDeprecateModal, setShowDeprecateModal] = useState(false);
 
   function approve() {
     startTransition(async () => {
@@ -46,11 +47,14 @@ export function EntityDetail({
     });
   }
 
-  function deprecate() {
-    const reason = window.prompt("Deprecation 사유를 입력하세요:");
-    if (reason === null) return;
+  function handleDeprecated(reason: string, replacementId: string) {
+    setShowDeprecateModal(false);
     startTransition(async () => {
-      await updateEntity(entity.id, { status: "deprecated", deprecation_reason: reason });
+      await updateEntity(entity.id, {
+        status: "deprecated",
+        deprecation_reason: reason || undefined,
+        replacement_entity_id: replacementId || undefined,
+      });
       router.refresh();
     });
   }
@@ -88,7 +92,7 @@ export function EntityDetail({
           )}
           {entity.status === "active" && (
             <button
-              onClick={deprecate}
+              onClick={() => setShowDeprecateModal(true)}
               disabled={isPending}
               className="text-xs bg-red-500 text-white rounded px-3 py-1.5 hover:bg-red-600 font-medium disabled:opacity-60"
             >
@@ -126,6 +130,13 @@ export function EntityDetail({
         <div className="bg-white border-b border-gray-100 px-6 py-3 text-gray-600 text-xs shrink-0">
           {entity.description}
         </div>
+      )}
+
+      {showDeprecateModal && (
+        <DeprecateModal
+          onConfirm={handleDeprecated}
+          onCancel={() => setShowDeprecateModal(false)}
+        />
       )}
 
       <div className="flex-1 overflow-hidden flex flex-col">
@@ -276,6 +287,13 @@ function AliasPane({ entityId, aliases }: { entityId: string; aliases: AliasRead
     });
   }
 
+  function handleDeactivate(aliasId: string) {
+    startTransition(async () => {
+      await deactivateAlias(entityId, aliasId);
+      router.refresh();
+    });
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-4">
@@ -289,6 +307,7 @@ function AliasPane({ entityId, aliases }: { entityId: string; aliases: AliasRead
               <th className="text-left px-4 py-2 font-medium">alias</th>
               <th className="text-left px-4 py-2 font-medium">Primary</th>
               <th className="text-left px-4 py-2 font-medium">상태</th>
+              <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -317,11 +336,22 @@ function AliasPane({ entityId, aliases }: { entityId: string; aliases: AliasRead
                     <span className="text-gray-400">inactive</span>
                   )}
                 </td>
+                <td className="px-4 py-2.5 text-right">
+                  {a.is_active && (
+                    <button
+                      onClick={() => handleDeactivate(a.id)}
+                      disabled={isPending}
+                      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40"
+                    >
+                      비활성화
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
             {!aliases.length && (
               <tr>
-                <td colSpan={4} className="py-4 text-center text-gray-400">
+                <td colSpan={5} className="py-4 text-center text-gray-400">
                   등록된 alias 없음
                 </td>
               </tr>
@@ -506,5 +536,61 @@ function RelationPane({ relations }: { relations: RelationRead[] }) {
         </table>
       </div>
     </>
+  );
+}
+
+function DeprecateModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: (reason: string, replacementId: string) => void;
+  onCancel: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [replacementId, setReplacementId] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+        <h2 className="font-semibold text-gray-900 mb-1">Deprecated 처리</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          이 Entity를 deprecated 상태로 변경합니다. 대체 Entity UUID를 지정하면 번들 조회 시 warning에 포함됩니다.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">사유 (선택)</label>
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="deprecation 사유를 입력하세요"
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">대체 Entity UUID (선택)</label>
+            <input
+              value={replacementId}
+              onChange={(e) => setReplacementId(e.target.value)}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-red-400"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50"
+          >
+            취소
+          </button>
+          <button
+            onClick={() => onConfirm(reason, replacementId)}
+            className="px-4 py-2 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 font-medium"
+          >
+            Deprecated 처리
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

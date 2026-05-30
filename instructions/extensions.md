@@ -85,23 +85,29 @@ pgvector는 다음 조건에서 추가한다:
 ## Step 3-3. Review UI
 
 **브랜치**: `feat/ext-review-ui`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
+**참조**: `frontend/src/app/(app)/review/`, `frontend/src/app/(app)/entities/[id]/`
 
-### 목적
+### 작업 목록
 
-사람이 `candidate` 상태의 entity를 검토하고 `active`로 승인하거나 수정할 수 있는 최소 UI.
+- [x] 기술 스택 확정 → Next.js + Tailwind (기존 관리자 콘솔에 통합)
+- [x] entity 목록 + status 필터 → EntityList (`/entities?status=candidate` 등)
+- [x] candidate → active 승인 UI → ReviewCard + EntityDetail 헤더 승인 버튼
+- [x] alias 추가/비활성화 UI
+  — AliasPane에 비활성화 버튼 추가
+  — 백엔드 `DELETE /entities/{id}/aliases/{alias_id}` 엔드포인트 추가
+  — `test_alias_deactivate.py` 6개 테스트 → 모두 통과
+- [x] deprecated 처리 UI (replacement_entity_id 연결)
+  — EntityDetail "Deprecated 처리" 버튼 → DeprecateModal (사유 + 대체 UUID 입력)
+  — `window.prompt` 방식 제거
 
-### 작업 목록 (TBD)
+### 구현 세부사항
 
-- [ ] 기술 스택 확정 (React? 별도 서비스? FastAPI `/admin` 라우터?)
-- [ ] entity 목록 + status 필터
-- [ ] candidate → active 승인 UI
-- [ ] alias 추가/비활성화 UI
-- [ ] deprecated 처리 UI (replacement_entity_id 연결)
+- `AliasRepository.deactivate()`, `AliasService.deactivate_alias()` 신규 추가
+- `DeprecateModal`: replacement_entity_id 지정 가능한 모달 컴포넌트
+- 전체 테스트: **242 passed**
 
-**미결**: UI 기술 스택 확정 필요
-
-**완료일**: —
+**완료일**: 2026-05-30
 
 ---
 

@@ -38,6 +38,27 @@ async def add_alias(
     return OkResponse(data=AliasRead.model_validate(alias))
 
 
+@router.delete(
+    "/entities/{entity_id}/aliases/{alias_id}",
+    status_code=200,
+    response_model=OkResponse[AliasRead],
+)
+async def deactivate_alias(
+    entity_id: uuid.UUID,
+    alias_id: uuid.UUID,
+    session: SessionDep,
+    auth: Annotated[tuple, Depends(get_actor)],
+) -> OkResponse[AliasRead]:
+    user, api_key = auth
+    policy = AccessPolicy(session)
+    user_project_ids = await policy.get_user_project_ids(user.id)
+    entity = await EntityService(session).get_by_id(entity_id)
+    policy.check_can_mutate_entity(entity.project_id, user, user_project_ids)
+    actor = actor_identifier(user, api_key)
+    alias = await AliasService(session).deactivate_alias(entity_id, alias_id, actor=actor)
+    return OkResponse(data=AliasRead.model_validate(alias))
+
+
 @router.get("/entities/{entity_id}/aliases", response_model=OkResponse[list[AliasRead]])
 async def list_aliases(
     entity_id: uuid.UUID,

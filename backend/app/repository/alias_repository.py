@@ -34,6 +34,21 @@ class AliasRepository:
         )
         return list(result.scalars().all())
 
+    async def deactivate(self, entity_id: uuid.UUID, alias_id: uuid.UUID) -> EntityAlias | None:
+        result = await self._session.execute(
+            select(EntityAlias).where(
+                EntityAlias.id == alias_id,
+                EntityAlias.entity_id == entity_id,
+                EntityAlias.is_active == True,  # noqa: E712
+            )
+        )
+        alias = result.scalar_one_or_none()
+        if alias is None:
+            return None
+        alias.is_active = False
+        await self._session.flush()
+        return alias
+
     async def resolve(
         self,
         alias: str,
