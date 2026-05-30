@@ -39,9 +39,9 @@ Phase 3   — 확장 기능 (pgvector, Revision, Export)    ✅ 완료 (2026-05-
 
 | 완료일 | UUID | 제목 |
 |--------|------|------|
-| 2026-05-30 | b42a0b82-cf20-4de0-9af3-a76ca03b2e86 | [BUG] 승인 대기 Entity 승인 불가 및 오류 표시 누락 |
 | 2026-05-30 | 5d40172a-2f4b-4224-964a-ad5e7e30c0ed | [BUG] project_admin 계정 프로젝트 관리 화면 접근 오류 |
 | 2026-05-30 | 6dc18568-6873-4524-a88c-5f5e70b2b6db | Project ID 제약조건 확장 (3-50자, A-Za-z0-9_-#^@ 허용) |
+| 2026-05-30 | da294ef0-436c-4884-85ae-221369c72f97 | ISSUE EntityType 추가 및 타입별 CSS 색상 정상화 |
 
 ---
 
@@ -76,6 +76,7 @@ Phase 3   — 확장 기능 (pgvector, Revision, Export)    ✅ 완료 (2026-05-
 | 5d40172a | .completed/ | bugfix | `completed` 2026-05-30 |
 | 6dc18568 | .completed/ | enhancement | `completed` 2026-05-30 |
 | 03080220 | .completed/ | Phase 3 | `completed` 2026-05-30 |
+| da294ef0 | .completed/ | enhancement | `completed` 2026-05-30 |
 
 > 완료된 지침 세부 내용은 `instructions/.completed/{uuid}.md`에 보관.
 

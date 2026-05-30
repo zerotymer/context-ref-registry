@@ -79,7 +79,7 @@ uvicorn app.main:app --reload --port 8000
 
 # 테스트 (실제 PostgreSQL 필요)
 .venv/bin/pytest tests/ -q
-# 현재: 271 passed
+# 현재: 286 passed
 ```
 
 ### Frontend
@@ -160,11 +160,11 @@ backend/
     domain/       # 모델·스키마·Enum
     mcp/          # MCP 서버
     auth/         # JWT·API Key 인증
-  tests/          # 271 테스트
+  tests/          # 286 테스트
   alembic/        # DB 마이그레이션 (migrations/versions/)
 frontend/         # Next.js 관리자 콘솔 (BFF 패턴)
-ci/               # PR 검증 스크립트
-.github/workflows/ # PR 검증 CI workflow
+ci/               # PR 검증 스크립트 (validate-pr-refs.py)
+.github/workflows/ # PR 검증 CI workflow (pr-validate-refs.yml)
 docs/             # 설계 문서 00~11
 instructions/     # 구현 지침 파일
 ```
