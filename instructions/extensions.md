@@ -143,8 +143,9 @@ pgvector는 다음 조건에서 추가한다:
 
 ## Step 3-5. GitHub PR 검증
 
-**브랜치**: `feat/ext-pr-validation`
-**상태**: `[ ]` pending
+**브랜치**: `feat/ext-agents-export`
+**상태**: `[x]` completed
+**참조**: `backend/app/api/validate.py`, `backend/app/service/validate_service.py`, `ci/validate-pr-refs.py`
 
 ### 목적
 
@@ -152,12 +153,21 @@ PR diff에서 entity UUID/alias 참조를 추출하여 레지스트리 유효성
 
 ### 작업 목록
 
-- [ ] GitHub webhook 또는 CI 스크립트 연동
-- [ ] PR 코드/커밋 메시지에서 UUID/alias 패턴 추출
-- [ ] `POST /validate-references` 또는 MCP `validate_references` 연동
-- [ ] 결과를 PR comment로 게시
+- [x] GitHub webhook 또는 CI 스크립트 연동 — `.github/workflows/pr-validate-refs.yml`
+- [x] PR 코드/커밋 메시지에서 UUID/alias 패턴 추출 — `ci/validate-pr-refs.py` (UUID regex + `@ref:`/`@entity:` annotation)
+- [x] `POST /validate-references` REST 엔드포인트 추가
+- [x] 결과를 PR comment로 게시 — GitHub API 연동
 
-**완료일**: —
+### 구현 세부사항
+
+- `ValidateService.validate_references()` — UUID/alias 일괄 검증 서비스 (MCP `validate_references` 도구도 이 서비스 재사용)
+- `POST /validate-references` — `{"references": [...]}` 요청, `{valid, resolved, ambiguous, missing}` 응답
+- `ci/validate-pr-refs.py` — git diff → UUID/alias 추출 → API 호출 → Markdown 보고서 출력 + GitHub PR comment 게시
+- `.github/workflows/pr-validate-refs.yml` — PR 이벤트 시 자동 실행, `REGISTRY_URL`/`REGISTRY_API_KEY` 시크릿으로 설정
+- 추출 패턴: UUID (`[0-9a-f]{8}-…`) + `@ref:alias` / `@entity:alias` 어노테이션
+- 테스트: `test_validate_references_api.py` 9개 → 전체 260 passed
+
+**완료일**: 2026-05-30
 
 ---
 

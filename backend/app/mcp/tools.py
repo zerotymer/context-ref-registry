@@ -15,6 +15,7 @@ from app.service.alias_service import AliasService
 from app.service.bundle_service import BundleService
 from app.service.entity_service import EntityService
 from app.service.relation_service import RelationService
+from app.service.validate_service import ValidateService
 
 
 def _entity_summary(entity: Any) -> dict:
@@ -371,42 +372,12 @@ async def get_entity_history(id: str, limit: int = 20) -> dict:
     )
 )
 async def validate_references(references: list[str]) -> dict:
-    resolved = []
-    ambiguous = []
-    missing = []
-
     async with async_session_factory() as session:
-        entity_repo = EntityRepository(session)
-        alias_repo = AliasRepository(session)
-
-        for ref in references:
-            # Try UUID first
-            try:
-                uid = uuid.UUID(ref)
-                entity = await entity_repo.get_by_id(uid)
-                if entity:
-                    resolved.append({"input": ref, "status": "resolved", "id": str(entity.id)})
-                else:
-                    missing.append(ref)
-                continue
-            except ValueError:
-                pass
-
-            # Try as alias
-            entities = await alias_repo.resolve(ref)
-            if not entities:
-                missing.append(ref)
-            elif len(entities) == 1:
-                resolved.append({"input": ref, "status": "resolved", "id": str(entities[0].id)})
-            else:
-                ambiguous.append({
-                    "input": ref,
-                    "candidates": [str(e.id) for e in entities],
-                })
+        result = await ValidateService(session).validate_references(references)
 
     return {
-        "valid": len(ambiguous) == 0 and len(missing) == 0,
-        "resolved": resolved,
-        "ambiguous": ambiguous,
-        "missing": missing,
+        "valid": result.valid,
+        "resolved": result.resolved,
+        "ambiguous": result.ambiguous,
+        "missing": result.missing,
     }
