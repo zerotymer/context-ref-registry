@@ -88,7 +88,7 @@ docker compose up -d
 
 | UUID | 파일 | 상태 |
 |------|------|------|
-| 03080220-3b52-4d28-a79d-e2d698e5480f | instructions/extensions.md | pending |
+| 03080220-3b52-4d28-a79d-e2d698e5480f | .completed/ | completed (2026-05-30) |
 | 1285a04e-652a-4b95-a3a9-160dfc897ef2 | .completed/ | completed (2026-05-29) |
 | 0ac0d3e0-f558-4b6a-9aed-3b09ad1e953e | .completed/ | completed (2026-05-29) |
 | ce6d92bf-2c2d-4944-adb3-1089a6530e56 | .completed/ | completed (2026-05-29) |
