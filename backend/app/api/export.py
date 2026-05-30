@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Annotated
 
+import yaml
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
@@ -32,3 +34,22 @@ async def export_agents_md(
         language=language,
     )
     return md
+
+
+@router.get("/openapi")
+async def export_openapi(
+    session: SessionDep,
+    format: Annotated[str, Query(pattern="^(json|yaml)$")] = "json",
+    include_deprecated: bool = False,
+    title: str = "Context Registry — API Entities",
+    version: str = "generated",
+) -> Response:
+    spec = await ExportService(session).generate_openapi(
+        include_deprecated=include_deprecated,
+        title=title,
+        version=version,
+    )
+    if format == "yaml":
+        content = yaml.dump(spec, allow_unicode=True, sort_keys=False)
+        return Response(content=content, media_type="application/yaml")
+    return Response(content=json.dumps(spec, ensure_ascii=False, indent=2), media_type="application/json")

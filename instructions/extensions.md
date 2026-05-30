@@ -174,7 +174,8 @@ PR diff에서 entity UUID/alias 참조를 추출하여 레지스트리 유효성
 ## Step 3-6. OpenAPI Export
 
 **브랜치**: `feat/ext-openapi-export`
-**상태**: `[ ]` pending
+**상태**: `[x]` completed
+**참조**: `backend/app/api/export.py`, `backend/app/service/export_service.py`
 
 ### 목적
 
@@ -182,11 +183,22 @@ PR diff에서 entity UUID/alias 참조를 추출하여 레지스트리 유효성
 
 ### 작업 목록
 
-- [ ] `GET /export/openapi` 엔드포인트
-- [ ] API type entity → OpenAPI path 변환 규칙 정의
-- [ ] context body → description 매핑
+- [x] `GET /export/openapi` 엔드포인트
+- [x] API type entity → OpenAPI path 변환 규칙 정의
+- [x] context body → description 매핑
 
-**완료일**: —
+### 구현 세부사항
+
+- `ExportService.generate_openapi()` — API type entity 전체 조회 후 OpenAPI 3.1.0 spec 생성
+- 경로/메서드 추출 우선순위: ① `entity_metadata[api].method/path` ② canonical_name 파싱 (`METHOD /path`) ③ slug fallback (GET)
+- context 매핑: `summary` → operation `summary`, 나머지 → operation `description` (type 헤더 포함)
+- deprecated entity: `include_deprecated=false`(기본) 시 제외, `true` 시 포함 + `deprecated: true` 마킹
+- `format=json`(기본) / `format=yaml` 선택 가능
+- `?title=`, `?version=` 커스텀 info 지원
+- 테스트: `test_export_openapi.py` 11개 → 전체 271 passed
+- PyYAML 의존성 추가 (`pyproject.toml`)
+
+**완료일**: 2026-05-30
 
 ---
 
