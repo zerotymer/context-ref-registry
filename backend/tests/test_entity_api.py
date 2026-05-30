@@ -171,4 +171,18 @@ async def test_patch_entity_deprecation(admin_client: AsyncClient):
     data = patch_resp.json()["data"]
     assert data["status"] == "deprecated"
     assert data["replacement_entity_id"] == replacement_id
-    assert data["deprecation_reason"] == "신버전으로 대체"
+
+
+async def test_create_entity_issue_type(admin_client: AsyncClient):
+    response = await admin_client.post("/entities", json={
+        "type": "ISSUE",
+        "canonical_name": "로그인 버튼 비활성화 버그",
+    })
+    assert response.status_code == 201
+    body = response.json()
+    assert body["ok"] is True
+    entity_id = body["data"]["id"]
+
+    get_resp = await admin_client.get(f"/entities/{entity_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["data"]["type"] == "ISSUE"

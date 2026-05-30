@@ -13,3 +13,7 @@ export async function addAlias(entityId: string, body: AliasCreate): Promise<Ali
     body: JSON.stringify(body),
   });
 }
+
+export async function deactivateAlias(entityId: string, aliasId: string): Promise<AliasRead> {
+  return backendFetch(`/entities/${entityId}/aliases/${aliasId}`, { method: "DELETE" });
+}

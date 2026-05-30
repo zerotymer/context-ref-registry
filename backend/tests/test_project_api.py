@@ -61,17 +61,37 @@ async def test_create_project_unauthenticated_returns_401(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_create_project_invalid_id_returns_422(admin_client: AsyncClient):
-    # ID too short
+    # ID too short (2 chars)
     resp = await admin_client.post("/projects", json={"id": "AB", "alias": "alias"})
     assert resp.status_code == 422
 
-    # ID with numbers
-    resp2 = await admin_client.post("/projects", json={"id": "Alpha123", "alias": "alias"})
+    # ID too long (51 chars)
+    resp2 = await admin_client.post("/projects", json={"id": "A" * 51, "alias": "alias"})
     assert resp2.status_code == 422
 
-    # ID too long
-    resp3 = await admin_client.post("/projects", json={"id": "A" * 21, "alias": "alias"})
+    # ID with disallowed characters (space, !, %)
+    resp3 = await admin_client.post("/projects", json={"id": "no space", "alias": "alias"})
     assert resp3.status_code == 422
+
+    resp4 = await admin_client.post("/projects", json={"id": "has!bang", "alias": "alias"})
+    assert resp4.status_code == 422
+
+    resp5 = await admin_client.post("/projects", json={"id": "pct%25", "alias": "alias"})
+    assert resp5.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("project_id", [
+    "my-project",
+    "team#sub",
+    "v2_api@corp",
+    "ABC123",
+    "a^b",
+    "my-project_v2#prod@api",
+])
+async def test_create_project_valid_extended_ids(admin_client: AsyncClient, project_id: str):
+    resp = await admin_client.post("/projects", json={"id": project_id, "alias": "alias"})
+    assert resp.status_code == 201, f"Expected 201 for id={project_id!r}, got {resp.status_code}: {resp.text}"
 
 
 @pytest.mark.asyncio

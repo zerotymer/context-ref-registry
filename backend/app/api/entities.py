@@ -20,6 +20,7 @@ from app.domain.schemas import (
     EntityRead,
     EntityUpdate,
     OkResponse,
+    RevisionCompareResponse,
     TagRead,
 )
 from app.service.entity_service import EntityService
@@ -184,3 +185,19 @@ async def get_entity_history_revision(
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
     history = await EntityService(session).get_history_revision(entity_id, revision_no)
     return OkResponse(data=EntityHistoryRead.model_validate(history))
+
+
+@router.get("/{entity_id}/history/{rev_a}/compare/{rev_b}", response_model=OkResponse[RevisionCompareResponse])
+async def compare_entity_history(
+    entity_id: uuid.UUID,
+    rev_a: int,
+    rev_b: int,
+    session: SessionDep,
+    user: Annotated[UserAccount | None, Depends(get_optional_user)],
+) -> OkResponse[RevisionCompareResponse]:
+    policy = AccessPolicy(session)
+    visible_ids = await policy.get_visible_project_ids(user)
+    entity = await EntityService(session).get_by_id(entity_id)
+    policy.check_can_view_entity(entity.project_id, user, visible_ids)
+    result = await EntityService(session).compare_revisions(entity_id, rev_a, rev_b)
+    return OkResponse(data=result)

@@ -9,7 +9,9 @@ from app.api.auth import router as auth_router
 from app.api.bundles import router as bundles_router
 from app.api.contexts import router as contexts_router
 from app.api.entities import router as entities_router
+from app.api.export import router as export_router
 from app.api.ingest import router as ingest_router
+from app.api.validate import router as validate_router
 from app.api.projects import router as projects_router
 from app.api.relations import router as relations_router
 from app.api.search import router as search_router
@@ -48,6 +50,8 @@ app.include_router(ingest_router)
 app.include_router(bundles_router)
 app.include_router(search_router)
 app.include_router(tags_router)
+app.include_router(export_router)
+app.include_router(validate_router)
 
 
 @app.get("/health")

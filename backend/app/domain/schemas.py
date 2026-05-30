@@ -118,6 +118,19 @@ class EntityHistoryListResponse(BaseModel):
     total: int
 
 
+class RevisionDiffField(BaseModel):
+    before: Any
+    after: Any
+    changed: bool
+
+
+class RevisionCompareResponse(BaseModel):
+    entity_id: uuid.UUID
+    rev_a: EntityHistoryRead
+    rev_b: EntityHistoryRead
+    diff: dict[str, RevisionDiffField]
+
+
 # ---------------------------------------------------------------------------
 # Alias
 # ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ export const ENTITY_TYPES: EntityType[] = [
   "INFRA_UNIT",
   "API",
   "CODE_SYMBOL",
+  "ISSUE",
 ];
 
 export const ENTITY_STATUSES: EntityStatus[] = [
@@ -44,6 +45,7 @@ export const ENTITY_TYPE_COLORS: Record<EntityType, string> = {
   INFRA_UNIT: "bg-teal-50 text-teal-700",
   API: "bg-orange-50 text-orange-700",
   CODE_SYMBOL: "bg-sky-50 text-sky-700",
+  ISSUE: "bg-rose-50 text-rose-700",
 };
 
 export const ENTITY_TYPE_BAR_COLORS: Record<EntityType, string> = {
@@ -52,6 +54,7 @@ export const ENTITY_TYPE_BAR_COLORS: Record<EntityType, string> = {
   INFRA_UNIT: "bg-teal-400",
   API: "bg-orange-400",
   CODE_SYMBOL: "bg-sky-400",
+  ISSUE: "bg-rose-400",
 };
 
 export const CONTEXT_TYPE_COLORS: Record<ContextType, string> = {

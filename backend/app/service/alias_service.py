@@ -45,6 +45,25 @@ class AliasService:
         )
         return alias
 
+    async def deactivate_alias(
+        self, entity_id: uuid.UUID, alias_id: uuid.UUID, actor: str | None = None
+    ) -> EntityAlias:
+        alias = await self._alias_repo.deactivate(entity_id, alias_id)
+        if alias is None:
+            raise RegistryError(
+                code="ALIAS_NOT_FOUND",
+                message=f"Active alias {alias_id} not found for entity {entity_id}",
+                status_code=404,
+            )
+        await self._audit.log(
+            actor=actor or "system",
+            action="alias_deactivate",
+            target_type="alias",
+            target_id=str(alias.id),
+            after_snapshot={"id": str(alias.id), "is_active": False},
+        )
+        return alias
+
     async def list_aliases(self, entity_id: uuid.UUID) -> list[EntityAlias]:
         entity = await self._entity_repo.get_by_id(entity_id)
         if entity is None:

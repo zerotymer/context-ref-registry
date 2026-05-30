@@ -63,6 +63,7 @@ export default async function DashboardPage() {
     INFRA_UNIT: 0,
     API: 0,
     CODE_SYMBOL: 0,
+    ISSUE: 0,
   };
   allData.items.forEach((e) => {
     typeCounts[e.type] = (typeCounts[e.type] ?? 0) + 1;
