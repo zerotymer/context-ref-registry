@@ -28,7 +28,7 @@ Phase 1.8 — Tag UI                                    ✅ 완료 (2026-05-28)
 Phase 2   — 인증 시스템 (JWT, API Key, 프로젝트 권한)  ✅ 완료 (2026-05-29)
 Phase 2   — 운영 준비 (보안·감사로그·백업·모니터링)    ✅ 완료 (2026-05-29)
 Phase 2.3 — 관리자 콘솔 UI & 인증 고급                ✅ 완료 (2026-05-29)
-Phase 3   — 확장 기능 (pgvector, Revision, Export)    ← 다음
+Phase 3   — 확장 기능 (pgvector, Revision, Export)    ✅ 완료 (2026-05-30)
 ```
 
 ---
@@ -39,45 +39,43 @@ Phase 3   — 확장 기능 (pgvector, Revision, Export)    ← 다음
 
 | 완료일 | UUID | 제목 |
 |--------|------|------|
-| 2026-05-29 | 0ac0d3e0-f558-4b6a-9aed-3b09ad1e953e | 관리자 콘솔 UI — 로그인·사용자·프로젝트·멤버 관리 화면 |
-| 2026-05-29 | 1285a04e-652a-4b95-a3a9-160dfc897ef2 | 인증 시스템 3 — 관리자·프로젝트 관리자 기능 |
-| 2026-05-29 | ce6d92bf-2c2d-4944-adb3-1089a6530e56 | 운영 준비 — 보안 & 모니터링 |
+| 2026-05-30 | b42a0b82-cf20-4de0-9af3-a76ca03b2e86 | [BUG] 승인 대기 Entity 승인 불가 및 오류 표시 누락 |
+| 2026-05-30 | 5d40172a-2f4b-4224-964a-ad5e7e30c0ed | [BUG] project_admin 계정 프로젝트 관리 화면 접근 오류 |
+| 2026-05-30 | 6dc18568-6873-4524-a88c-5f5e70b2b6db | Project ID 제약조건 확장 (3-50자, A-Za-z0-9_-#^@ 허용) |
 
 ---
 
-## Phase 3 — 확장 기능 (진행 예정)
+## Phase 3 — 확장 기능 ✅ 완료 (2026-05-30)
 
 **목표**: 검색 고도화, 이력 추적, 외부 연동
 
 | 순서 | UUID | 지침 파일 | 상태 |
 |------|------|-----------|------|
-| 3 | 03080220 | extensions.md | `pending` |
+| 3 | 03080220 | .completed/03080220-3b52-4d28-a79d-e2d698e5480f.md | `completed` 2026-05-30 |
 
-### 포함 범위 (`docs/08` 기반)
+### 완료 범위
 
 ```
-3-1   pgvector semantic search    context_embedding 테이블 + 벡터 검색
-3-2   entity_revision             변경 이력 추적 테이블
-3-3   Review UI                   entity/alias/context 검토 화면
-3-4   AGENTS.md export            에이전트용 context 내보내기
-3-5   GitHub PR 검증              PR 내 entity 참조 유효성 자동 확인
-3-6   OpenAPI export              레지스트리 스펙 내보내기
+3-1   pgvector semantic search    ✅ context_embedding + HNSW 인덱스 + MCP 연동
+3-2   entity_revision             ✅ entity_history 테이블 + 비교 API
+3-3   Review UI                   ✅ alias 비활성화 + deprecated 처리 모달
+3-4   AGENTS.md export            ✅ GET /export/agents-md — 에이전트용 컨텍스트 내보내기
+3-5   GitHub PR 검증              ✅ POST /validate-references + CI workflow + validate-pr-refs.py
+3-6   OpenAPI export              ✅ GET /export/openapi — JSON/YAML 형식 지원
 ```
-
-전제조건: Phase 2 완료 ✅ (이미 충족)
 
 ---
 
 ## 지침 파일 현황
 
-> 완료 지침은 최근 3건만 표시. 전체 이력은 `instructions/instructions.log` 참고.
+> 최근 4건 표시. 전체 이력은 `instructions/instructions.log` 참고.
 
-| UUID | 파일 | Phase | 상태 |
-|------|------|-------|------|
-| 03080220 | extensions.md | 3 | `pending` |
-| 0ac0d3e0 | .completed/ | 2.3a | `completed` 2026-05-29 |
-| 1285a04e | .completed/ | 2.3b | `completed` 2026-05-29 |
-| ce6d92bf | .completed/ | 2 | `completed` 2026-05-29 |
+| UUID | 파일 | 분류 | 상태 |
+|------|------|------|------|
+| b42a0b82 | .completed/ | bugfix | `completed` 2026-05-30 |
+| 5d40172a | .completed/ | bugfix | `completed` 2026-05-30 |
+| 6dc18568 | .completed/ | enhancement | `completed` 2026-05-30 |
+| 03080220 | .completed/ | Phase 3 | `completed` 2026-05-30 |
 
 > 완료된 지침 세부 내용은 `instructions/.completed/{uuid}.md`에 보관.
 

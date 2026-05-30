@@ -4,13 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { updateEntity } from "@/lib/actions/entities";
+import { ApiError } from "@/lib/api/client";
 import { EntityTypeBadge } from "@/components/shared/EntityTypeBadge";
 import { ConfidenceBar } from "@/components/shared/ConfidenceBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { CONTEXT_TYPE_COLORS } from "@/lib/constants";
 import type { ReviewItem } from "./page";
 
-export function ReviewList({ items }: { items: ReviewItem[] }) {
+export function ReviewList({ items, canApprove }: { items: ReviewItem[]; canApprove: boolean }) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set<string>());
   const visible = items.filter((i) => !dismissed.has(i.entity.id));
 
@@ -31,6 +32,7 @@ export function ReviewList({ items }: { items: ReviewItem[] }) {
           <ReviewCard
             key={item.entity.id}
             item={item}
+            canApprove={canApprove}
             onDismiss={() =>
               setDismissed((prev) => { const next = new Set<string>(prev); next.add(item.entity.id); return next; })
             }
@@ -44,30 +46,51 @@ export function ReviewList({ items }: { items: ReviewItem[] }) {
 
 function ReviewCard({
   item,
+  canApprove,
   onDismiss,
 }: {
   item: ReviewItem;
+  canApprove: boolean;
   onDismiss: () => void;
 }) {
   const { entity, aliases, contexts, relations } = item;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const isLowConfidence = entity.confidence < 0.7;
   const summary = contexts.find((c) => c.context_type === "summary");
 
   function approve() {
-    onDismiss();
+    setError(null);
     startTransition(async () => {
-      await updateEntity(entity.id, { status: "active" });
-      router.refresh();
+      try {
+        await updateEntity(entity.id, { status: "active" });
+        onDismiss();
+        router.refresh();
+      } catch (err: unknown) {
+        if (err instanceof ApiError) {
+          setError(`[${err.code}] ${err.message}`);
+        } else {
+          setError(err instanceof Error ? err.message : "승인에 실패했습니다.");
+        }
+      }
     });
   }
 
   function archive() {
-    onDismiss();
+    setError(null);
     startTransition(async () => {
-      await updateEntity(entity.id, { status: "archived" });
-      router.refresh();
+      try {
+        await updateEntity(entity.id, { status: "archived" });
+        onDismiss();
+        router.refresh();
+      } catch (err: unknown) {
+        if (err instanceof ApiError) {
+          setError(`[${err.code}] ${err.message}`);
+        } else {
+          setError(err instanceof Error ? err.message : "보류 처리에 실패했습니다.");
+        }
+      }
     });
   }
 
@@ -146,13 +169,19 @@ function ReviewCard({
             </Link>
             <button
               onClick={approve}
-              disabled={isPending}
-              className="text-xs px-4 py-1.5 rounded-md bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-60"
+              disabled={isPending || !canApprove}
+              title={!canApprove ? "admin 권한이 필요합니다" : undefined}
+              className="text-xs px-4 py-1.5 rounded-md bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               ✓ Active 승인
             </button>
           </div>
         </div>
+        {error && (
+          <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );

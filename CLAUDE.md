@@ -88,9 +88,9 @@ docker compose up -d
 
 | UUID | 파일 | 상태 |
 |------|------|------|
+| b42a0b82-cf20-4de0-9af3-a76ca03b2e86 | .completed/ | completed (2026-05-30) — [BUG] 승인 대기 Entity 승인 불가 및 오류 표시 누락 |
+| 5d40172a-2f4b-4224-964a-ad5e7e30c0ed | .completed/ | completed (2026-05-30) — [BUG] project_admin 계정 프로젝트 관리 화면 접근 오류 |
 | 6dc18568-6873-4524-a88c-5f5e70b2b6db | .completed/ | completed (2026-05-30) — Project ID 제약조건 확장 |
-| 03080220-3b52-4d28-a79d-e2d698e5480f | .completed/ | completed (2026-05-30) — 확장 기능 전체 |
-| 1285a04e-652a-4b95-a3a9-160dfc897ef2 | .completed/ | completed (2026-05-29) |
 
 ## Git Branch 전략
 
