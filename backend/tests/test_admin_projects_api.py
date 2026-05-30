@@ -94,8 +94,17 @@ async def test_create_project_duplicate(admin_client: AsyncClient):
 
 
 async def test_create_project_invalid_id(admin_client: AsyncClient):
-    resp = await admin_client.post("/admin/projects", json={"id": "1-invalid", "alias": "X"})
+    # too short
+    resp = await admin_client.post("/admin/projects", json={"id": "AB", "alias": "X"})
     assert resp.status_code == 422
+
+    # disallowed character (space)
+    resp2 = await admin_client.post("/admin/projects", json={"id": "no space", "alias": "X"})
+    assert resp2.status_code == 422
+
+    # disallowed character (!)
+    resp3 = await admin_client.post("/admin/projects", json={"id": "bad!id", "alias": "X"})
+    assert resp3.status_code == 422
 
 
 # ---------------------------------------------------------------------------

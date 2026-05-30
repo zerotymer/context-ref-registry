@@ -40,3 +40,7 @@ ce6d92bf-2c2d-4944-adb3-1089a6530e56 | 운영 준비 — 보안 & 모니터링 (
 03080220-3b52-4d28-a79d-e2d698e5480f | 확장 기능 Step 3-5 — GitHub PR 검증 | 2026-05-30T00:00:00+09:00 | step_completed
 03080220-3b52-4d28-a79d-e2d698e5480f | 확장 기능 Step 3-6 — OpenAPI Export | 2026-05-30T00:00:00+09:00 | step_completed
 03080220-3b52-4d28-a79d-e2d698e5480f | 확장 기능 — pgvector, Revision, Export | 2026-05-30T00:00:00+09:00 | completed
+6dc18568-6873-4524-a88c-5f5e70b2b6db | fix-project-id-constraints — Project ID 제약조건 확장 | 2026-05-30T00:00:00+09:00 | created
+6dc18568-6873-4524-a88c-5f5e70b2b6db | Project ID 제약조건 확장 | 2026-05-30T03:40:00+09:00 | completed
+5d40172a-2f4b-4224-964a-ad5e7e30c0ed | bug-project-admin-access — project_admin 계정 프로젝트 관리 화면 접근 오류 | 2026-05-30T00:00:00+09:00 | created
+b42a0b82-cf20-4de0-9af3-a76ca03b2e86 | bug-review-approval — 승인 대기 Entity 승인 불가 및 오류 표시 누락 | 2026-05-30T00:00:00+09:00 | created
