@@ -7,11 +7,13 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_admin
+from app.auth.dependencies import get_current_admin, get_current_user
 from app.db.session import get_session
 from app.domain.models import UserAccount
 from app.domain.schemas import OkResponse
+from app.exceptions import RegistryError
 from app.repository.audit_log_repository import AuditLogRepository
+from app.repository.project_member_repository import ProjectMemberRepository
 from app.repository.project_repository import ProjectRepository
 from app.service.project_service import ProjectService
 
@@ -72,11 +74,22 @@ class MemberRoleUpdateRequest(BaseModel):
 @router.get("", response_model=OkResponse[list[ProjectRead]])
 async def list_projects(
     session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
+    user: Annotated[UserAccount, Depends(get_current_user)],
     is_active: bool | None = Query(default=None),
     search: str | None = Query(default=None),
 ) -> OkResponse[list[ProjectRead]]:
-    projects = await ProjectService(session).list_all_projects(is_active=is_active, search=search)
+    if user.role not in ("admin", "project_admin"):
+        raise RegistryError("FORBIDDEN", "Admin or project_admin required", status_code=403)
+
+    all_projects = await ProjectService(session).list_all_projects(is_active=is_active, search=search)
+
+    if user.role == "admin":
+        projects = all_projects
+    else:
+        member_ids = await ProjectMemberRepository(session).get_project_ids_for_user(user.id)
+        member_id_set = set(member_ids)
+        projects = [p for p in all_projects if p.id in member_id_set]
+
     return OkResponse(data=[ProjectRead.model_validate(p) for p in projects])
 
 
@@ -114,7 +127,6 @@ async def update_project(
 
     existing = await ProjectRepository(session).get_by_id(project_id)
     if existing is None:
-        from app.exceptions import RegistryError
         raise RegistryError("NOT_FOUND", f"Project '{project_id}' not found", status_code=404)
 
     before_snap = {"alias": existing.alias, "description": existing.description, "is_active": existing.is_active}
@@ -147,8 +159,14 @@ async def update_project(
 async def list_members(
     project_id: str,
     session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
+    user: Annotated[UserAccount, Depends(get_current_user)],
 ) -> OkResponse[list[MemberRead]]:
+    if user.role not in ("admin", "project_admin"):
+        raise RegistryError("FORBIDDEN", "Admin or project_admin required", status_code=403)
+    if user.role == "project_admin":
+        member_ids = await ProjectMemberRepository(session).get_project_ids_for_user(user.id)
+        if project_id not in member_ids:
+            raise RegistryError("FORBIDDEN", "Not a member of this project", status_code=403)
     members = await ProjectService(session).list_members(project_id)
     return OkResponse(data=[MemberRead.model_validate(m) for m in members])
 
