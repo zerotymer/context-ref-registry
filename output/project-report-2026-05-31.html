@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Context Ref Registry — 프로젝트 현황 보고서 (2026-05-31)</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #21253a;
+      --border: #2e3350;
+      --accent: #6c8ef5;
+      --accent2: #4ade80;
+      --accent3: #f59e0b;
+      --accent4: #f87171;
+      --text: #e2e8f0;
+      --text-muted: #8892b0;
+      --text-dim: #4a5568;
+      --badge-green-bg: #14532d;
+      --badge-green: #4ade80;
+      --badge-blue-bg: #1e3a5f;
+      --badge-blue: #60a5fa;
+      --badge-purple-bg: #3b2a5c;
+      --badge-purple: #c084fc;
+      --badge-yellow-bg: #451a03;
+      --badge-yellow: #fbbf24;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+      padding: 40px 20px 80px;
+    }
+
+    /* ── 레이아웃 ── */
+    .wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ── 헤더 ── */
+    .report-header {
+      background: linear-gradient(135deg, #1e2540 0%, #141829 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 40px;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .report-header::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(108,142,245,.18) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .report-header .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+    .badge.green  { background: var(--badge-green-bg);  color: var(--badge-green); }
+    .badge.blue   { background: var(--badge-blue-bg);   color: var(--badge-blue); }
+    .badge.purple { background: var(--badge-purple-bg); color: var(--badge-purple); }
+    .badge.yellow { background: var(--badge-yellow-bg); color: var(--badge-yellow); }
+
+    .report-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      letter-spacing: -.3px;
+    }
+    .report-header p {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .report-header .meta {
+      display: flex;
+      gap: 24px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .meta-item .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
+    .meta-item .value { font-size: 15px; font-weight: 600; color: var(--accent); }
+
+    /* ── 섹션 ── */
+    section { margin-bottom: 32px; }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2 .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      background: var(--surface2);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin: 18px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    /* ── 카드 그리드 ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card .card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .card .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-green  { background: var(--badge-green); box-shadow: 0 0 6px var(--badge-green); }
+    .dot-blue   { background: var(--badge-blue); }
+    .dot-yellow { background: var(--badge-yellow); }
+
+    /* ── 테이블 ── */
+    .tbl-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    thead tr {
+      background: var(--surface2);
+    }
+    th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td {
+      padding: 9px 14px;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: top;
+    }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 11.5px;
+      color: #93c5fd;
+    }
+
+    .method {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      margin-right: 4px;
+    }
+    .method.GET    { background: #0f3d2e; color: #4ade80; }
+    .method.POST   { background: #1e3a5f; color: #60a5fa; }
+    .method.PATCH  { background: #3b2a1a; color: #fb923c; }
+    .method.PUT    { background: #2d1e3b; color: #c084fc; }
+    .method.DELETE { background: #3b1a1a; color: #f87171; }
+
+    /* ── 타임라인 ── */
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px; top: 6px; bottom: 6px;
+      width: 2px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+    .tl-item {
+      position: relative;
+      margin-bottom: 18px;
+    }
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: -24px; top: 7px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+    .tl-item.completed::before { background: var(--badge-green); }
+    .tl-item .tl-date {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .tl-item .tl-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .tl-item .tl-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── 아키텍처 다이어그램 ── */
+    .arch-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: pre;
+      overflow-x: auto;
+      line-height: 1.9;
+    }
+    .arch-box .hl  { color: var(--accent); }
+    .arch-box .hl2 { color: var(--badge-green); }
+    .arch-box .hl3 { color: var(--badge-yellow); }
+
+    /* ── stat row ── */
+    .stat-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 22px;
+      min-width: 130px;
+      flex: 1;
+    }
+    .stat-card .num {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+    .stat-card .num.green  { color: var(--badge-green); }
+    .stat-card .num.yellow { color: var(--badge-yellow); }
+    .stat-card .lbl {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-top: 4px;
+    }
+
+    /* ── footer ── */
+    footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    @media (max-width: 640px) {
+      .report-header { padding: 24px 20px; }
+      .report-header h1 { font-size: 20px; }
+      .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- ── 헤더 ── -->
+  <div class="report-header">
+    <div class="badge-row">
+      <span class="badge green">✓ All Complete</span>
+      <span class="badge blue">FastAPI · PostgreSQL · Next.js</span>
+      <span class="badge purple">MCP Read-Only</span>
+      <span class="badge yellow">286 Tests Passed</span>
+    </div>
+    <h1>Context Ref Registry — 프로젝트 현황 보고서</h1>
+    <p>LLM Reference Registry · API 개발 및 인증 시스템 종합 현황</p>
+    <div class="meta">
+      <div class="meta-item">
+        <span class="label">보고일</span>
+        <span class="value">2026-05-31</span>
+      </div>
+      <div class="meta-item">
+        <span class="label">담당자</span>
+        <span class="value">zerotymer</span>
+      </div>
+      <div class="meta-item">
+        <span class="label">테스트</span>
+        <span class="value" style="color:var(--badge-green)">286 Passed</span>
+      </div>
+      <div class="meta-item">
+        <span class="label">완료 지침</span>
+        <span class="value">16건</span>
+      </div>
+      <div class="meta-item">
+        <span class="label">활성 지침</span>
+        <span class="value" style="color:var(--text-muted)">없음</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 통계 ── -->
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="num">36</div>
+      <div class="lbl">REST 엔드포인트</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">6</div>
+      <div class="lbl">MCP Tools</div>
+    </div>
+    <div class="stat-card">
+      <div class="num green">286</div>
+      <div class="lbl">테스트 통과</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">24</div>
+      <div class="lbl">테스트 파일</div>
+    </div>
+    <div class="stat-card">
+      <div class="num yellow">3</div>
+      <div class="lbl">인증 단계</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">6</div>
+      <div class="lbl">Entity 타입</div>
+    </div>
+  </div>
+
+  <!-- ── 프로젝트 개요 ── -->
+  <section>
+    <h2><span class="icon">📋</span> 프로젝트 개요</h2>
+    <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">
+      코딩 에이전트(Claude Code, Codex, Cursor 등)가 UI 화면·기능·인프라·API·코드 심볼·이슈를 <strong style="color:var(--text)">UUID 기반</strong>으로 안정적으로 참조할 수 있게 하는 경량 저장소.
+      문서 파싱은 외부 에이전트가 담당하고, 이 서비스는 정리된 결과를 <strong style="color:var(--text)">저장·조회·제공</strong>하는 역할만 한다.
+    </p>
+
+    <div class="arch-box"><span class="hl">외부 Parser / Agent</span>
+         │
+         ▼  POST /ingest/batch
+    ┌─────────────────────────────┐
+    │   <span class="hl2">Registry (PostgreSQL 16)</span>     │
+    │   entity · alias · context  │
+    │   relation · tag · revision │
+    └─────────────────────────────┘
+         │                  │
+         ▼ REST read/write   ▼ MCP read-only (stdio)
+    <span class="hl">관리자 콘솔</span>           <span class="hl3">Coding Agent</span>
+    (Next.js BFF)        (Claude Code 등)</div>
+  </section>
+
+  <!-- ── 구현 현황 ── -->
+  <section>
+    <h2><span class="icon">📦</span> 전체 구현 현황</h2>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-green"></span>MVP Core</div>
+        <div class="card-desc">DB Schema → REST API → MCP → 테스트 (Steps 0–10)</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-green"></span>관리자 UI</div>
+        <div class="card-desc">Next.js + Tailwind, BFF 패턴 (Server Actions), Entity·Tag 관리 화면</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-green"></span>인증 시스템</div>
+        <div class="card-desc">JWT + API Key 인증, 프로젝트·멤버십·접근 정책 (3단계)</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-green"></span>관리자 콘솔</div>
+        <div class="card-desc">로그인·사용자·프로젝트·멤버 관리 화면 (role-gated)</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-green"></span>인증 고급</div>
+        <div class="card-desc">관리자(superadmin)·프로젝트 관리자(project_admin) 기능</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-green"></span>운영 준비</div>
+        <div class="card-desc">API Key Hashing, Audit Log, Backup, Observability 엔드포인트</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-green"></span>확장 기능</div>
+        <div class="card-desc">pgvector Semantic Search, Entity Revision, Export (AGENTS.md / OpenAPI 3.1.0), PR 참조 검증</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── API 엔드포인트 ── -->
+  <section>
+    <h2><span class="icon">🔌</span> REST API 엔드포인트 전체 목록</h2>
+
+    <h3>인증 — <code>app/api/auth.py</code></h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드</th><th>경로</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/auth/users</code></td><td>사용자 등록</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/auth/login</code></td><td>로그인 (JWT 발급)</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/auth/logout</code></td><td>로그아웃 (세션 무효화)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/auth/me</code></td><td>현재 사용자 조회</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/auth/api-keys</code></td><td>API Key 발급</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>프로젝트 — <code>app/api/projects.py</code></h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드</th><th>경로</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/projects</code></td><td>프로젝트 생성</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/projects</code></td><td>프로젝트 목록</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/projects/{id}</code></td><td>프로젝트 조회</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/projects/{id}/members</code></td><td>멤버 목록</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/projects/{id}/members</code></td><td>멤버 추가</td></tr>
+          <tr><td><span class="method PUT">PUT</span></td><td><code>/projects/{id}/members/{user_id}</code></td><td>멤버 역할 변경</td></tr>
+          <tr><td><span class="method DELETE">DELETE</span></td><td><code>/projects/{id}/members/{user_id}</code></td><td>멤버 제거</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>관리자 — <code>app/api/admin_*.py</code></h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드</th><th>경로</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/projects</code></td><td>전체 프로젝트 목록 (superadmin / project_admin 전용)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/admin/users</code></td><td>전체 사용자 목록 (superadmin / project_admin 전용)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Registry Core — <code>app/api/entities.py</code> 외</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드</th><th>경로</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method POST">POST</span></td><td><code>/entities</code></td><td>Entity 생성 (id 지정 가능)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/entities</code></td><td>Entity 목록 조회 (필터·페이징)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/entities/{id}</code></td><td>Entity 단건 조회</td></tr>
+          <tr><td><span class="method PATCH">PATCH</span></td><td><code>/entities/{id}</code></td><td>Entity 수정 (id·type 변경 불가)</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/entities/{id}/aliases</code></td><td>Alias 추가</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/entities/{id}/aliases</code></td><td>Alias 목록</td></tr>
+          <tr><td><span class="method PATCH">PATCH</span></td><td><code>/entities/{id}/aliases/{alias_id}</code></td><td>Alias 비활성화</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/resolve</code></td><td>Alias → Entity 해석 (not_found / resolved / ambiguous)</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/entities/{id}/contexts</code></td><td>Context 추가</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/entities/{id}/contexts</code></td><td>Context 목록</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/entities/{id}/tags</code></td><td>Tag 부착</td></tr>
+          <tr><td><span class="method DELETE">DELETE</span></td><td><code>/entities/{id}/tags/{tag}</code></td><td>Tag 제거</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/entities/{id}/history</code></td><td>변경 이력 조회</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/entities/{id}/revisions</code></td><td>Revision 목록</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/entities/{id}/revisions/compare</code></td><td>Revision 비교 diff</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/relations</code></td><td>Relation 생성</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/entities/{id}/relations</code></td><td>Relation 목록 (direction, max_depth)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/search</code></td><td>Entity 검색 (alias exact → canonical partial → tsvector)</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/context-bundle</code></td><td>BFS Context Bundle 조회</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/ingest/batch</code></td><td>일괄 Ingest (upsert)</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/export/agents-md</code></td><td>AGENTS.md 형식 컨텍스트 내보내기</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/export/openapi</code></td><td>OpenAPI 3.1.0 spec (JSON / YAML) 내보내기</td></tr>
+          <tr><td><span class="method POST">POST</span></td><td><code>/validate-references</code></td><td>PR 내 UUID / Alias 참조 일괄 검증</td></tr>
+          <tr><td><span class="method GET">GET</span></td><td><code>/health</code></td><td>헬스체크</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 인증 시스템 ── -->
+  <section>
+    <h2><span class="icon">🔐</span> 인증 시스템 구조</h2>
+
+    <div class="card-grid" style="margin-bottom:18px;">
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-blue"></span>JWT (Bearer Token)</div>
+        <div class="card-desc">
+          <code>/auth/login</code> → <code>sessions</code> 테이블에 저장.<br/>
+          만료 시 자동 무효화. <code>/auth/logout</code>으로 즉시 폐기 가능.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-blue"></span>API Key (X-API-Key)</div>
+        <div class="card-desc">
+          <code>/auth/api-keys</code> → <code>api_keys</code> 테이블에 <code>key_hash</code>만 저장 (원문 미보존).<br/>
+          코딩 에이전트·CI 파이프라인용.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="status-dot dot-green"></span>역할 계층 (RBAC)</div>
+        <div class="card-desc">
+          <strong style="color:var(--badge-yellow)">superadmin</strong> → 전체 시스템 관리<br/>
+          <strong style="color:var(--badge-blue)">project_admin</strong> → 관리자 콘솔 접근<br/>
+          <strong style="color:var(--text)">user</strong> → 프로젝트 멤버십 기반 (viewer / editor / admin)
+        </div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>역할</th><th>핵심 파일</th></tr></thead>
+        <tbody>
+          <tr><td>인증 의존성</td><td>JWT 검증, API Key 조회, <code>get_current_user</code></td><td><code>app/auth/dependencies.py</code></td></tr>
+          <tr><td>접근 정책</td><td>역할 기반 접근 제어 (RBAC), 프로젝트 멤버십 검사</td><td><code>app/auth/policy.py</code></td></tr>
+          <tr><td>인증 서비스</td><td>로그인, JWT 발급, 세션 관리, API Key 발급·해시</td><td><code>app/service/auth_service.py</code></td></tr>
+          <tr><td>프로젝트 서비스</td><td>프로젝트 생성, 멤버 초대, 역할 변경, 권한 검사</td><td><code>app/service/project_service.py</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── MCP Tools ── -->
+  <section>
+    <h2><span class="icon">🤖</span> MCP Tool 목록 (Read-Only)</h2>
+    <p style="color:var(--text-muted); font-size:12px; margin-bottom:12px;">
+      <code>stdio</code> transport로 실행. 코딩 에이전트가 프로세스를 직접 spawn. <strong style="color:var(--accent4)">Write tool 추가 금지.</strong>
+    </p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Tool</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>resolve_alias</code></td><td>alias → entity 해석. <code>not_found</code> / <code>resolved</code> / <code>ambiguous</code> 반환</td></tr>
+          <tr><td><code>get_entity</code></td><td>UUID로 entity 조회. deprecated 시 <code>warnings</code>에 <code>replacement_entity_id</code> 포함</td></tr>
+          <tr><td><code>search_entities</code></td><td>alias exact → canonical_name partial → tsvector FTS 순 3단계 검색</td></tr>
+          <tr><td><code>get_related_entities</code></td><td>BFS 방식 관련 entity 조회. <code>direction</code>, <code>max_depth</code> 파라미터 지원</td></tr>
+          <tr><td><code>get_context_bundle</code></td><td>핵심 tool — BFS로 관련 entity · context · relation 묶음 반환. <code>token_budget</code> 우선순위 컷 지원</td></tr>
+          <tr><td><code>validate_references</code></td><td>ID / alias 유효성 일괄 검증. valid / ambiguous / missing 분류</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── DB 테이블 ── -->
+  <section>
+    <h2><span class="icon">🗄️</span> DB 테이블 구조</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>테이블</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>users</code></td><td>사용자 계정 (email, hashed_password, role)</td></tr>
+          <tr><td><code>sessions</code></td><td>JWT 세션 (token, expires_at)</td></tr>
+          <tr><td><code>api_keys</code></td><td>API Key (key_hash, name, user_id)</td></tr>
+          <tr><td><code>projects</code></td><td>프로젝트 (name, owner_id)</td></tr>
+          <tr><td><code>project_members</code></td><td>프로젝트 멤버십 (project_id, user_id, role: viewer/editor/admin)</td></tr>
+          <tr><td><code>entity</code></td><td>UUID, type, canonical_name, status, confidence, project_id</td></tr>
+          <tr><td><code>entity_alias</code></td><td>locale별 alias (is_active로 비활성화, ambiguous 허용)</td></tr>
+          <tr><td><code>entity_context</code></td><td>context_type별 텍스트 (RAG 단위)</td></tr>
+          <tr><td><code>entity_relation</code></td><td>from/to entity 간 관계 (CONTAINS, RELATED_TO, USES 등)</td></tr>
+          <tr><td><code>entity_metadata</code></td><td>JSONB 타입별 상세 필드</td></tr>
+          <tr><td><code>entity_tag</code></td><td>entity ↔ tag 다중 부착</td></tr>
+          <tr><td><code>entity_history</code></td><td>entity 변경 이력 (field, old_value, new_value)</td></tr>
+          <tr><td><code>source_ref</code></td><td>원본 문서 참조</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Entity 타입 / 상태 / 도메인 Enum</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Enum</th><th>값</th></tr></thead>
+        <tbody>
+          <tr><td><code>EntityType</code></td><td><code>UI_AREA</code> · <code>FEATURE</code> · <code>INFRA_UNIT</code> · <code>API</code> · <code>CODE_SYMBOL</code> · <code>ISSUE</code></td></tr>
+          <tr><td><code>EntityStatus</code></td><td><code>candidate</code> → <code>active</code> → <code>deprecated</code> / <code>archived</code></td></tr>
+          <tr><td><code>ContextType</code></td><td>summary · details · business_rule · validation_rule · implementation_hint · security_note · infra_note · compatibility_note · exception_case</td></tr>
+          <tr><td><code>RelationType</code></td><td>CONTAINS · RELATED_TO · USES · IMPLEMENTED_BY · READS_FROM · WRITES_TO · DEPENDS_ON · CALLS</td></tr>
+          <tr><td><code>Locale</code></td><td><code>ko</code> · <code>en</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 지침 타임라인 ── -->
+  <section>
+    <h2><span class="icon">📅</span> 주요 구현 타임라인</h2>
+    <div class="timeline">
+      <div class="tl-item completed">
+        <div class="tl-date">2026-05-28</div>
+        <div class="tl-title">Frontend BFF 전환 · Tag UI 구현</div>
+        <div class="tl-desc">Server Actions + Server Components로 Backend API 호출 구조 전환, Entity 태그 관리 화면 구현</div>
+      </div>
+      <div class="tl-item completed">
+        <div class="tl-date">2026-05-29</div>
+        <div class="tl-title">인증 시스템 1 · 2 · 3 완료</div>
+        <div class="tl-desc">사용자 계정·로그인·API Key 병행 인증 → 프로젝트·멤버십·권한 정책 → 관리자·프로젝트 관리자 기능 순차 완료</div>
+      </div>
+      <div class="tl-item completed">
+        <div class="tl-date">2026-05-29</div>
+        <div class="tl-title">관리자 콘솔 UI · 운영 준비 완료</div>
+        <div class="tl-desc">로그인·사용자·프로젝트·멤버 관리 화면, Audit Log·Backup·Observability 엔드포인트 구축</div>
+      </div>
+      <div class="tl-item completed">
+        <div class="tl-date">2026-05-30 (Steps 3-1 ~ 3-6)</div>
+        <div class="tl-title">확장 기능 전체 완료</div>
+        <div class="tl-desc">pgvector Semantic Search · Entity Revision History · Review UI · AGENTS.md Export · GitHub PR 검증 · OpenAPI 3.1.0 Export</div>
+      </div>
+      <div class="tl-item completed">
+        <div class="tl-date">2026-05-30</div>
+        <div class="tl-title">Project ID 제약조건 확장 (버그·개선)</div>
+        <div class="tl-desc">3–50자, A-Za-z0-9_-#^@ 허용으로 검증 로직 확장</div>
+      </div>
+      <div class="tl-item completed">
+        <div class="tl-date">2026-05-30</div>
+        <div class="tl-title">project_admin 관리 화면 접근 오류 수정</div>
+        <div class="tl-desc">project_admin 계정의 프로젝트 관리 화면 권한 검사 로직 수정</div>
+      </div>
+      <div class="tl-item completed">
+        <div class="tl-date">2026-05-30</div>
+        <div class="tl-title">승인 대기 Entity 승인 불가 오류 수정</div>
+        <div class="tl-desc">Review UI — candidate Entity 상태 전환 및 오류 메시지 표시 누락 수정</div>
+      </div>
+      <div class="tl-item completed">
+        <div class="tl-date">2026-05-30</div>
+        <div class="tl-title">ISSUE EntityType 추가 · CSS 색상 정상화</div>
+        <div class="tl-desc">6번째 엔티티 타입 ISSUE 추가, 모든 타입별 배지 CSS 색상 정상화</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 핵심 불변 규칙 ── -->
+  <section>
+    <h2><span class="icon">⚠️</span> 핵심 불변 규칙</h2>
+    <div class="card-grid">
+      <div class="card" style="border-color: rgba(248,113,113,.3);">
+        <div class="card-title" style="color:var(--accent4);">Entity UUID 불변</div>
+        <div class="card-desc"><code>entity.id</code>는 생성 후 절대 변경 금지. PATCH에서 <code>id</code>·<code>type</code> 필드 수신 시 무시.</div>
+      </div>
+      <div class="card" style="border-color: rgba(248,113,113,.3);">
+        <div class="card-title" style="color:var(--accent4);">Type 변경 금지</div>
+        <div class="card-desc">Ingest 시 기존 entity의 type 변경 시도 → <code>400 TYPE_CHANGE_FORBIDDEN</code></div>
+      </div>
+      <div class="card" style="border-color: rgba(248,113,113,.3);">
+        <div class="card-title" style="color:var(--accent4);">Deprecated 삭제 금지</div>
+        <div class="card-desc">deprecated entity는 DELETE 금지. <code>status=deprecated</code> + <code>replacement_entity_id</code> 기록.</div>
+      </div>
+      <div class="card" style="border-color: rgba(248,113,113,.3);">
+        <div class="card-title" style="color:var(--accent4);">MCP Write 금지</div>
+        <div class="card-desc">MCP server는 read-only. write tool 추가 금지.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 테스트 현황 ── -->
+  <section>
+    <h2><span class="icon">✅</span> 테스트 현황 (286 Passed)</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>파일</th><th>대상</th></tr></thead>
+        <tbody>
+          <tr><td><code>test_auth_api.py</code></td><td>로그인, 로그아웃, 사용자 등록, API Key 발급</td></tr>
+          <tr><td><code>test_project_api.py</code></td><td>프로젝트 CRUD, 멤버 초대·제거, 역할 변경</td></tr>
+          <tr><td><code>test_admin_projects_api.py</code></td><td>관리자 프로젝트 관리 API (project_admin 권한 포함)</td></tr>
+          <tr><td><code>test_admin_users_api.py</code></td><td>관리자 사용자 관리 API</td></tr>
+          <tr><td><code>test_entity_api.py</code></td><td>Entity CRUD, PATCH 제한, deprecated</td></tr>
+          <tr><td><code>test_entity_list_api.py</code></td><td>GET /entities 목록 조회, 필터·페이징</td></tr>
+          <tr><td><code>test_alias_resolve.py</code></td><td>ambiguous / resolved / not_found, locale / type 필터</td></tr>
+          <tr><td><code>test_alias_deactivate.py</code></td><td>Alias 비활성화 (PATCH)</td></tr>
+          <tr><td><code>test_context_api.py</code></td><td>Context 추가·조회, 필터</td></tr>
+          <tr><td><code>test_context_bundle.py</code></td><td>depth, token_budget, deprecated warning</td></tr>
+          <tr><td><code>test_tag_api.py</code></td><td>Tag 부착·제거, 다중 tag</td></tr>
+          <tr><td><code>test_history_api.py</code></td><td>Entity 변경 이력 조회</td></tr>
+          <tr><td><code>test_revision_compare_api.py</code></td><td>Revision 목록 및 비교 API</td></tr>
+          <tr><td><code>test_ingest_batch.py</code></td><td>upsert, type 변경 금지, relation 검증</td></tr>
+          <tr><td><code>test_mcp_tools.py</code></td><td>MCP 6개 tool 직접 호출</td></tr>
+          <tr><td><code>test_relation_api.py</code></td><td>Relation 생성·조회, direction / depth</td></tr>
+          <tr><td><code>test_search_api.py</code></td><td>GET /search (alias exact, canonical partial, type filter)</td></tr>
+          <tr><td><code>test_export_agents_md.py</code></td><td>GET /export/agents-md — AGENTS.md 포맷 검증</td></tr>
+          <tr><td><code>test_export_openapi.py</code></td><td>GET /export/openapi — JSON / YAML OpenAPI 3.1.0 검증</td></tr>
+          <tr><td><code>test_validate_references_api.py</code></td><td>POST /validate-references — valid / ambiguous / missing 분류</td></tr>
+          <tr><td><code>test_audit_log.py</code></td><td>Audit Log 기록 및 조회</td></tr>
+          <tr><td><code>test_observability.py</code></td><td>Observability 엔드포인트</td></tr>
+          <tr><td><code>test_domain_schemas.py</code></td><td>Pydantic 스키마 검증</td></tr>
+          <tr><td><code>test_examples.py</code></td><td>docs/10 예제 기반 DoD 통합 테스트</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="color:var(--text-muted); font-size:12px;">
+      모든 테스트는 <strong>실제 PostgreSQL</strong> (<code>TEST_DATABASE_URL</code>)에서 실행. Mock DB 사용 금지.<br/>
+      각 테스트는 <code>_clean_tables</code> fixture로 테이블 전체 truncate 후 실행.
+    </p>
+  </section>
+
+  <footer>
+    <span>context-ref-registry · 프로젝트 현황 보고서</span>
+    <span>생성일: 2026-05-31 · git: main · 286 tests passed</span>
+  </footer>
+
+</div>
+</body>
+</html>
