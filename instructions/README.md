@@ -30,6 +30,7 @@ Phase 2   — 인증 시스템 (JWT, API Key, 프로젝트 권한)  ✅ 완료 (
 Phase 2   — 운영 준비 (보안·감사로그·백업·모니터링)    ✅ 완료 (2026-05-29)
 Phase 2.3 — 관리자 콘솔 UI & 인증 고급                ✅ 완료 (2026-05-29)
 Phase 3   — 확장 기능 (pgvector, Revision, Export)    ✅ 완료 (2026-05-30)
+Phase 3.1 — API Key 관리 UI (사용자 + 관리자 화면)    ✅ 완료 (2026-05-31)
 ```
 
 ---
@@ -40,9 +41,8 @@ Phase 3   — 확장 기능 (pgvector, Revision, Export)    ✅ 완료 (2026-05-
 
 | 완료일 | UUID | 제목 |
 |--------|------|------|
-| 2026-05-30 | 5d40172a-2f4b-4224-964a-ad5e7e30c0ed | [BUG] project_admin 계정 프로젝트 관리 화면 접근 오류 |
-| 2026-05-30 | 6dc18568-6873-4524-a88c-5f5e70b2b6db | Project ID 제약조건 확장 (3-50자, A-Za-z0-9_-#^@ 허용) |
 | 2026-05-30 | da294ef0-436c-4884-85ae-221369c72f97 | ISSUE EntityType 추가 및 타입별 CSS 색상 정상화 |
+| 2026-05-31 | c4309c75-5633-4187-a785-3b40c8e037b2 | API Key 관리 UI — 사용자/관리자 화면 구현 (298 passed) |
 
 ---
 
@@ -73,11 +73,9 @@ Phase 3   — 확장 기능 (pgvector, Revision, Export)    ✅ 완료 (2026-05-
 
 | UUID | 파일 | 분류 | 상태 |
 |------|------|------|------|
-| b42a0b82 | .completed/ | bugfix | `completed` 2026-05-30 |
-| 5d40172a | .completed/ | bugfix | `completed` 2026-05-30 |
 | 6dc18568 | .completed/ | enhancement | `completed` 2026-05-30 |
-| 03080220 | .completed/ | Phase 3 | `completed` 2026-05-30 |
 | da294ef0 | .completed/ | enhancement | `completed` 2026-05-30 |
+| c4309c75 | .completed/ | Phase 3.1 | `completed` 2026-05-31 |
 
 > 완료된 지침 세부 내용은 `instructions/.completed/{uuid}.md`에 보관.
 

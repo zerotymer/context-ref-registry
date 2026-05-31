@@ -17,8 +17,9 @@
 | 관리자 콘솔 UI (로그인·사용자·프로젝트·멤버 화면) | ✅ 완료 |
 | 인증 고급 (관리자·프로젝트 관리자 기능) | ✅ 완료 |
 | 확장 기능 (pgvector, Revision, Export, PR 검증, OpenAPI 내보내기) | ✅ 완료 |
+| API Key 관리 UI (사용자 셀프서비스 + 관리자 화면) | ✅ 완료 |
 
-테스트: **286 passed** (`cd backend && .venv/bin/pytest tests/`)
+테스트: **298 passed** (`cd backend && .venv/bin/pytest tests/`)
 
 ### 진행상태 점검 / 지침 업데이트 시 필수 작업
 
