@@ -33,6 +33,7 @@ Phase 3   — 확장 기능 (pgvector, Revision, Export)    ✅ 완료 (2026-05-
 Phase 3.1 — API Key 관리 UI (사용자 + 관리자 화면)    ✅ 완료 (2026-05-31)
 Phase 3.2 — API Key 프로젝트 접근 제어 강화            ✅ 완료 (2026-05-31)
 Phase 3.3 — Project ID 특수문자 제한 (_만 허용)        ✅ 완료 (2026-05-31)
+Phase 3.4 — Entity 배치 저장 & 참조 패턴               ✅ 완료 (2026-05-31)
 ```
 
 ---
@@ -43,9 +44,9 @@ Phase 3.3 — Project ID 특수문자 제한 (_만 허용)        ✅ 완료 (20
 
 | 완료일 | UUID | 제목 |
 |--------|------|------|
-| 2026-05-31 | c4309c75-5633-4187-a785-3b40c8e037b2 | API Key 관리 UI — 사용자/관리자 화면 구현 |
+| 2026-05-31 | 4d7b7053-162b-4e15-99cc-d6700354008f | Project ID 특수문자 제한 — 언더바(_)만 허용 |
 | 2026-05-31 | d679e0e0-ed7e-4de0-ba3d-554a83d3601c | API Key 프로젝트 기반 발급 및 접근 제어 강화 |
-| 2026-05-31 | 4d7b7053-162b-4e15-99cc-d6700354008f | Project ID 특수문자 제한 — 언더바(_)만 허용 (304 passed) |
+| 2026-05-31 | 498fd32d-b55b-4e14-9e6b-cdfa4639b6b0 | Entity 배치 저장 및 참조 패턴 확장 (320 passed) |
 
 ---
 
@@ -78,7 +79,7 @@ Phase 3.3 — Project ID 특수문자 제한 (_만 허용)        ✅ 완료 (20
 |------|------|------|------|
 | d679e0e0 | .completed/ | Phase 3.2 | `completed` 2026-05-31 |
 | 4d7b7053 | .completed/ | Phase 3.3 | `completed` 2026-05-31 |
-| c4309c75 | .completed/ | Phase 3.1 | `completed` 2026-05-31 |
+| 498fd32d | .completed/ | Phase 3.4 | `completed` 2026-05-31 |
 
 > 완료된 지침 세부 내용은 `instructions/.completed/{uuid}.md`에 보관.
 
