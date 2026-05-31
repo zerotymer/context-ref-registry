@@ -249,17 +249,17 @@ async def test_regular_user_can_create_api_key(client: AsyncClient):
             email="admin-helper@test.com", password="pw", display_name="A", role="admin"
         )
         await ProjectService(session).create_project(
-            id="user-proj", alias="User Project", description=None, created_by=admin.id
+            id="user_proj", alias="User Project", description=None, created_by=admin.id
         )
         await ProjectMemberRepository(session).create(
-            project_id="user-proj",
+            project_id="user_proj",
             user_id=_uuid.UUID(user["id"]),
             role="editor",
             created_by=admin.id,
         )
         await session.commit()
 
-    resp = await client.post("/auth/api-keys", json={"name": "key", "scopes": ["read:entities"], "project_id": "user-proj"})
+    resp = await client.post("/auth/api-keys", json={"name": "key", "scopes": ["read:entities"], "project_id": "user_proj"})
     assert resp.status_code == 201
     assert resp.json()["data"]["name"] == "key"
 

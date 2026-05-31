@@ -14,8 +14,8 @@ function CreateProjectModal({ onClose, onCreated }: { onClose: () => void; onCre
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!/^[A-Za-z0-9_\-#\^@]{3,50}$/.test(form.id)) {
-      setError("프로젝트 ID는 3~50자이며 영문·숫자·_·-·#·^·@만 허용됩니다.");
+    if (!/^[A-Za-z0-9_]{3,50}$/.test(form.id)) {
+      setError("프로젝트 ID는 3~50자이며 영문·숫자·언더바(_)만 허용됩니다.");
       return;
     }
     startTransition(async () => {
@@ -40,7 +40,7 @@ function CreateProjectModal({ onClose, onCreated }: { onClose: () => void; onCre
               required
               value={form.id}
               onChange={(e) => setForm({ ...form, id: e.target.value })}
-              placeholder="예: my-project, team#sub@v2"
+              placeholder="예: my_project, team_sub_v2"
               className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
             />
           </div>

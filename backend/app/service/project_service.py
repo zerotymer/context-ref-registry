@@ -10,7 +10,7 @@ from app.exceptions import RegistryError
 from app.repository.project_member_repository import ProjectMemberRepository
 from app.repository.project_repository import ProjectRepository
 
-_PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9_\-#\^@]{3,50}$")
+_PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9_]{3,50}$")
 
 _VALID_ROLES = {"member", "project_admin"}
 
@@ -32,7 +32,7 @@ class ProjectService:
         if not _PROJECT_ID_RE.match(id):
             raise RegistryError(
                 "INVALID_PROJECT_ID",
-                "Project ID must be 3-50 characters: A-Za-z0-9_-#^@",
+                "Project ID must be 3-50 characters: letters, digits, underscore (_)",
                 status_code=422,
             )
         alias = alias.strip()

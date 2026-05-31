@@ -34,7 +34,7 @@ async def _create_user_and_login(
     return {"id": str(user.id)}
 
 
-async def _create_project_with_member(user_id: str, project_id: str = "test-proj") -> str:
+async def _create_project_with_member(user_id: str, project_id: str = "test_proj") -> str:
     """Create a project as admin and add user as member. Returns project_id."""
     async with async_session_factory() as session:
         # create admin user for project ownership
@@ -101,11 +101,11 @@ async def test_user_nonmember_project_gets_403(client: AsyncClient):
             email="admin-other@internal.test", password="pw", display_name="A", role="admin"
         )
         await ProjectService(session).create_project(
-            id="other-proj", alias="Other", description=None, created_by=admin.id
+            id="other_proj", alias="Other", description=None, created_by=admin.id
         )
     resp = await client.post(
         "/auth/api-keys",
-        json={"name": "k", "scopes": ["read:entities"], "project_id": "other-proj"},
+        json={"name": "k", "scopes": ["read:entities"], "project_id": "other_proj"},
     )
     assert resp.status_code == 403
 
@@ -113,7 +113,7 @@ async def test_user_nonmember_project_gets_403(client: AsyncClient):
 async def test_user_member_project_success(client: AsyncClient):
     """Regular user creates key for a project they ARE a member of."""
     user = await _create_user_and_login(client, email="user@test.com")
-    proj_id = await _create_project_with_member(user["id"], "member-proj")
+    proj_id = await _create_project_with_member(user["id"], "member_proj")
     resp = await client.post(
         "/auth/api-keys",
         json={"name": "k", "scopes": ["read:entities"], "project_id": proj_id},
@@ -163,8 +163,8 @@ async def test_user_cannot_see_other_users_keys(client: AsyncClient):
         alice = await _create_user_and_login(client, email="alice@test.com")
         bob = await _create_user_and_login(other, email="bob@test.com")
 
-        alice_proj = await _create_project_with_member(alice["id"], "alice-proj")
-        bob_proj = await _create_project_with_member(bob["id"], "bob-proj")
+        alice_proj = await _create_project_with_member(alice["id"], "alice_proj")
+        bob_proj = await _create_project_with_member(bob["id"], "bob_proj")
 
         await client.post("/auth/api-keys", json={"name": "alice-key", "scopes": ["read:entities"], "project_id": alice_proj})
         await other.post("/auth/api-keys", json={"name": "bob-key", "scopes": ["read:entities"], "project_id": bob_proj})
@@ -223,7 +223,7 @@ async def test_user_cannot_revoke_others_key(client: AsyncClient):
         alice = await _create_user_and_login(client, email="alice@test.com")
         bob = await _create_user_and_login(other, email="bob@test.com")
 
-        bob_proj = await _create_project_with_member(bob["id"], "bob-proj2")
+        bob_proj = await _create_project_with_member(bob["id"], "bob_proj2")
         create_resp = await other.post(
             "/auth/api-keys", json={"name": "bob-key", "scopes": ["read:entities"], "project_id": bob_proj}
         )
@@ -320,10 +320,10 @@ async def test_unauthenticated_cannot_list_keys(client: AsyncClient):
 async def test_project_key_accesses_own_project_entity(admin_client: AsyncClient):
     """A project-scoped API key can read entities in its project."""
     # create project and entity
-    await admin_client.post("/projects", json={"id": "proj-a", "alias": "Project A"})
+    await admin_client.post("/projects", json={"id": "proj_a", "alias": "Project A"})
     await admin_client.post("/ingest/batch", json={
         "source": {"type": "screen_spec", "name": "t", "uri": "file://t", "version": "1"},
-        "entities": [{"type": "FEATURE", "canonical_name": "feat-a", "status": "active", "project_id": "proj-a"}],
+        "entities": [{"type": "FEATURE", "canonical_name": "feat-a", "status": "active", "project_id": "proj_a"}],
         "relations": [],
     })
     # list entities via admin to get id
@@ -332,7 +332,7 @@ async def test_project_key_accesses_own_project_entity(admin_client: AsyncClient
 
     # create project key
     key_resp = await admin_client.post("/admin/api-keys", json={
-        "name": "proj-a-key", "scopes": ["read:entities"], "project_id": "proj-a"
+        "name": "proj_a_key", "scopes": ["read:entities"], "project_id": "proj_a"
     })
     raw_key = key_resp.json()["data"]["key"]
 
@@ -346,11 +346,11 @@ async def test_project_key_accesses_own_project_entity(admin_client: AsyncClient
 async def test_project_key_blocked_from_other_project_entity(admin_client: AsyncClient):
     """A project-scoped API key cannot read entities from another project."""
     # create two projects and entities
-    await admin_client.post("/projects", json={"id": "proj-b", "alias": "B"})
-    await admin_client.post("/projects", json={"id": "proj-c", "alias": "C"})
+    await admin_client.post("/projects", json={"id": "proj_b", "alias": "B"})
+    await admin_client.post("/projects", json={"id": "proj_c", "alias": "C"})
     await admin_client.post("/ingest/batch", json={
         "source": {"type": "screen_spec", "name": "t", "uri": "file://t2", "version": "1"},
-        "entities": [{"type": "FEATURE", "canonical_name": "feat-c", "status": "active", "project_id": "proj-c"}],
+        "entities": [{"type": "FEATURE", "canonical_name": "feat-c", "status": "active", "project_id": "proj_c"}],
         "relations": [],
     })
     ent_resp = await admin_client.get("/entities?limit=1")
@@ -358,7 +358,7 @@ async def test_project_key_blocked_from_other_project_entity(admin_client: Async
 
     # create key scoped to proj-b
     key_resp = await admin_client.post("/admin/api-keys", json={
-        "name": "proj-b-key", "scopes": ["read:entities"], "project_id": "proj-b"
+        "name": "proj_b_key", "scopes": ["read:entities"], "project_id": "proj_b"
     })
     raw_key = key_resp.json()["data"]["key"]
 
@@ -371,10 +371,10 @@ async def test_project_key_blocked_from_other_project_entity(admin_client: Async
 
 async def test_admin_global_key_accesses_all_projects(admin_client: AsyncClient):
     """A global admin key (project_id=null) can access all project entities."""
-    await admin_client.post("/projects", json={"id": "proj-d", "alias": "D"})
+    await admin_client.post("/projects", json={"id": "proj_d", "alias": "D"})
     await admin_client.post("/ingest/batch", json={
         "source": {"type": "screen_spec", "name": "t", "uri": "file://t3", "version": "1"},
-        "entities": [{"type": "FEATURE", "canonical_name": "feat-d", "status": "active", "project_id": "proj-d"}],
+        "entities": [{"type": "FEATURE", "canonical_name": "feat-d", "status": "active", "project_id": "proj_d"}],
         "relations": [],
     })
     ent_resp = await admin_client.get("/entities?limit=1")
@@ -414,10 +414,10 @@ async def test_legacy_key_blocked_from_entities(admin_client: AsyncClient):
         await session.commit()
 
     # create an entity
-    await admin_client.post("/projects", json={"id": "proj-e", "alias": "E"})
+    await admin_client.post("/projects", json={"id": "proj_e", "alias": "E"})
     await admin_client.post("/ingest/batch", json={
         "source": {"type": "screen_spec", "name": "t", "uri": "file://t4", "version": "1"},
-        "entities": [{"type": "FEATURE", "canonical_name": "feat-e", "status": "active", "project_id": "proj-e"}],
+        "entities": [{"type": "FEATURE", "canonical_name": "feat-e", "status": "active", "project_id": "proj_e"}],
         "relations": [],
     })
     ent_resp = await admin_client.get("/entities?limit=1")

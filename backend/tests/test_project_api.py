@@ -69,7 +69,7 @@ async def test_create_project_invalid_id_returns_422(admin_client: AsyncClient):
     resp2 = await admin_client.post("/projects", json={"id": "A" * 51, "alias": "alias"})
     assert resp2.status_code == 422
 
-    # ID with disallowed characters (space, !, %)
+    # ID with disallowed characters (space, !, %, hyphen, hash, at, caret)
     resp3 = await admin_client.post("/projects", json={"id": "no space", "alias": "alias"})
     assert resp3.status_code == 422
 
@@ -79,17 +79,28 @@ async def test_create_project_invalid_id_returns_422(admin_client: AsyncClient):
     resp5 = await admin_client.post("/projects", json={"id": "pct%25", "alias": "alias"})
     assert resp5.status_code == 422
 
+    resp6 = await admin_client.post("/projects", json={"id": "my-project", "alias": "alias"})
+    assert resp6.status_code == 422
+
+    resp7 = await admin_client.post("/projects", json={"id": "team#sub", "alias": "alias"})
+    assert resp7.status_code == 422
+
+    resp8 = await admin_client.post("/projects", json={"id": "v2@corp", "alias": "alias"})
+    assert resp8.status_code == 422
+
+    resp9 = await admin_client.post("/projects", json={"id": "a^b_c", "alias": "alias"})
+    assert resp9.status_code == 422
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("project_id", [
-    "my-project",
-    "team#sub",
-    "v2_api@corp",
     "ABC123",
-    "a^b",
-    "my-project_v2#prod@api",
+    "my_project",
+    "v2_api",
+    "team_sub_v2",
+    "UPPER_lower_123",
 ])
-async def test_create_project_valid_extended_ids(admin_client: AsyncClient, project_id: str):
+async def test_create_project_valid_underscore_ids(admin_client: AsyncClient, project_id: str):
     resp = await admin_client.post("/projects", json={"id": project_id, "alias": "alias"})
     assert resp.status_code == 201, f"Expected 201 for id={project_id!r}, got {resp.status_code}: {resp.text}"
 

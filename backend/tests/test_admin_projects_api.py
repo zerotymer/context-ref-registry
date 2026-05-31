@@ -250,18 +250,18 @@ async def test_project_admin_can_list_own_projects(
     """project_admin sees only projects they are a member of."""
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
-    await _create_project("pa-own", "Own Project", admin_id)
-    await _create_project("pa-other", "Other Project", admin_id)
+    await _create_project("pa_own", "Own Project", admin_id)
+    await _create_project("pa_other", "Other Project", admin_id)
 
     padmin_resp = await project_admin_client.get("/auth/me")
     padmin_id = padmin_resp.json()["data"]["id"]
-    await admin_client.post("/admin/projects/pa-own/members", json={"user_id": padmin_id, "role": "member"})
+    await admin_client.post("/admin/projects/pa_own/members", json={"user_id": padmin_id, "role": "member"})
 
     resp = await project_admin_client.get("/admin/projects")
     assert resp.status_code == 200
     ids = [p["id"] for p in resp.json()["data"]]
-    assert "pa-own" in ids
-    assert "pa-other" not in ids
+    assert "pa_own" in ids
+    assert "pa_other" not in ids
 
 
 async def test_project_admin_cannot_list_other_projects(
@@ -271,12 +271,12 @@ async def test_project_admin_cannot_list_other_projects(
     """project_admin without membership cannot see other projects."""
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
-    await _create_project("pa-secret", "Secret Project", admin_id)
+    await _create_project("pa_secret", "Secret Project", admin_id)
 
     resp = await project_admin_client.get("/admin/projects")
     assert resp.status_code == 200
     ids = [p["id"] for p in resp.json()["data"]]
-    assert "pa-secret" not in ids
+    assert "pa_secret" not in ids
 
 
 async def test_user_role_still_gets_403_on_list(client: AsyncClient):
@@ -299,13 +299,13 @@ async def test_project_admin_can_view_members_of_own_project(
     """project_admin that is a member can list members of that project."""
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
-    await _create_project("pa-mbr", "Member Project", admin_id)
+    await _create_project("pa_mbr", "Member Project", admin_id)
 
     padmin_resp = await project_admin_client.get("/auth/me")
     padmin_id = padmin_resp.json()["data"]["id"]
-    await admin_client.post("/admin/projects/pa-mbr/members", json={"user_id": padmin_id, "role": "member"})
+    await admin_client.post("/admin/projects/pa_mbr/members", json={"user_id": padmin_id, "role": "member"})
 
-    resp = await project_admin_client.get("/admin/projects/pa-mbr/members")
+    resp = await project_admin_client.get("/admin/projects/pa_mbr/members")
     assert resp.status_code == 200
     user_ids = [m["user_id"] for m in resp.json()["data"]]
     assert padmin_id in user_ids
@@ -318,9 +318,9 @@ async def test_project_admin_cannot_view_members_of_other_project(
     """project_admin not in a project gets 403 on member list."""
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
-    await _create_project("pa-mbr2", "Other Members Project", admin_id)
+    await _create_project("pa_mbr2", "Other Members Project", admin_id)
 
-    resp = await project_admin_client.get("/admin/projects/pa-mbr2/members")
+    resp = await project_admin_client.get("/admin/projects/pa_mbr2/members")
     assert resp.status_code == 403
 
 
@@ -331,14 +331,14 @@ async def test_project_admin_cannot_add_member(
     """project_admin cannot add members even to their own project."""
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
-    await _create_project("pa-addmbr", "Add Member Project", admin_id)
+    await _create_project("pa_addmbr", "Add Member Project", admin_id)
 
     padmin_resp = await project_admin_client.get("/auth/me")
     padmin_id = padmin_resp.json()["data"]["id"]
-    await admin_client.post("/admin/projects/pa-addmbr/members", json={"user_id": padmin_id, "role": "member"})
+    await admin_client.post("/admin/projects/pa_addmbr/members", json={"user_id": padmin_id, "role": "member"})
 
     other_uid = await _create_user("other-for-add@test.com")
     resp = await project_admin_client.post(
-        "/admin/projects/pa-addmbr/members", json={"user_id": other_uid, "role": "member"}
+        "/admin/projects/pa_addmbr/members", json={"user_id": other_uid, "role": "member"}
     )
     assert resp.status_code == 403
