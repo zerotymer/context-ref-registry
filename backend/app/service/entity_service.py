@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import EntityStatus, EntityType
 from app.domain.models import Entity
-from app.domain.schemas import EntityCreate, EntityHistoryListResponse, EntityHistoryRead, EntityUpdate, RevisionCompareResponse, RevisionDiffField
+from app.domain.schemas import BatchCreateItem, EntityBatchCreateResult, EntityCreate, EntityHistoryListResponse, EntityHistoryRead, EntityUpdate, RevisionCompareResponse, RevisionDiffField
 from app.exceptions import RegistryError
 from app.repository.entity_repository import EntityRepository
 from app.repository.history_repository import HistoryRepository
@@ -173,6 +173,70 @@ class EntityService:
                 status_code=404,
             )
         return history
+
+    async def resolve_ref(self, ref: str) -> Entity:
+        """Resolve any reference pattern (UUID / PROJECT_ID@UUID / PROJECT_ID@TAG) to a single Entity.
+
+        Raises:
+            RegistryError("INVALID_REF_FORMAT")    — parse_ref() 실패
+            RegistryError("ENTITY_NOT_FOUND")       — 존재하지 않음
+            RegistryError("PROJECT_SCOPE_MISMATCH") — SCOPED_UUID: 프로젝트 불일치
+            RegistryError("AMBIGUOUS_TAG_REF")      — SCOPED_TAG: 복수 매칭
+        """
+        from app.domain.ref_pattern import RefKind, parse_ref
+
+        try:
+            parsed = parse_ref(ref)
+        except ValueError as e:
+            raise RegistryError("INVALID_REF_FORMAT", str(e), 422)
+
+        if parsed.kind == RefKind.UUID:
+            return await self.get_by_id(uuid.UUID(parsed.identifier))
+
+        if parsed.kind == RefKind.SCOPED_UUID:
+            entity = await self.get_by_id(uuid.UUID(parsed.identifier))
+            if entity.project_id != parsed.project_id:
+                raise RegistryError(
+                    "PROJECT_SCOPE_MISMATCH",
+                    f"Entity {parsed.identifier} does not belong to project {parsed.project_id!r}",
+                    404,
+                )
+            return entity
+
+        # SCOPED_TAG
+        matches = await self._repo.get_by_tag_in_project(parsed.project_id, parsed.identifier)
+        if not matches:
+            raise RegistryError(
+                "ENTITY_NOT_FOUND",
+                f"No entity with tag {parsed.identifier!r} in project {parsed.project_id!r}",
+                404,
+            )
+        if len(matches) > 1:
+            raise RegistryError(
+                "AMBIGUOUS_TAG_REF",
+                f"Tag {parsed.identifier!r} matches {len(matches)} entities in project {parsed.project_id!r}",
+                422,
+                details={"matched_ids": [str(e.id) for e in matches]},
+            )
+        return matches[0]
+
+    async def batch_create(
+        self,
+        items: list[EntityCreate],
+        changed_by: str,
+    ) -> list[BatchCreateItem]:
+        """Create multiple entities. Returns per-item success/error (partial success allowed)."""
+        results: list[BatchCreateItem] = []
+        for idx, item in enumerate(items):
+            try:
+                entity = await self.create(item, changed_by=changed_by)
+                results.append(BatchCreateItem(index=idx, id=str(entity.id), ok=True))
+            except Exception as exc:
+                await self._session.rollback()
+                code = getattr(exc, "code", "UNKNOWN_ERROR")
+                message = getattr(exc, "message", str(exc))
+                results.append(BatchCreateItem(index=idx, ok=False, error_code=code, error_message=message))
+        return results
 
     async def compare_revisions(
         self, entity_id: uuid.UUID, rev_a_no: int, rev_b_no: int

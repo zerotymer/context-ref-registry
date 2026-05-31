@@ -139,6 +139,20 @@ class EntityRepository:
         result = await self._session.execute(stmt)
         return list(result.all())
 
+    async def get_by_tag_in_project(
+        self,
+        project_id: str,
+        tag: str,
+    ) -> list[Entity]:
+        """Return all entities in a project that have the given tag."""
+        stmt = (
+            select(Entity)
+            .join(EntityTag, EntityTag.entity_id == Entity.id)
+            .where(Entity.project_id == project_id, EntityTag.tag == tag)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
     async def search(
         self,
         query: str,

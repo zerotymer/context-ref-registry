@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -20,9 +19,9 @@ router = APIRouter(tags=["contexts"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-@router.post("/entities/{entity_id}/contexts", status_code=201, response_model=OkResponse[ContextRead])
+@router.post("/entities/{entity_ref}/contexts", status_code=201, response_model=OkResponse[ContextRead])
 async def add_context(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     body: ContextCreate,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_actor)],
@@ -30,16 +29,16 @@ async def add_context(
     user, api_key = auth
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_mutate_entity(entity.project_id, user, user_project_ids, api_key)
     actor = actor_identifier(user, api_key)
-    ctx = await ContextService(session).add_context(entity_id, body, actor=actor)
+    ctx = await ContextService(session).add_context(entity.id, body, actor=actor)
     return OkResponse(data=ContextRead.model_validate(ctx))
 
 
-@router.get("/entities/{entity_id}/contexts", response_model=OkResponse[list[ContextRead]])
+@router.get("/entities/{entity_ref}/contexts", response_model=OkResponse[list[ContextRead]])
 async def list_contexts(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_optional_actor)],
     context_type: ContextType | None = Query(None, description="Filter by context type"),
@@ -48,7 +47,7 @@ async def list_contexts(
     user, api_key = auth
     policy = AccessPolicy(session)
     visible_ids = await policy.get_visible_project_ids(user, api_key)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
-    contexts = await ContextService(session).list_contexts(entity_id, context_type, language)
+    contexts = await ContextService(session).list_contexts(entity.id, context_type, language)
     return OkResponse(data=[ContextRead.model_validate(c) for c in contexts])

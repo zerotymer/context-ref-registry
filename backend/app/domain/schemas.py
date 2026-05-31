@@ -356,12 +356,36 @@ class BundleRelationRead(BaseModel):
 
 
 class ContextBundleRequest(BaseModel):
-    root_ids: list[uuid.UUID] = Field(..., min_length=1)
+    root_ids: list[str] = Field(..., min_length=1)
     include_relations: list[RelationType] | None = None
     include_types: list[EntityType] | None = None
     max_depth: int = Field(1, ge=0, le=10)
     token_budget: int = Field(6000, ge=100)
     language: Locale = Locale.KO
+
+
+# ---------------------------------------------------------------------------
+# Batch Entity Create
+# ---------------------------------------------------------------------------
+
+
+class EntityBatchCreateRequest(BaseModel):
+    entities: list[EntityCreate] = Field(..., min_length=1, max_length=100)
+
+
+class BatchCreateItem(BaseModel):
+    index: int
+    ok: bool
+    id: str | None = None
+    error_code: str | None = None
+    error_message: str | None = None
+
+
+class EntityBatchCreateResult(BaseModel):
+    total: int
+    created: int
+    failed: int
+    items: list[BatchCreateItem]
 
 
 class ContextBundleResponse(BaseModel):
