@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 from app.domain.enums import Locale
+from app.service.entity_service import EntityService
 from app.service.export_service import ExportService
 
 router = APIRouter(prefix="/export", tags=["export"])
@@ -20,13 +21,19 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 @router.get("/agents-md", response_class=PlainTextResponse)
 async def export_agents_md(
-    root_ids: Annotated[str, Query(description="Comma-separated root entity UUIDs")],
+    root_ids: Annotated[str, Query(description="Comma-separated root entity refs (UUID or PROJECT_ID@identifier)")],
     session: SessionDep,
     max_depth: Annotated[int, Query(ge=0, le=10)] = 2,
     token_budget: Annotated[int, Query(ge=100)] = 8000,
     language: Locale = Locale.KO,
 ) -> str:
-    parsed: list[uuid.UUID] = [uuid.UUID(rid.strip()) for rid in root_ids.split(",") if rid.strip()]
+    svc = EntityService(session)
+    parsed: list[uuid.UUID] = []
+    for ref in root_ids.split(","):
+        ref = ref.strip()
+        if ref:
+            entity = await svc.resolve_ref(ref)
+            parsed.append(entity.id)
     md = await ExportService(session).generate_agents_md(
         root_ids=parsed,
         max_depth=max_depth,

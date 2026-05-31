@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-import uuid
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_actor, get_current_user, get_optional_actor, get_optional_user
+from app.auth.dependencies import get_actor, get_optional_actor
 from app.service.audit_service import actor_identifier
 from app.auth.policy import AccessPolicy
 from app.db.session import get_session
 from app.domain.enums import EntityStatus, EntityType
-from app.domain.models import ApiKey, UserAccount
 from app.domain.schemas import (
+    BatchCreateItem,
+    EntityBatchCreateRequest,
+    EntityBatchCreateResult,
     EntityCreate,
     EntityHistoryListResponse,
     EntityHistoryRead,
@@ -70,23 +71,43 @@ async def create_entity(
     return OkResponse(data={"id": str(entity.id)})
 
 
-@router.get("/{entity_id}", response_model=OkResponse[EntityRead])
+@router.post("/batch", status_code=207, response_model=OkResponse[EntityBatchCreateResult])
+async def batch_create_entities(
+    body: EntityBatchCreateRequest,
+    session: SessionDep,
+    auth: Annotated[tuple, Depends(get_actor)],
+    x_changed_by: str | None = Header(default=None),
+) -> OkResponse[EntityBatchCreateResult]:
+    user, api_key = auth
+    policy = AccessPolicy(session)
+    for item in body.entities:
+        await policy.check_can_assign_project(item.project_id, user)
+    actor = actor_identifier(user, api_key)
+    items = await EntityService(session).batch_create(body.entities, changed_by=x_changed_by or actor)
+    created = sum(1 for i in items if i.ok)
+    failed = len(items) - created
+    return OkResponse(data=EntityBatchCreateResult(
+        total=len(items), created=created, failed=failed, items=items
+    ))
+
+
+@router.get("/{entity_ref}", response_model=OkResponse[EntityRead])
 async def get_entity(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_optional_actor)],
 ) -> OkResponse[EntityRead]:
     user, api_key = auth
     policy = AccessPolicy(session)
     visible_ids = await policy.get_visible_project_ids(user, api_key)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
     return OkResponse(data=EntityRead.model_validate(entity))
 
 
-@router.patch("/{entity_id}", response_model=OkResponse[EntityRead])
+@router.patch("/{entity_ref}", response_model=OkResponse[EntityRead])
 async def update_entity(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     body: EntityUpdate,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_actor)],
@@ -95,10 +116,10 @@ async def update_entity(
     user, api_key = auth
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_mutate_entity(entity.project_id, user, user_project_ids, api_key)
     actor = actor_identifier(user, api_key)
-    entity = await EntityService(session).update(entity_id, body, changed_by=x_changed_by or actor)
+    entity = await EntityService(session).update(entity.id, body, changed_by=x_changed_by or actor)
     return OkResponse(data=EntityRead.model_validate(entity))
 
 
@@ -107,23 +128,23 @@ async def update_entity(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{entity_id}/tags", response_model=OkResponse[list[str]])
+@router.get("/{entity_ref}/tags", response_model=OkResponse[list[str]])
 async def list_entity_tags(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_optional_actor)],
 ) -> OkResponse[list[str]]:
     user, api_key = auth
     policy = AccessPolicy(session)
     visible_ids = await policy.get_visible_project_ids(user, api_key)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
     return OkResponse(data=[t.tag for t in entity.tags])
 
 
-@router.post("/{entity_id}/tags", status_code=201, response_model=OkResponse[list[str]])
+@router.post("/{entity_ref}/tags", status_code=201, response_model=OkResponse[list[str]])
 async def add_entity_tag(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_actor)],
     tag: str = Body(..., embed=True),
@@ -131,15 +152,15 @@ async def add_entity_tag(
     user, api_key = auth
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_mutate_entity(entity.project_id, user, user_project_ids, api_key)
-    entity = await EntityService(session).add_tag(entity_id, tag)
+    entity = await EntityService(session).add_tag(entity.id, tag)
     return OkResponse(data=[t.tag for t in entity.tags])
 
 
-@router.delete("/{entity_id}/tags/{tag}", status_code=200, response_model=OkResponse[dict])
+@router.delete("/{entity_ref}/tags/{tag}", status_code=200, response_model=OkResponse[dict])
 async def remove_entity_tag(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     tag: str,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_actor)],
@@ -147,9 +168,9 @@ async def remove_entity_tag(
     user, api_key = auth
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_mutate_entity(entity.project_id, user, user_project_ids, api_key)
-    await EntityService(session).remove_tag(entity_id, tag)
+    await EntityService(session).remove_tag(entity.id, tag)
     return OkResponse(data={"removed": tag})
 
 
@@ -158,9 +179,9 @@ async def remove_entity_tag(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{entity_id}/history", response_model=OkResponse[EntityHistoryListResponse])
+@router.get("/{entity_ref}/history", response_model=OkResponse[EntityHistoryListResponse])
 async def list_entity_history(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_optional_actor)],
     limit: int = Query(50, ge=1, le=200),
@@ -169,18 +190,18 @@ async def list_entity_history(
     user, api_key = auth
     policy = AccessPolicy(session)
     visible_ids = await policy.get_visible_project_ids(user, api_key)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
-    items, total = await EntityService(session).list_history(entity_id, limit, offset)
+    items, total = await EntityService(session).list_history(entity.id, limit, offset)
     return OkResponse(data=EntityHistoryListResponse(
         items=[EntityHistoryRead.model_validate(h) for h in items],
         total=total,
     ))
 
 
-@router.get("/{entity_id}/history/{revision_no}", response_model=OkResponse[EntityHistoryRead])
+@router.get("/{entity_ref}/history/{revision_no}", response_model=OkResponse[EntityHistoryRead])
 async def get_entity_history_revision(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     revision_no: int,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_optional_actor)],
@@ -188,15 +209,15 @@ async def get_entity_history_revision(
     user, api_key = auth
     policy = AccessPolicy(session)
     visible_ids = await policy.get_visible_project_ids(user, api_key)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
-    history = await EntityService(session).get_history_revision(entity_id, revision_no)
+    history = await EntityService(session).get_history_revision(entity.id, revision_no)
     return OkResponse(data=EntityHistoryRead.model_validate(history))
 
 
-@router.get("/{entity_id}/history/{rev_a}/compare/{rev_b}", response_model=OkResponse[RevisionCompareResponse])
+@router.get("/{entity_ref}/history/{rev_a}/compare/{rev_b}", response_model=OkResponse[RevisionCompareResponse])
 async def compare_entity_history(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     rev_a: int,
     rev_b: int,
     session: SessionDep,
@@ -205,7 +226,7 @@ async def compare_entity_history(
     user, api_key = auth
     policy = AccessPolicy(session)
     visible_ids = await policy.get_visible_project_ids(user, api_key)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
-    result = await EntityService(session).compare_revisions(entity_id, rev_a, rev_b)
+    result = await EntityService(session).compare_revisions(entity.id, rev_a, rev_b)
     return OkResponse(data=result)

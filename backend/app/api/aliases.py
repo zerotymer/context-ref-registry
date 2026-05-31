@@ -20,9 +20,9 @@ router = APIRouter(tags=["aliases"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-@router.post("/entities/{entity_id}/aliases", status_code=201, response_model=OkResponse[AliasRead])
+@router.post("/entities/{entity_ref}/aliases", status_code=201, response_model=OkResponse[AliasRead])
 async def add_alias(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     body: AliasCreate,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_actor)],
@@ -30,20 +30,20 @@ async def add_alias(
     user, api_key = auth
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_mutate_entity(entity.project_id, user, user_project_ids, api_key)
     actor = actor_identifier(user, api_key)
-    alias = await AliasService(session).add_alias(entity_id, body, actor=actor)
+    alias = await AliasService(session).add_alias(entity.id, body, actor=actor)
     return OkResponse(data=AliasRead.model_validate(alias))
 
 
 @router.delete(
-    "/entities/{entity_id}/aliases/{alias_id}",
+    "/entities/{entity_ref}/aliases/{alias_id}",
     status_code=200,
     response_model=OkResponse[AliasRead],
 )
 async def deactivate_alias(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     alias_id: uuid.UUID,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_actor)],
@@ -51,25 +51,25 @@ async def deactivate_alias(
     user, api_key = auth
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_mutate_entity(entity.project_id, user, user_project_ids, api_key)
     actor = actor_identifier(user, api_key)
-    alias = await AliasService(session).deactivate_alias(entity_id, alias_id, actor=actor)
+    alias = await AliasService(session).deactivate_alias(entity.id, alias_id, actor=actor)
     return OkResponse(data=AliasRead.model_validate(alias))
 
 
-@router.get("/entities/{entity_id}/aliases", response_model=OkResponse[list[AliasRead]])
+@router.get("/entities/{entity_ref}/aliases", response_model=OkResponse[list[AliasRead]])
 async def list_aliases(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_optional_actor)],
 ) -> OkResponse[list[AliasRead]]:
     user, api_key = auth
     policy = AccessPolicy(session)
     visible_ids = await policy.get_visible_project_ids(user, api_key)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
-    aliases = await AliasService(session).list_aliases(entity_id)
+    aliases = await AliasService(session).list_aliases(entity.id)
     return OkResponse(data=[AliasRead.model_validate(a) for a in aliases])
 
 

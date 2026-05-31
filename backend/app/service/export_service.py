@@ -94,7 +94,7 @@ class ExportService:
         language: Locale,
     ) -> str:
         req = ContextBundleRequest(
-            root_ids=root_ids,
+            root_ids=[str(rid) for rid in root_ids],
             max_depth=max_depth,
             token_budget=token_budget,
             language=language,

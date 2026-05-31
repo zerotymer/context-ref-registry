@@ -39,8 +39,10 @@ class BundleService:
         self._relation_repo = RelationRepository(session)
 
     async def get_context_bundle(self, req: ContextBundleRequest) -> ContextBundleResponse:
+        root_uuid_list: list[uuid.UUID] = [uuid.UUID(str(rid)) for rid in req.root_ids]
+
         root_entities: list[Entity] = []
-        for rid in req.root_ids:
+        for rid in root_uuid_list:
             entity = await self._entity_repo.get_by_id(rid)
             if entity is None:
                 raise RegistryError(
@@ -52,7 +54,7 @@ class BundleService:
 
         all_entities, all_relations = await self._bfs(root_entities, req)
 
-        root_ids_set = set(req.root_ids)
+        root_ids_set = set(root_uuid_list)
         roots = [e for e in all_entities if e.id in root_ids_set]
         related = [e for e in all_entities if e.id not in root_ids_set]
 

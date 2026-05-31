@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -41,9 +40,9 @@ async def create_relation(
     return OkResponse(data=RelationRead.model_validate(relation))
 
 
-@router.get("/entities/{entity_id}/relations", response_model=OkResponse[list[RelationRead]])
+@router.get("/entities/{entity_ref}/relations", response_model=OkResponse[list[RelationRead]])
 async def list_relations(
-    entity_id: uuid.UUID,
+    entity_ref: str,
     session: SessionDep,
     auth: Annotated[tuple, Depends(get_optional_actor)],
     direction: str = Query("both", description="Traversal direction: out, in, or both"),
@@ -59,7 +58,7 @@ async def list_relations(
     user, api_key = auth
     policy = AccessPolicy(session)
     visible_ids = await policy.get_visible_project_ids(user, api_key)
-    entity = await EntityService(session).get_by_id(entity_id)
+    entity = await EntityService(session).resolve_ref(entity_ref)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
-    relations = await RelationService(session).list_relations(entity_id, direction, relation_type, max_depth)
+    relations = await RelationService(session).list_relations(entity.id, direction, relation_type, max_depth)
     return OkResponse(data=[RelationRead.model_validate(r) for r in relations])

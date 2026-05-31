@@ -87,19 +87,25 @@ async def resolve_alias(
 
 
 @mcp.tool(
-    description="Retrieve a single entity by UUID, including its aliases grouped by locale and any deprecation warnings."
+    description=(
+        "Retrieve a single entity by reference. Accepts three patterns:\n"
+        "  - UUID: '550e8400-e29b-41d4-a716-446655440000'\n"
+        "  - PROJECT_ID@UUID: 'my_project@550e8400-e29b-41d4-a716-446655440000'\n"
+        "  - PROJECT_ID@TAG: 'my_project@auth' (fails if multiple matches)\n"
+        "Returns entity details, aliases by locale, and deprecation warnings."
+    )
 )
 async def get_entity(id: str) -> dict:
-    entity_id = uuid.UUID(id)
-
     async with async_session_factory() as session:
         service = EntityService(session)
         alias_repo = AliasRepository(session)
 
         try:
-            entity = await service.get_by_id(entity_id)
+            entity = await service.resolve_ref(id)
         except RegistryError as exc:
             return {"error": exc.code, "message": exc.message}
+
+        entity_id = entity.id
 
         alias_rows = await alias_repo.list_by_entity(entity_id)
 
@@ -259,21 +265,30 @@ async def get_context_bundle(
     include_relations: list[str] | None = None,
     language: str = "ko",
 ) -> dict:
-    root_uuid_list = [uuid.UUID(r) for r in root_ids]
+    """root_ids accepts UUID, PROJECT_ID@UUID, or PROJECT_ID@TAG patterns."""
     type_enums = [EntityType(t) for t in include_types] if include_types else None
     rel_enums = [RelationType(r) for r in include_relations] if include_relations else None
     locale_enum = Locale(language)
 
-    req = ContextBundleRequest(
-        root_ids=root_uuid_list,
-        max_depth=max_depth,
-        token_budget=token_budget,
-        include_types=type_enums,
-        include_relations=rel_enums,
-        language=locale_enum,
-    )
-
     async with async_session_factory() as session:
+        entity_svc = EntityService(session)
+        resolved_uuids: list[uuid.UUID] = []
+        for ref in root_ids:
+            try:
+                entity = await entity_svc.resolve_ref(ref)
+                resolved_uuids.append(entity.id)
+            except RegistryError as exc:
+                return {"error": exc.code, "message": exc.message}
+
+        req = ContextBundleRequest(
+            root_ids=[str(r) for r in resolved_uuids],
+            max_depth=max_depth,
+            token_budget=token_budget,
+            include_types=type_enums,
+            include_relations=rel_enums,
+            language=locale_enum,
+        )
+
         service = BundleService(session)
         try:
             bundle = await service.get_context_bundle(req)
