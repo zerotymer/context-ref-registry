@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Key 관리 — UI 목업</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      font-size: 14px;
+    }
+
+    /* ── 탭 네비게이션 ── */
+    .tab-bar {
+      background: #1e293b;
+      display: flex;
+      gap: 4px;
+      padding: 12px 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .tab-btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px 6px 0 0;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      background: #334155;
+      color: #94a3b8;
+      transition: all .15s;
+    }
+    .tab-btn.active {
+      background: #f3f4f6;
+      color: #1e293b;
+    }
+    .tab-btn:hover:not(.active) {
+      background: #3e5068;
+      color: #e2e8f0;
+    }
+
+    /* ── 앱 셸 ── */
+    .screen { display: none; }
+    .screen.active { display: flex; height: calc(100vh - 43px); }
+
+    /* ── 사이드바 ── */
+    aside {
+      width: 220px;
+      background: #fff;
+      border-right: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-logo {
+      padding: 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .sidebar-logo .name {
+      font-weight: 700;
+      font-size: 14px;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+    .sidebar-logo .ver { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    nav { flex: 1; padding: 8px; overflow-y: auto; }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #4b5563;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .1s;
+    }
+    .nav-link:hover { background: #f9fafb; }
+    .nav-link.active { background: #eef2ff; color: #4338ca; font-weight: 500; }
+    .nav-link .badge {
+      margin-left: auto;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 999px;
+    }
+    .nav-section {
+      font-size: 10px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 10px 10px 4px;
+    }
+    .sidebar-footer {
+      border-top: 1px solid #f1f5f9;
+      padding: 10px 14px;
+      font-size: 11px;
+    }
+    .sidebar-footer .email { color: #6b7280; display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+    .avatar {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: #e0e7ff;
+      color: #4338ca;
+      font-weight: 700;
+      font-size: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid;
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+    .role-admin { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+    .role-user  { border-color: #d1d5db; color: #6b7280; background: #f9fafb; }
+
+    /* ── 메인 콘텐츠 ── */
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .page-header {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .page-header h1 { font-weight: 600; font-size: 15px; color: #111827; }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: #4338ca; }
+
+    /* ── 필터 바 ── */
+    .filter-bar {
+      background: #fff;
+      border-bottom: 1px solid #f1f5f9;
+      padding: 8px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .filter-bar select,
+    .filter-bar input {
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: #374151;
+      background: #fff;
+    }
+    .filter-bar input { width: 180px; }
+    .count-label { margin-left: auto; font-size: 12px; color: #9ca3af; }
+
+    /* ── 테이블 ── */
+    .table-wrap { flex: 1; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    thead { background: #f9fafb; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; }
+    th { padding: 9px 16px; text-align: left; font-weight: 500; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+    td { padding: 10px 16px; border-top: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── 배지 ── */
+    .scope-badge {
+      display: inline-flex;
+      align-items: center;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-weight: 500;
+      margin-right: 3px;
+      margin-bottom: 2px;
+    }
+    .status-active {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: #16a34a; font-size: 12px; font-weight: 500;
+    }
+    .status-active::before {
+      content: ''; width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 2px #dcfce7;
+    }
+    .status-revoked { color: #9ca3af; font-size: 12px; }
+    .btn-revoke {
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      background: #fff;
+      border-radius: 5px;
+      padding: 3px 9px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .btn-revoke:hover { background: #fef2f2; }
+    .btn-revoke:disabled { opacity: .4; cursor: not-allowed; }
+    .mono {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 11px;
+      color: #374151;
+    }
+    .empty-row td {
+      text-align: center;
+      padding: 48px;
+      color: #9ca3af;
+    }
+
+    /* ── 인포 박스 ── */
+    .info-banner {
+      margin: 16px 24px 0;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #92400e;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+    .info-banner .icon { font-size: 14px; flex-shrink: 0; }
+
+    /* ── 모달 ── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    .modal-box {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      padding: 24px;
+      width: 100%;
+    }
+    .modal-sm { max-width: 380px; }
+    .modal-md { max-width: 460px; }
+    .modal-title { font-weight: 600; font-size: 15px; color: #111827; margin-bottom: 16px; }
+    .form-label { display: block; font-size: 11px; font-weight: 500; color: #6b7280; margin-bottom: 4px; }
+    .form-input {
+      width: 100%;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: #111827;
+    }
+    .form-input:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 2px #e0e7ff; }
+    .scope-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .scope-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: border-color .1s, background .1s;
+    }
+    .scope-item:hover { border-color: #818cf8; background: #fafafa; }
+    .scope-item.checked { border-color: #818cf8; background: #eef2ff; }
+    .scope-item input { margin-top: 2px; accent-color: #4f46e5; }
+    .scope-item .scope-name { font-size: 12px; font-weight: 600; color: #374151; }
+    .scope-item .scope-desc { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .btn-cancel {
+      padding: 6px 14px; font-size: 13px; color: #6b7280;
+      background: none; border: none; cursor: pointer;
+    }
+    .btn-cancel:hover { color: #111827; }
+
+    /* ── Key Reveal 모달 ── */
+    .key-reveal-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0;
+    }
+    .key-reveal-label { font-size: 11px; color: #166534; font-weight: 500; margin-bottom: 6px; }
+    .key-reveal-value {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 12px;
+      color: #14532d;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .btn-copy {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 8px;
+      border: 1px solid #86efac;
+      background: #dcfce7;
+      color: #166534;
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .warning-text {
+      font-size: 11px;
+      color: #dc2626;
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-top: 10px;
+    }
+
+    /* ── 아이콘 SVG ── */
+    .icon-sm { width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* ── 범례 ── */
+    .legend {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 11px;
+      color: #6b7280;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      z-index: 50;
+      line-height: 1.8;
+    }
+    .legend strong { color: #374151; display: block; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- ── 탭 네비게이션 ── -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('user-screen')">① 사용자 화면 — /settings/api-keys</button>
+  <button class="tab-btn" onclick="showTab('admin-screen')">② 관리자 화면 — /admin/api-keys</button>
+  <button class="tab-btn" onclick="showTab('modal-create')">③ 발급 모달</button>
+  <button class="tab-btn" onclick="showTab('modal-reveal')">④ Key 공개 모달</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ① 사용자 화면
+══════════════════════════════════════════════════════ -->
+<div id="user-screen" class="screen active">
+  <aside>
+    <div class="sidebar-logo">
+      <div class="name">LLM Reference<br/>Registry</div>
+      <div class="ver">v0.1.0</div>
+    </div>
+    <nav>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        Entity 목록
+      </a>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        승인 대기
+        <span class="badge">3</span>
+      </a>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        Bundle 탐색기
+      </a>
+      <!-- ★ 신규 메뉴 -->
+      <a class="nav-link active">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+        API 설정
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="email"><span class="avatar">A</span> alice@company.com</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="role-badge role-user">user</span>
+        <span style="font-size:11px;color:#9ca3af;cursor:pointer;">로그아웃</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="page-header">
+      <h1>API 설정</h1>
+      <button class="btn-primary">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        새 API Key 발급
+      </button>
+    </div>
+
+    <div class="info-banner">
+      <span class="icon">ℹ️</span>
+      <span>API Key는 코딩 에이전트·CI 파이프라인에서 <code>X-API-Key</code> 헤더로 사용합니다.
+      Key는 발급 직후에만 표시되며 이후 재확인이 불가합니다.</span>
+    </div>
+
+    <div class="table-wrap" style="margin-top:16px;">
+      <table>
+        <thead>
+          <tr>
+            <th>이름</th>
+            <th>스코프</th>
+            <th>생성일</th>
+            <th>상태</th>
+            <th style="width:60px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">ci-bot</td>
+            <td>
+              <span class="scope-badge">read:entities</span>
+              <span class="scope-badge">ingest</span>
+            </td>
+            <td style="color:#6b7280;">2026-05-30</td>
+            <td><span class="status-active">활성</span></td>
+            <td><button class="btn-revoke">폐기</button></td>
+          </tr>
+          <tr>
+            <td class="mono">cursor-agent</td>
+            <td>
+              <span class="scope-badge">read:all</span>
+            </td>
+            <td style="color:#6b7280;">2026-05-28</td>
+            <td><span class="status-active">활성</span></td>
+            <td><button class="btn-revoke">폐기</button></td>
+          </tr>
+          <tr style="opacity:.55;">
+            <td class="mono">old-key</td>
+            <td>
+              <span class="scope-badge" style="opacity:.6;">read:entities</span>
+            </td>
+            <td style="color:#9ca3af;">2026-05-01</td>
+            <td><span class="status-revoked">폐기됨</span></td>
+            <td><button class="btn-revoke" disabled>폐기</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ② 관리자 화면
+══════════════════════════════════════════════════════ -->
+<div id="admin-screen" class="screen">
+  <aside>
+    <div class="sidebar-logo">
+      <div class="name">LLM Reference<br/>Registry</div>
+      <div class="ver">v0.1.0</div>
+    </div>
+    <nav>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        Entity 목록
+      </a>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        승인 대기
+      </a>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        Bundle 탐색기
+      </a>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+        API 설정
+      </a>
+
+      <div class="nav-section">관리자</div>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        사용자 관리
+      </a>
+      <a class="nav-link">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+        프로젝트 관리
+      </a>
+      <!-- ★ 신규 -->
+      <a class="nav-link active">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        API Key 관리
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="email"><span class="avatar" style="background:#fef2f2;color:#dc2626;">S</span> superadmin@company.com</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="role-badge role-admin">admin</span>
+        <span style="font-size:11px;color:#9ca3af;cursor:pointer;">로그아웃</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="page-header">
+      <h1>API Key 관리</h1>
+      <button class="btn-primary">
+        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        키 발급
+      </button>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" placeholder="소유자 이메일 검색..." />
+      <select>
+        <option>모든 상태</option>
+        <option>활성</option>
+        <option>폐기됨</option>
+      </select>
+      <span class="count-label">총 4개</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>소유자</th>
+            <th>이름</th>
+            <th>스코프</th>
+            <th>생성일</th>
+            <th>상태</th>
+            <th style="width:60px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:#6b7280;">alice@company.com</td>
+            <td class="mono">ci-bot</td>
+            <td>
+              <span class="scope-badge">read:entities</span>
+              <span class="scope-badge">ingest</span>
+            </td>
+            <td style="color:#6b7280;">2026-05-30</td>
+            <td><span class="status-active">활성</span></td>
+            <td><button class="btn-revoke">폐기</button></td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;">alice@company.com</td>
+            <td class="mono">cursor-agent</td>
+            <td>
+              <span class="scope-badge">read:all</span>
+            </td>
+            <td style="color:#6b7280;">2026-05-28</td>
+            <td><span class="status-active">활성</span></td>
+            <td><button class="btn-revoke">폐기</button></td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;">bob@company.com</td>
+            <td class="mono">codex-ci</td>
+            <td>
+              <span class="scope-badge">read:entities</span>
+              <span class="scope-badge">write:entities</span>
+              <span class="scope-badge">ingest</span>
+            </td>
+            <td style="color:#6b7280;">2026-05-27</td>
+            <td><span class="status-active">활성</span></td>
+            <td><button class="btn-revoke">폐기</button></td>
+          </tr>
+          <tr style="opacity:.55;">
+            <td style="color:#9ca3af;">bob@company.com</td>
+            <td class="mono">old-key</td>
+            <td>
+              <span class="scope-badge" style="opacity:.5;">read:entities</span>
+            </td>
+            <td style="color:#9ca3af;">2026-05-01</td>
+            <td><span class="status-revoked">폐기됨</span></td>
+            <td><button class="btn-revoke" disabled>폐기</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ③ 발급 모달
+══════════════════════════════════════════════════════ -->
+<div id="modal-create" class="screen" style="background:#f3f4f6; align-items:center; justify-content:center;">
+  <div class="modal-box modal-md">
+    <div class="modal-title">새 API Key 발급</div>
+
+    <div style="margin-bottom:14px;">
+      <label class="form-label">Key 이름 <span style="color:#ef4444;">*</span></label>
+      <input class="form-input" type="text" placeholder="예: ci-bot, cursor-agent" value="ci-bot" />
+      <div style="font-size:10px;color:#9ca3af;margin-top:4px;">용도를 식별할 수 있는 이름을 입력하세요.</div>
+    </div>
+
+    <div style="margin-bottom:4px;">
+      <label class="form-label">스코프 <span style="color:#ef4444;">*</span> (하나 이상 선택)</label>
+    </div>
+    <div class="scope-grid">
+      <label class="scope-item checked">
+        <input type="checkbox" checked />
+        <div>
+          <div class="scope-name">read:entities</div>
+          <div class="scope-desc">Entity/Alias/Context 읽기</div>
+        </div>
+      </label>
+      <label class="scope-item">
+        <input type="checkbox" />
+        <div>
+          <div class="scope-name">write:entities</div>
+          <div class="scope-desc">Entity 생성·수정</div>
+        </div>
+      </label>
+      <label class="scope-item checked">
+        <input type="checkbox" checked />
+        <div>
+          <div class="scope-name">ingest</div>
+          <div class="scope-desc">Batch ingest 실행</div>
+        </div>
+      </label>
+      <label class="scope-item">
+        <input type="checkbox" />
+        <div>
+          <div class="scope-name">read:all</div>
+          <div class="scope-desc">전체 읽기 권한</div>
+        </div>
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel">취소</button>
+      <button class="btn-primary">발급</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ④ Key 공개 모달
+══════════════════════════════════════════════════════ -->
+<div id="modal-reveal" class="screen" style="background:#f3f4f6; align-items:center; justify-content:center;">
+  <div class="modal-box modal-md">
+    <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">🎉</span> API Key가 발급되었습니다
+    </div>
+
+    <div style="font-size:13px;color:#6b7280;margin-bottom:4px;">
+      <strong style="color:#111827;">ci-bot</strong> 키가 생성되었습니다.
+    </div>
+
+    <div class="key-reveal-box">
+      <div class="key-reveal-label">발급된 API Key (한 번만 표시됩니다)</div>
+      <div class="key-reveal-value">llmref_sk_a7f3c9e2d5b84f1a6e0c3d8b2f9a4e7c1d6b5f8a2e3c7d0b4f9a1e5c2d8b6f3a9</div>
+      <button class="btn-copy">
+        <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+        복사
+      </button>
+    </div>
+
+    <div class="warning-text">
+      ⚠️ 이 키는 지금만 표시됩니다. 창을 닫으면 다시 확인할 수 없으며, 분실 시 재발급이 필요합니다.
+    </div>
+
+    <div style="margin-top:14px;padding:10px 12px;background:#f9fafb;border-radius:6px;font-size:11px;color:#6b7280;">
+      <div style="font-weight:500;color:#374151;margin-bottom:4px;">사용 방법</div>
+      <div style="font-family:monospace;">X-API-Key: llmref_sk_a7f3c9e2d5b84...</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-primary">완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 범례 ── -->
+<div class="legend">
+  <strong>탭 설명</strong>
+  ① 사용자 화면 — /settings/api-keys<br/>
+  ② 관리자 화면 — /admin/api-keys<br/>
+  ③ 발급 모달 (스코프 선택)<br/>
+  ④ Raw Key 공개 모달
+</div>
+
+<script>
+  function showTab(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  // scope-item 체크박스 토글
+  document.querySelectorAll('.scope-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+      if (e.target.tagName === 'INPUT') return;
+      const cb = this.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      this.classList.toggle('checked', cb.checked);
+    });
+    const cb = item.querySelector('input[type=checkbox]');
+    cb?.addEventListener('change', function() {
+      item.classList.toggle('checked', this.checked);
+    });
+  });
+
+  // 복사 버튼 피드백
+  document.querySelector('.btn-copy')?.addEventListener('click', function() {
+    this.textContent = '복사됨!';
+    setTimeout(() => { this.innerHTML = `<svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> 복사`; }, 1500);
+  });
+</script>
+</body>
+</html>
