@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>로그인 — LLM Reference Registry</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center font-sans">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-8">
+      <div class="font-semibold text-gray-900 text-lg leading-tight">LLM Reference<br/>Registry</div>
+      <div class="text-xs text-gray-400 mt-1">v0.1.0</div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm px-8 py-8">
+      <h2 class="text-sm font-semibold text-gray-800 mb-6">로그인</h2>
+
+      <form class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1.5">이메일</label>
+          <input
+            type="email"
+            placeholder="admin@example.com"
+            value="admin@example.com"
+            class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1.5">비밀번호</label>
+          <input
+            type="password"
+            value="••••••••"
+            class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          />
+        </div>
+
+        <!-- 로그인 실패 상태 (주석 처리 → 오류 시 노출) -->
+        <!--
+        <div class="bg-red-50 border border-red-200 rounded-md px-3 py-2 text-xs text-red-700">
+          이메일 또는 비밀번호가 올바르지 않습니다.
+        </div>
+        -->
+
+        <button
+          type="button"
+          onclick="window.location='admin-users.html'"
+          class="w-full bg-indigo-600 text-white text-sm font-medium py-2 rounded-md hover:bg-indigo-700 mt-2"
+        >
+          로그인
+        </button>
+      </form>
+
+    </div>
+
+    <!-- 비활성 계정 오류 상태 예시 -->
+    <div class="mt-4 bg-amber-50 border border-amber-200 rounded-md px-4 py-3 text-xs text-amber-700 hidden" id="inactive-msg">
+      비활성화된 계정입니다. 관리자에게 문의하세요.
+    </div>
+  </div>
+
+  <!-- 뒤로 가기 -->
+  <a href="index.html" class="fixed top-4 left-4 text-xs text-gray-400 hover:text-gray-600">← 목록</a>
+</body>
+</html>

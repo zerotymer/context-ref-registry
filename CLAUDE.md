@@ -48,6 +48,10 @@ ci/                     # PR 참조 검증 스크립트 (validate-pr-refs.py)
 .github/workflows/      # GitHub Actions CI (pr-validate-refs.yml)
 docs/                   # 설계 문서 00~11
 instructions/           # 구현 지침 파일
+output/                 # 생성된 산출물 (목업 HTML, 보고서 등)
+  admin-console-mockup/ #   관리자 콘솔 UI 목업
+  review-ui-mockup/     #   Review UI 목업
+  tag-ui-mockup/        #   Tag UI 목업
 ```
 
 ## Docker Compose
@@ -83,6 +87,14 @@ docker compose up -d
 2. `instructions/.completed/{uuid}.md`로 이동
 3. `instructions/instructions.log`에 `completed` 이벤트 추가
 4. git commit
+
+### 진행상태 점검 / 지침 업데이트 시 필수 작업
+
+'진행상태 점검' 또는 '지침 업데이트' 요청 시 다음을 함께 수행한다:
+
+1. `CLAUDE.md` — 현재 지침 테이블·구현 현황·프로젝트 구조 동기화
+2. `AGENTS.md` — 현재 구현 상태 테이블 동기화
+3. `instructions/README.md` — 로드맵·완료 지침 요약·지침 파일 현황 동기화
 
 ### 현재 지침
 

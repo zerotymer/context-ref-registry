@@ -14,6 +14,7 @@ LLM Reference Registry 구현 지침 파일 모음.
 | 완료 처리 | frontmatter `status: completed` → `instructions/.completed/{uuid}.md` 이동 → log 기록 → 커밋 |
 | 브랜치 전략 | Step별 `feat/step{N}-{slug}` → PR → main (스킬 `e03f48fb-3e00-41d7-b99d-c32854567d67`) |
 | 참조 문서 | `docs/00~11` — 구현 중 판단 필요 시 해당 문서 우선 참고 |
+| **진행상태 점검** | '진행상태 점검' 또는 '지침 업데이트' 요청 시 CLAUDE.md, AGENTS.md, instructions/README.md 동기화 필수 |
 
 ---
 

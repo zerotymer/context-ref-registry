@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>프로젝트 멤버 관리 — LLM Reference Registry</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex font-sans text-sm">
+
+  <!-- Sidebar (project_admin 기준: 관리자 메뉴 없음) -->
+  <aside class="w-56 bg-white border-r border-gray-200 flex flex-col shrink-0 min-h-screen">
+    <div class="px-4 py-4 border-b border-gray-100">
+      <div class="font-semibold text-gray-900 text-base leading-tight">LLM Reference<br/>Registry</div>
+      <div class="text-xs text-gray-400 mt-0.5">v0.1.0</div>
+    </div>
+    <nav class="flex-1 px-2 py-3 space-y-0.5">
+      <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        Entity 목록
+      </a>
+      <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-50">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        승인 대기
+      </a>
+
+      <!-- 프로젝트 관리자 전용 섹션 -->
+      <div class="pt-3 pb-1 px-3">
+        <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">내 프로젝트</div>
+      </div>
+      <a href="admin-members.html" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm bg-indigo-50 text-indigo-700 font-medium">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        멤버 관리
+      </a>
+    </nav>
+    <div class="px-4 py-3 border-t border-gray-100 text-xs">
+      <div class="flex items-center gap-2 text-gray-600">
+        <span class="w-6 h-6 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-semibold text-xs">A</span>
+        alice@example.com
+      </div>
+      <div class="mt-1">
+        <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 px-1.5 py-0.5 rounded-full text-xs font-medium">project_admin</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col min-h-screen">
+    <!-- Breadcrumb + header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-3 shrink-0">
+      <div class="text-xs text-gray-400 mb-1">
+        <a href="admin-projects.html" class="hover:text-indigo-600">프로젝트 관리</a>
+        <span class="mx-1.5">›</span>
+        <span class="font-medium text-gray-600">frontend-v2</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="font-semibold text-gray-900">멤버 관리</h1>
+          <div class="text-xs text-gray-400 mt-0.5">프론트엔드 v2 컴포넌트 레지스트리</div>
+        </div>
+        <button onclick="document.getElementById('add-modal').classList.remove('hidden')"
+          class="flex items-center gap-1.5 bg-indigo-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-indigo-700">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          멤버 추가
+        </button>
+      </div>
+    </header>
+
+    <!-- 프로젝트 관리자 섹션 -->
+    <div class="bg-white border-b border-gray-100 px-6 py-4 shrink-0">
+      <div class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide">프로젝트 관리자</div>
+      <div class="flex items-center gap-3">
+        <span class="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-semibold text-sm">A</span>
+        <div>
+          <div class="text-sm font-medium text-gray-800">alice@example.com</div>
+          <div class="text-xs text-gray-400">Alice Kim</div>
+        </div>
+        <span class="ml-auto inline-flex items-center bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-full text-xs font-medium">project_admin</span>
+        <!-- 전역 관리자만 관리자 변경 가능 — 여기선 비활성 -->
+        <button disabled class="text-gray-300 text-xs ml-2 cursor-not-allowed">관리자 변경</button>
+      </div>
+    </div>
+
+    <!-- 멤버 테이블 -->
+    <main class="flex-1 overflow-y-auto">
+      <div class="px-6 py-3 text-xs text-gray-400">일반 멤버 2명</div>
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 border-b border-gray-200 sticky top-0">
+          <tr class="text-gray-500">
+            <th class="text-left px-6 py-2.5 font-medium">이메일</th>
+            <th class="text-left px-3 py-2.5 font-medium">역할</th>
+            <th class="text-left px-3 py-2.5 font-medium">추가일</th>
+            <th class="text-left px-3 py-2.5 font-medium">추가한 사람</th>
+            <th class="px-3 py-2.5"/>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 bg-white">
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-3 font-medium text-gray-800">bob@example.com
+              <div class="text-gray-400 font-normal mt-0.5">Bob Park</div>
+            </td>
+            <td class="px-3 py-3">
+              <select class="border border-gray-200 rounded-md text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                <option selected>member</option>
+                <option>viewer</option>
+              </select>
+            </td>
+            <td class="px-3 py-3 text-gray-400">2026-05-15</td>
+            <td class="px-3 py-3 text-gray-400">alice@example.com</td>
+            <td class="px-3 py-3">
+              <button onclick="if(confirm('Bob Park을 프로젝트에서 제거하시겠습니까?')) alert('제거됨')"
+                class="text-xs text-red-500 hover:text-red-700 hover:underline">제거</button>
+            </td>
+          </tr>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-3 font-medium text-gray-800">dave@example.com
+              <div class="text-gray-400 font-normal mt-0.5">Dave Choi</div>
+            </td>
+            <td class="px-3 py-3">
+              <select class="border border-gray-200 rounded-md text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                <option>member</option>
+                <option selected>viewer</option>
+              </select>
+            </td>
+            <td class="px-3 py-3 text-gray-400">2026-05-20</td>
+            <td class="px-3 py-3 text-gray-400">alice@example.com</td>
+            <td class="px-3 py-3">
+              <button onclick="if(confirm('Dave Choi를 프로젝트에서 제거하시겠습니까?')) alert('제거됨')"
+                class="text-xs text-red-500 hover:text-red-700 hover:underline">제거</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Entity 필터 미리보기 -->
+      <div class="border-t border-gray-200 px-6 py-4 mt-2">
+        <div class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide">프로젝트 기준 Entity 필터</div>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
+          <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+          <span class="text-xs text-gray-600">Entity 목록에서 <span class="font-medium text-indigo-700">frontend-v2</span> 프로젝트 엔티티만 보기</span>
+          <a href="#" class="ml-auto text-xs text-indigo-600 hover:underline">바로가기 →</a>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 멤버 추가 모달 -->
+  <div id="add-modal" class="hidden fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-900 text-sm">멤버 추가</h3>
+        <button onclick="document.getElementById('add-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="px-6 py-5 space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1.5">사용자 <span class="text-red-500">*</span></label>
+          <select class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            <option value="">사용자 선택...</option>
+            <option>charlie@example.com</option>
+          </select>
+          <div class="text-xs text-gray-400 mt-1">이미 멤버이거나 비활성화된 사용자는 표시되지 않습니다.</div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1.5">역할</label>
+          <select class="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            <option value="member">member — 조회·수정 가능</option>
+            <option value="viewer">viewer — 조회만 가능</option>
+          </select>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+        <button onclick="document.getElementById('add-modal').classList.add('hidden')" class="text-sm px-3 py-1.5 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50">취소</button>
+        <button class="text-sm px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <a href="index.html" class="fixed top-4 right-4 text-xs text-gray-400 hover:text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-md">← 목록</a>
+</body>
+</html>
