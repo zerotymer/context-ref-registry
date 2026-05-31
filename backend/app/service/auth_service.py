@@ -133,6 +133,36 @@ class AuthService:
         await self._session.commit()
         return api_key, raw_key
 
+    async def list_api_keys(self, user_id: uuid.UUID) -> list[ApiKey]:
+        return await self._api_key_repo.list_by_user(user_id)
+
+    async def list_all_api_keys(
+        self,
+        *,
+        created_by_email: str | None = None,
+        is_active: bool | None = None,
+    ) -> list[tuple[ApiKey, str | None]]:
+        return await self._api_key_repo.list_all(
+            created_by_email=created_by_email,
+            is_active=is_active,
+        )
+
+    async def revoke_api_key(
+        self,
+        api_key_id: uuid.UUID,
+        *,
+        actor_id: uuid.UUID,
+        is_admin: bool = False,
+    ) -> ApiKey:
+        key = await self._api_key_repo.get_by_id(api_key_id)
+        if key is None:
+            raise RegistryError("NOT_FOUND", "API key not found", status_code=404)
+        if not is_admin and key.created_by != actor_id:
+            raise RegistryError("FORBIDDEN", "Cannot revoke another user's API key", status_code=403)
+        revoked = await self._api_key_repo.revoke(api_key_id)
+        await self._session.commit()
+        return revoked
+
     async def list_users(
         self,
         *,
