@@ -65,7 +65,7 @@ async def test_update_snapshot_is_before_image(admin_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_status_change_type(admin_client: AsyncClient):
-    eid = await _create_entity(admin_client)
+    eid = await _create_entity(admin_client, status="candidate")
     await admin_client.patch(f"/entities/{eid}", json={"status": "active"})
     history = await _get_history(admin_client, eid)
     update_entry = next(h for h in history if h["revision_no"] == 2)

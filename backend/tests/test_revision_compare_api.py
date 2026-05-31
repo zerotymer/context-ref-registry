@@ -8,7 +8,7 @@ from httpx import AsyncClient
 async def _make_entity_with_history(admin_client: AsyncClient) -> str:
     resp = await admin_client.post(
         "/entities",
-        json={"type": "FEATURE", "canonical_name": "초기 이름", "description": "초기 설명"},
+        json={"type": "FEATURE", "canonical_name": "초기 이름", "description": "초기 설명", "status": "candidate"},
     )
     assert resp.status_code == 201
     eid = resp.json()["data"]["id"]

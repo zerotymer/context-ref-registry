@@ -27,7 +27,7 @@ from app.domain.schemas import (
 
 def test_entity_create_defaults():
     e = EntityCreate(type=EntityType.FEATURE, canonical_name="사용자 검색")
-    assert e.status == EntityStatus.CANDIDATE
+    assert e.status == EntityStatus.ACTIVE
     assert e.confidence == 1.0
     assert e.id is None
 

@@ -62,6 +62,7 @@ async def test_entity_status_change_writes_audit_log(admin_client: AsyncClient):
     create_resp = await admin_client.post("/entities", json={
         "type": "FEATURE",
         "canonical_name": "상태 변경 테스트",
+        "status": "candidate",
     })
     entity_id = create_resp.json()["data"]["id"]
 

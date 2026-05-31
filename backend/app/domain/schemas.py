@@ -41,7 +41,7 @@ class EntityCreate(BaseModel):
     type: EntityType
     canonical_name: str = Field(..., max_length=500)
     description: str | None = None
-    status: EntityStatus = EntityStatus.CANDIDATE
+    status: EntityStatus = EntityStatus.ACTIVE
     confidence: float = Field(1.0, ge=0.0, le=1.0)
     tags: list[str] = Field(default_factory=list)
     project_id: str | None = None
@@ -286,7 +286,7 @@ class IngestEntityInput(BaseModel):
     type: EntityType
     canonical_name: str = Field(..., max_length=500)
     description: str | None = None
-    status: EntityStatus = EntityStatus.CANDIDATE
+    status: EntityStatus = EntityStatus.ACTIVE
     confidence: float = Field(1.0, ge=0.0, le=1.0)
     project_id: str | None = None
     aliases: dict[Locale, list[str]] = Field(default_factory=dict)

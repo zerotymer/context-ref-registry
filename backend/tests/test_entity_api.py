@@ -47,7 +47,7 @@ async def test_get_entity_returns_200(admin_client: AsyncClient):
     assert data["id"] == entity_id
     assert data["type"] == "INFRA_UNIT"
     assert data["canonical_name"] == "사용자 DB"
-    assert data["status"] == "candidate"
+    assert data["status"] == "active"
 
 
 async def test_get_public_entity_unauthenticated(admin_client: AsyncClient, client: AsyncClient):
