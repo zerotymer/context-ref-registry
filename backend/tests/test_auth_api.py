@@ -235,12 +235,14 @@ async def test_api_key_admin_creates_key(client: AsyncClient):
     assert len(body["key"]) > 20  # raw key returned
 
 
-async def test_non_admin_cannot_create_api_key(client: AsyncClient):
+async def test_regular_user_can_create_api_key(client: AsyncClient):
+    # POST /auth/api-keys is now open to all authenticated users (not admin-only)
     await _create_user(client, email="user@test.com", password="pw", role="user")
     await _login(client, "user@test.com", "pw")
 
-    resp = await client.post("/auth/api-keys", json={"name": "key", "scopes": ["read"]})
-    assert resp.status_code == 403
+    resp = await client.post("/auth/api-keys", json={"name": "key", "scopes": ["read:entities"]})
+    assert resp.status_code == 201
+    assert resp.json()["data"]["name"] == "key"
 
 
 # ---------------------------------------------------------------------------

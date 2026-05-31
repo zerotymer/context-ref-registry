@@ -58,8 +58,39 @@ class ApiKeyRead(BaseModel):
     scopes: list[str]
     project_id: uuid.UUID | None
     created_at: str
+    revoked_at: str | None = None
+    is_active: bool = True
 
     model_config = {"from_attributes": True}
+
+    @classmethod
+    def from_orm_model(cls, key: "ApiKey") -> "ApiKeyRead":
+        return cls(
+            id=key.id,
+            name=key.name,
+            scopes=key.scopes,
+            project_id=key.project_id,
+            created_at=key.created_at.isoformat(),
+            revoked_at=key.revoked_at.isoformat() if key.revoked_at else None,
+            is_active=key.revoked_at is None,
+        )
+
+
+class AdminApiKeyRead(ApiKeyRead):
+    created_by_email: str | None = None
+
+    @classmethod
+    def from_orm_with_email(cls, key: "ApiKey", email: str | None) -> "AdminApiKeyRead":
+        return cls(
+            id=key.id,
+            name=key.name,
+            scopes=key.scopes,
+            project_id=key.project_id,
+            created_at=key.created_at.isoformat(),
+            revoked_at=key.revoked_at.isoformat() if key.revoked_at else None,
+            is_active=key.revoked_at is None,
+            created_by_email=email,
+        )
 
 
 class ApiKeyCreatedResponse(BaseModel):
@@ -124,7 +155,7 @@ async def create_user(
 
 
 # ---------------------------------------------------------------------------
-# API Key management (admin only)
+# API Key management (logged-in users + admin)
 # ---------------------------------------------------------------------------
 
 
@@ -132,13 +163,13 @@ async def create_user(
 async def create_api_key(
     body: ApiKeyCreateRequest,
     session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
+    user: Annotated[UserAccount, Depends(get_current_user)],
 ) -> OkResponse[ApiKeyCreatedResponse]:
     api_key, raw_key = await AuthService(session).create_api_key(
         name=body.name,
         scopes=body.scopes,
         project_id=body.project_id,
-        created_by=admin.id,
+        created_by=user.id,
     )
     return OkResponse(
         data=ApiKeyCreatedResponse(
@@ -148,3 +179,26 @@ async def create_api_key(
             key=raw_key,
         )
     )
+
+
+@router.get("/api-keys", response_model=OkResponse[list[ApiKeyRead]])
+async def list_my_api_keys(
+    session: SessionDep,
+    user: Annotated[UserAccount, Depends(get_current_user)],
+) -> OkResponse[list[ApiKeyRead]]:
+    keys = await AuthService(session).list_api_keys(user.id)
+    return OkResponse(data=[ApiKeyRead.from_orm_model(k) for k in keys])
+
+
+@router.delete("/api-keys/{key_id}", status_code=200, response_model=OkResponse[ApiKeyRead])
+async def revoke_api_key(
+    key_id: uuid.UUID,
+    session: SessionDep,
+    user: Annotated[UserAccount, Depends(get_current_user)],
+) -> OkResponse[ApiKeyRead]:
+    key = await AuthService(session).revoke_api_key(
+        key_id,
+        actor_id=user.id,
+        is_admin=user.role == "admin",
+    )
+    return OkResponse(data=ApiKeyRead.from_orm_model(key))
