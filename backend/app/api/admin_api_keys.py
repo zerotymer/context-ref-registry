@@ -11,6 +11,8 @@ from app.auth.dependencies import get_current_admin
 from app.db.session import get_session
 from app.domain.models import UserAccount
 from app.domain.schemas import OkResponse
+from app.exceptions import RegistryError
+from app.repository.project_repository import ProjectRepository
 from app.service.auth_service import AuthService
 
 router = APIRouter(prefix="/admin/api-keys", tags=["admin"])
@@ -25,11 +27,14 @@ async def list_all_api_keys(
     search: str | None = Query(default=None, description="Filter by owner email"),
     is_active: bool | None = Query(default=None),
 ) -> OkResponse[list[AdminApiKeyRead]]:
-    pairs = await AuthService(session).list_all_api_keys(
+    rows = await AuthService(session).list_all_api_keys(
         created_by_email=search,
         is_active=is_active,
     )
-    return OkResponse(data=[AdminApiKeyRead.from_orm_with_email(k, email) for k, email in pairs])
+    return OkResponse(data=[
+        AdminApiKeyRead.from_orm_with_email(k, email, project_name=pn, owner_role=role)
+        for k, email, pn, role in rows
+    ])
 
 
 @router.post("", status_code=201, response_model=OkResponse[ApiKeyCreatedResponse])
@@ -38,7 +43,12 @@ async def admin_create_api_key(
     session: SessionDep,
     admin: Annotated[UserAccount, Depends(get_current_admin)],
 ) -> OkResponse[ApiKeyCreatedResponse]:
-    """Admin creates a key (owned by admin unless project_id specifies otherwise)."""
+    """Admin creates a key; project_id=null means global key."""
+    if body.project_id is not None:
+        proj = await ProjectRepository(session).get_by_id(body.project_id)
+        if proj is None:
+            raise RegistryError("NOT_FOUND", f"Project '{body.project_id}' not found", status_code=404)
+
     api_key, raw_key = await AuthService(session).create_api_key(
         name=body.name,
         scopes=body.scopes,
@@ -66,6 +76,7 @@ async def admin_revoke_api_key(
         actor_id=admin.id,
         is_admin=True,
     )
-    pairs = await AuthService(session).list_all_api_keys()
-    email = next((e for k, e in pairs if k.id == key.id), None)
-    return OkResponse(data=AdminApiKeyRead.from_orm_with_email(key, email))
+    rows = await AuthService(session).list_all_api_keys()
+    row = next(((k, email, pn, role) for k, email, pn, role in rows if k.id == key.id), None)
+    email, pn, role = (row[1], row[2], row[3]) if row else (None, None, None)
+    return OkResponse(data=AdminApiKeyRead.from_orm_with_email(key, email, project_name=pn, owner_role=role))

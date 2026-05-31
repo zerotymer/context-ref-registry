@@ -133,7 +133,10 @@ class AuthService:
         await self._session.commit()
         return api_key, raw_key
 
-    async def list_api_keys(self, user_id: uuid.UUID) -> list[ApiKey]:
+    async def list_api_keys(
+        self, user_id: uuid.UUID
+    ) -> list[tuple[ApiKey, str | None, str | None]]:
+        """Returns (ApiKey, project_name, owner_role) tuples."""
         return await self._api_key_repo.list_by_user(user_id)
 
     async def list_all_api_keys(
@@ -141,7 +144,8 @@ class AuthService:
         *,
         created_by_email: str | None = None,
         is_active: bool | None = None,
-    ) -> list[tuple[ApiKey, str | None]]:
+    ) -> list[tuple[ApiKey, str | None, str | None, str | None]]:
+        """Returns (ApiKey, owner_email, project_name, owner_role) tuples."""
         return await self._api_key_repo.list_all(
             created_by_email=created_by_email,
             is_active=is_active,

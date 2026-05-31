@@ -5,9 +5,8 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
-from app.domain.models import ApiKey, UserAccount
+from app.domain.models import ApiKey, Project, UserAccount
 
 
 class ApiKeyRepository:
@@ -45,24 +44,31 @@ class ApiKeyRepository:
         await self._session.refresh(key)
         return key
 
-    async def list_by_user(self, user_id: uuid.UUID) -> list[ApiKey]:
-        result = await self._session.execute(
-            select(ApiKey)
+    async def list_by_user(
+        self, user_id: uuid.UUID
+    ) -> list[tuple[ApiKey, str | None, str | None]]:
+        """Returns (ApiKey, project_name, owner_role) tuples for user view."""
+        stmt = (
+            select(ApiKey, Project.alias, UserAccount.role)
+            .outerjoin(Project, ApiKey.project_id == Project.id)
+            .outerjoin(UserAccount, ApiKey.created_by == UserAccount.id)
             .where(ApiKey.created_by == user_id)
             .order_by(ApiKey.created_at.desc())
         )
-        return list(result.scalars().all())
+        result = await self._session.execute(stmt)
+        return [(row[0], row[1], row[2]) for row in result.all()]
 
     async def list_all(
         self,
         *,
         created_by_email: str | None = None,
         is_active: bool | None = None,
-    ) -> list[tuple[ApiKey, str | None]]:
-        """Returns list of (ApiKey, owner_email) for admin view."""
+    ) -> list[tuple[ApiKey, str | None, str | None, str | None]]:
+        """Returns (ApiKey, owner_email, project_name, owner_role) for admin view."""
         stmt = (
-            select(ApiKey, UserAccount.email)
+            select(ApiKey, UserAccount.email, Project.alias, UserAccount.role)
             .outerjoin(UserAccount, ApiKey.created_by == UserAccount.id)
+            .outerjoin(Project, ApiKey.project_id == Project.id)
             .order_by(ApiKey.created_at.desc())
         )
         if is_active is True:
@@ -72,7 +78,7 @@ class ApiKeyRepository:
         if created_by_email:
             stmt = stmt.where(UserAccount.email.ilike(f"%{created_by_email}%"))
         result = await self._session.execute(stmt)
-        return [(row[0], row[1]) for row in result.all()]
+        return [(row[0], row[1], row[2], row[3]) for row in result.all()]
 
     async def revoke(self, api_key_id: uuid.UUID) -> ApiKey | None:
         key = await self.get_by_id(api_key_id)

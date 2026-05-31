@@ -59,6 +59,13 @@ async def _get_optional_actor(
     return await _resolve_actor(session, access_token, authorization, x_api_key, raise_on_missing=False)
 
 
+async def get_optional_actor(
+    actor: Annotated[tuple, Depends(_get_optional_actor)],
+) -> tuple[UserAccount | None, ApiKey | None]:
+    """Accept session or API key; return (user, api_key) or (None, None)."""
+    return actor
+
+
 async def get_current_user(
     actor: Annotated[tuple, Depends(_get_current_actor)],
 ) -> UserAccount:

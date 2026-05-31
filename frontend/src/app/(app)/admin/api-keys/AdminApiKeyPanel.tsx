@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   adminCreateApiKey,
   adminRevokeApiKey,
   type AdminApiKeyItem,
   type ApiKeyCreated,
+  type ProjectOption,
 } from "@/lib/actions/api-keys";
 
 const VALID_SCOPES = [
@@ -34,6 +35,22 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
       )}
     >
       {isActive ? "활성" : "폐기됨"}
+    </span>
+  );
+}
+
+function GlobalBadge() {
+  return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+      전역
+    </span>
+  );
+}
+
+function LegacyBadge() {
+  return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
+      ⚠️ 접근 제한
     </span>
   );
 }
@@ -84,9 +101,11 @@ function KeyRevealModal({
 }
 
 function CreateApiKeyModal({
+  projects,
   onClose,
   onCreated,
 }: {
+  projects: ProjectOption[];
   onClose: () => void;
   onCreated: (result: ApiKeyCreated) => void;
 }) {
@@ -94,6 +113,7 @@ function CreateApiKeyModal({
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>([]);
+  const [projectId, setProjectId] = useState("");
 
   function toggleScope(scope: string) {
     setScopes((prev) =>
@@ -110,7 +130,11 @@ function CreateApiKeyModal({
     setError("");
     startTransition(async () => {
       try {
-        const result = await adminCreateApiKey({ name, scopes });
+        const result = await adminCreateApiKey({
+          name,
+          scopes,
+          project_id: projectId || null,
+        });
         onCreated(result);
         onClose();
       } catch (err: unknown) {
@@ -134,6 +158,20 @@ function CreateApiKeyModal({
               placeholder="예: ci-bot, cursor"
               className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">프로젝트 (선택)</label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            >
+              <option value="">전역 (모든 프로젝트)</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">미선택 시 모든 프로젝트에 접근 가능한 전역 키가 발급됩니다.</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">스코프</label>
@@ -176,10 +214,11 @@ function CreateApiKeyModal({
 
 interface AdminApiKeyPanelProps {
   initialKeys: AdminApiKeyItem[];
+  projects: ProjectOption[];
   currentFilters?: { search?: string; is_active?: string };
 }
 
-export function AdminApiKeyPanel({ initialKeys, currentFilters }: AdminApiKeyPanelProps) {
+export function AdminApiKeyPanel({ initialKeys, projects, currentFilters }: AdminApiKeyPanelProps) {
   const router = useRouter();
   const [keys, setKeys] = useState<AdminApiKeyItem[]>(initialKeys);
   const [showCreate, setShowCreate] = useState(false);
@@ -207,6 +246,12 @@ export function AdminApiKeyPanel({ initialKeys, currentFilters }: AdminApiKeyPan
   function handleCreated(result: ApiKeyCreated) {
     router.refresh();
     setRevealed(result);
+  }
+
+  function renderProjectCell(key: AdminApiKeyItem) {
+    if (key.is_legacy) return <LegacyBadge />;
+    if (!key.project_id) return <GlobalBadge />;
+    return <span className="text-xs text-gray-600">{key.project_name ?? key.project_id}</span>;
   }
 
   return (
@@ -265,6 +310,7 @@ export function AdminApiKeyPanel({ initialKeys, currentFilters }: AdminApiKeyPan
               <tr className="bg-gray-50 text-xs font-medium text-gray-500 border-b border-gray-200">
                 <th className="text-left px-4 py-2.5">소유자</th>
                 <th className="text-left px-4 py-2.5">이름</th>
+                <th className="text-left px-4 py-2.5">프로젝트</th>
                 <th className="text-left px-4 py-2.5">스코프</th>
                 <th className="text-left px-4 py-2.5">생성일</th>
                 <th className="text-left px-4 py-2.5">상태</th>
@@ -273,11 +319,19 @@ export function AdminApiKeyPanel({ initialKeys, currentFilters }: AdminApiKeyPan
             </thead>
             <tbody className="divide-y divide-gray-100">
               {keys.map((key) => (
-                <tr key={key.id} className={cn("hover:bg-gray-50", !key.is_active && "opacity-50")}>
+                <tr
+                  key={key.id}
+                  className={cn(
+                    "hover:bg-gray-50",
+                    !key.is_active && "opacity-50",
+                    key.is_legacy && key.is_active && "bg-yellow-50/40",
+                  )}
+                >
                   <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[140px]">
                     {key.created_by_email ?? "—"}
                   </td>
                   <td className="px-4 py-3 font-medium text-gray-800">{key.name}</td>
+                  <td className="px-4 py-3">{renderProjectCell(key)}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {key.scopes.map((s) => (
@@ -311,6 +365,7 @@ export function AdminApiKeyPanel({ initialKeys, currentFilters }: AdminApiKeyPan
 
       {showCreate && (
         <CreateApiKeyModal
+          projects={projects}
           onClose={() => setShowCreate(false)}
           onCreated={handleCreated}
         />

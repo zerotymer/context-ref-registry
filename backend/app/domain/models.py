@@ -225,7 +225,7 @@ class ApiKey(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     key_hash: Mapped[str] = mapped_column(Text, nullable=False)
     scopes: Mapped[list[str]] = mapped_column(ARRAY(String(50)), nullable=False, default=list)
-    project_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    project_id: Mapped[str | None] = mapped_column(String(50), ForeignKey("project.id", ondelete="SET NULL"), nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user_account.id", ondelete="SET NULL"), nullable=True
     )

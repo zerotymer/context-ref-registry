@@ -4,10 +4,11 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models import UserAccount
+from app.domain.models import ApiKey, UserAccount
 from app.exceptions import RegistryError
 from app.repository.project_member_repository import ProjectMemberRepository
 from app.repository.project_repository import ProjectRepository
+from app.repository.user_repository import UserRepository
 
 
 class AccessPolicy:
@@ -17,14 +18,29 @@ class AccessPolicy:
         self._session = session
         self._member_repo = ProjectMemberRepository(session)
         self._project_repo = ProjectRepository(session)
+        self._user_repo = UserRepository(session)
 
-    async def get_visible_project_ids(self, user: UserAccount | None) -> list[str] | None:
-        """Return the project IDs visible to the user.
+    async def get_visible_project_ids(
+        self,
+        user: UserAccount | None,
+        api_key: ApiKey | None = None,
+    ) -> list[str] | None:
+        """Return the project IDs visible to the caller.
 
         None  → admin (no filter, sees all)
-        []    → unauthenticated or user with no memberships (public only)
-        [ids] → user's active project memberships
+        []    → unauthenticated, legacy key, or user with no memberships
+        [ids] → user's active memberships OR single project from api_key
         """
+        if api_key is not None:
+            if api_key.project_id is not None:
+                return [api_key.project_id]
+            # project_id=None: check if the issuing user is admin
+            if api_key.created_by is not None:
+                owner = await self._user_repo.get_by_id(api_key.created_by)
+                if owner is not None and owner.role == "admin":
+                    return None  # global admin key
+            return []  # legacy key — no access
+
         if user is None:
             return []
         if user.role == "admin":
@@ -55,8 +71,19 @@ class AccessPolicy:
         entity_project_id: str | None,
         user: UserAccount,
         user_project_ids: list[str],
+        api_key: ApiKey | None = None,
     ) -> None:
         """Raise if user cannot modify an entity with the given project_id."""
+        if api_key is not None:
+            if api_key.project_id is not None:
+                if entity_project_id != api_key.project_id:
+                    raise RegistryError("FORBIDDEN", "API key restricted to a different project", status_code=403)
+                return
+            # project_id=None on api_key: admin global key passes, legacy key fails
+            if user.role == "admin":
+                return
+            raise RegistryError("FORBIDDEN", "Legacy API key has no write access", status_code=403)
+
         if user.role == "admin":
             return
         if entity_project_id is None:

@@ -8,6 +8,8 @@ export interface ApiKeyItem {
   name: string;
   scopes: string[];
   project_id: string | null;
+  project_name: string | null;
+  is_legacy: boolean;
   created_at: string;
   revoked_at: string | null;
   is_active: boolean;
@@ -24,14 +26,25 @@ export interface ApiKeyCreated {
   key: string;
 }
 
+export interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 export async function listMyApiKeys(): Promise<ApiKeyItem[]> {
   return backendFetch<ApiKeyItem[]>("/auth/api-keys");
+}
+
+export async function listMyProjects(): Promise<ProjectOption[]> {
+  interface ProjectRead { id: string; alias: string; }
+  const projects = await backendFetch<ProjectRead[]>("/projects");
+  return projects.map((p) => ({ id: p.id, name: p.alias }));
 }
 
 export async function createApiKey(body: {
   name: string;
   scopes: string[];
-  project_id?: string | null;
+  project_id: string;
 }): Promise<ApiKeyCreated> {
   const result = await backendFetch<ApiKeyCreated>("/auth/api-keys", {
     method: "POST",

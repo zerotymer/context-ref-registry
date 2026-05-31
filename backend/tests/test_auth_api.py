@@ -236,11 +236,30 @@ async def test_api_key_admin_creates_key(client: AsyncClient):
 
 
 async def test_regular_user_can_create_api_key(client: AsyncClient):
-    # POST /auth/api-keys is now open to all authenticated users (not admin-only)
-    await _create_user(client, email="user@test.com", password="pw", role="user")
+    # Regular users can create API keys, but project_id is required
+    user = await _create_user(client, email="user@test.com", password="pw", role="user")
     await _login(client, "user@test.com", "pw")
 
-    resp = await client.post("/auth/api-keys", json={"name": "key", "scopes": ["read:entities"]})
+    # Create project and add user as member via service layer
+    from app.service.project_service import ProjectService
+    from app.repository.project_member_repository import ProjectMemberRepository
+    import uuid as _uuid
+    async with async_session_factory() as session:
+        admin = await AuthService(session).create_user(
+            email="admin-helper@test.com", password="pw", display_name="A", role="admin"
+        )
+        await ProjectService(session).create_project(
+            id="user-proj", alias="User Project", description=None, created_by=admin.id
+        )
+        await ProjectMemberRepository(session).create(
+            project_id="user-proj",
+            user_id=_uuid.UUID(user["id"]),
+            role="editor",
+            created_by=admin.id,
+        )
+        await session.commit()
+
+    resp = await client.post("/auth/api-keys", json={"name": "key", "scopes": ["read:entities"], "project_id": "user-proj"})
     assert resp.status_code == 201
     assert resp.json()["data"]["name"] == "key"
 

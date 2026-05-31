@@ -8,6 +8,7 @@ import {
   revokeApiKey,
   type ApiKeyItem,
   type ApiKeyCreated,
+  type ProjectOption,
 } from "@/lib/actions/api-keys";
 
 const VALID_SCOPES = [
@@ -34,6 +35,14 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
       )}
     >
       {isActive ? "활성" : "폐기됨"}
+    </span>
+  );
+}
+
+function LegacyBadge() {
+  return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
+      ⚠️ 접근 제한
     </span>
   );
 }
@@ -84,9 +93,11 @@ function KeyRevealModal({
 }
 
 function CreateApiKeyModal({
+  projects,
   onClose,
   onCreated,
 }: {
+  projects: ProjectOption[];
   onClose: () => void;
   onCreated: (result: ApiKeyCreated) => void;
 }) {
@@ -94,6 +105,7 @@ function CreateApiKeyModal({
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>([]);
+  const [projectId, setProjectId] = useState("");
 
   function toggleScope(scope: string) {
     setScopes((prev) =>
@@ -103,6 +115,10 @@ function CreateApiKeyModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!projectId) {
+      setError("프로젝트를 선택해주세요.");
+      return;
+    }
     if (scopes.length === 0) {
       setError("스코프를 하나 이상 선택해주세요.");
       return;
@@ -110,7 +126,7 @@ function CreateApiKeyModal({
     setError("");
     startTransition(async () => {
       try {
-        const result = await createApiKey({ name, scopes });
+        const result = await createApiKey({ name, scopes, project_id: projectId });
         onCreated(result);
         onClose();
       } catch (err: unknown) {
@@ -134,6 +150,25 @@ function CreateApiKeyModal({
               placeholder="예: ci-bot, cursor"
               className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              프로젝트 <span className="text-red-500">*</span>
+            </label>
+            <select
+              required
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            >
+              <option value="">프로젝트를 선택하세요</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            {projects.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">가입된 프로젝트가 없습니다. 먼저 프로젝트에 참여하세요.</p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">스코프</label>
@@ -174,12 +209,20 @@ function CreateApiKeyModal({
   );
 }
 
-export function ApiKeyPanel({ initialKeys }: { initialKeys: ApiKeyItem[] }) {
+export function ApiKeyPanel({
+  initialKeys,
+  projects,
+}: {
+  initialKeys: ApiKeyItem[];
+  projects: ProjectOption[];
+}) {
   const router = useRouter();
   const [keys, setKeys] = useState<ApiKeyItem[]>(initialKeys);
   const [showCreate, setShowCreate] = useState(false);
   const [revealed, setRevealed] = useState<ApiKeyCreated | null>(null);
   const [revoking, startRevoke] = useTransition();
+
+  const hasLegacyKeys = keys.some((k) => k.is_legacy && k.is_active);
 
   function handleRevoke(id: string, name: string) {
     if (!confirm(`"${name}" 키를 폐기하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
@@ -198,6 +241,12 @@ export function ApiKeyPanel({ initialKeys }: { initialKeys: ApiKeyItem[] }) {
 
   return (
     <div className="flex-1 overflow-auto p-6">
+      {hasLegacyKeys && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+          ⚠️ 프로젝트가 지정되지 않은 키는 더 이상 접근이 허용되지 않습니다. 해당 키를 폐기하고 재발급하세요.
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-gray-900">내 API Key</h2>
         <button
@@ -219,6 +268,7 @@ export function ApiKeyPanel({ initialKeys }: { initialKeys: ApiKeyItem[] }) {
             <thead>
               <tr className="bg-gray-50 text-xs font-medium text-gray-500 border-b border-gray-200">
                 <th className="text-left px-4 py-2.5">이름</th>
+                <th className="text-left px-4 py-2.5">프로젝트</th>
                 <th className="text-left px-4 py-2.5">스코프</th>
                 <th className="text-left px-4 py-2.5">생성일</th>
                 <th className="text-left px-4 py-2.5">상태</th>
@@ -227,8 +277,22 @@ export function ApiKeyPanel({ initialKeys }: { initialKeys: ApiKeyItem[] }) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {keys.map((key) => (
-                <tr key={key.id} className={cn("hover:bg-gray-50", !key.is_active && "opacity-50")}>
+                <tr
+                  key={key.id}
+                  className={cn(
+                    "hover:bg-gray-50",
+                    !key.is_active && "opacity-50",
+                    key.is_legacy && key.is_active && "bg-yellow-50/40",
+                  )}
+                >
                   <td className="px-4 py-3 font-medium text-gray-800">{key.name}</td>
+                  <td className="px-4 py-3">
+                    {key.is_legacy ? (
+                      <LegacyBadge />
+                    ) : (
+                      <span className="text-xs text-gray-600">{key.project_name ?? key.project_id ?? "—"}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {key.scopes.map((s) => (
@@ -262,6 +326,7 @@ export function ApiKeyPanel({ initialKeys }: { initialKeys: ApiKeyItem[] }) {
 
       {showCreate && (
         <CreateApiKeyModal
+          projects={projects}
           onClose={() => setShowCreate(false)}
           onCreated={handleCreated}
         />

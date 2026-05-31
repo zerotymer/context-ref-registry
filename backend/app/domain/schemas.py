@@ -288,6 +288,7 @@ class IngestEntityInput(BaseModel):
     description: str | None = None
     status: EntityStatus = EntityStatus.CANDIDATE
     confidence: float = Field(1.0, ge=0.0, le=1.0)
+    project_id: str | None = None
     aliases: dict[Locale, list[str]] = Field(default_factory=dict)
     contexts: list[IngestContextInput] = Field(default_factory=list)
     metadata: dict[str, Any] | None = None

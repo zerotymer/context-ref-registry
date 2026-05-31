@@ -119,6 +119,7 @@ class IngestService:
                 description=item.description,
                 status=item.status,
                 confidence=item.confidence,
+                project_id=item.project_id,
             )
             self._session.add(entity)
             await self._session.flush()
@@ -136,6 +137,8 @@ class IngestService:
             existing.description = item.description
         existing.status = item.status
         existing.confidence = item.confidence
+        if item.project_id is not None:
+            existing.project_id = item.project_id
         await self._session.flush()
         return False, existing
 

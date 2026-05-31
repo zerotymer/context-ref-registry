@@ -6,12 +6,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_actor, get_current_user, get_optional_user
+from app.auth.dependencies import get_actor, get_optional_actor
 from app.service.audit_service import actor_identifier
 from app.auth.policy import AccessPolicy
 from app.db.session import get_session
 from app.domain.enums import RelationType
-from app.domain.models import UserAccount
 from app.domain.schemas import OkResponse, RelationCreate, RelationRead
 from app.exceptions import RegistryError
 from app.service.entity_service import EntityService
@@ -35,7 +34,7 @@ async def create_relation(
     user_project_ids = await policy.get_user_project_ids(user.id)
 
     from_entity = await EntityService(session).get_by_id(body.from_entity_id)
-    policy.check_can_mutate_entity(from_entity.project_id, user, user_project_ids)
+    policy.check_can_mutate_entity(from_entity.project_id, user, user_project_ids, api_key)
 
     actor = actor_identifier(user, api_key)
     relation = await RelationService(session).create_relation(body, actor=actor)
@@ -46,7 +45,7 @@ async def create_relation(
 async def list_relations(
     entity_id: uuid.UUID,
     session: SessionDep,
-    user: Annotated[UserAccount | None, Depends(get_optional_user)],
+    auth: Annotated[tuple, Depends(get_optional_actor)],
     direction: str = Query("both", description="Traversal direction: out, in, or both"),
     relation_type: RelationType | None = Query(None, description="Filter by relation type"),
     max_depth: int = Query(1, ge=1, le=10, description="Maximum traversal depth"),
@@ -57,8 +56,9 @@ async def list_relations(
             message=f"direction must be one of: {', '.join(sorted(_VALID_DIRECTIONS))}",
             status_code=400,
         )
+    user, api_key = auth
     policy = AccessPolicy(session)
-    visible_ids = await policy.get_visible_project_ids(user)
+    visible_ids = await policy.get_visible_project_ids(user, api_key)
     entity = await EntityService(session).get_by_id(entity_id)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
     relations = await RelationService(session).list_relations(entity_id, direction, relation_type, max_depth)

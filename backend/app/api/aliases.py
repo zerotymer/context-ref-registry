@@ -6,12 +6,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_actor, get_current_user, get_optional_user
+from app.auth.dependencies import get_actor, get_optional_actor
 from app.service.audit_service import actor_identifier
 from app.auth.policy import AccessPolicy
 from app.db.session import get_session
 from app.domain.enums import EntityType, Locale
-from app.domain.models import UserAccount
 from app.domain.schemas import AliasCreate, AliasRead, OkResponse, ResolveResult
 from app.service.alias_service import AliasService
 from app.service.entity_service import EntityService
@@ -32,7 +31,7 @@ async def add_alias(
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
     entity = await EntityService(session).get_by_id(entity_id)
-    policy.check_can_mutate_entity(entity.project_id, user, user_project_ids)
+    policy.check_can_mutate_entity(entity.project_id, user, user_project_ids, api_key)
     actor = actor_identifier(user, api_key)
     alias = await AliasService(session).add_alias(entity_id, body, actor=actor)
     return OkResponse(data=AliasRead.model_validate(alias))
@@ -53,7 +52,7 @@ async def deactivate_alias(
     policy = AccessPolicy(session)
     user_project_ids = await policy.get_user_project_ids(user.id)
     entity = await EntityService(session).get_by_id(entity_id)
-    policy.check_can_mutate_entity(entity.project_id, user, user_project_ids)
+    policy.check_can_mutate_entity(entity.project_id, user, user_project_ids, api_key)
     actor = actor_identifier(user, api_key)
     alias = await AliasService(session).deactivate_alias(entity_id, alias_id, actor=actor)
     return OkResponse(data=AliasRead.model_validate(alias))
@@ -63,10 +62,11 @@ async def deactivate_alias(
 async def list_aliases(
     entity_id: uuid.UUID,
     session: SessionDep,
-    user: Annotated[UserAccount | None, Depends(get_optional_user)],
+    auth: Annotated[tuple, Depends(get_optional_actor)],
 ) -> OkResponse[list[AliasRead]]:
+    user, api_key = auth
     policy = AccessPolicy(session)
-    visible_ids = await policy.get_visible_project_ids(user)
+    visible_ids = await policy.get_visible_project_ids(user, api_key)
     entity = await EntityService(session).get_by_id(entity_id)
     policy.check_can_view_entity(entity.project_id, user, visible_ids)
     aliases = await AliasService(session).list_aliases(entity_id)
@@ -76,12 +76,13 @@ async def list_aliases(
 @router.get("/resolve", response_model=OkResponse[ResolveResult])
 async def resolve_alias(
     session: SessionDep,
-    user: Annotated[UserAccount | None, Depends(get_optional_user)],
+    auth: Annotated[tuple, Depends(get_optional_actor)],
     alias: str = Query(..., description="Alias string to resolve"),
     locale: Locale | None = Query(None, description="Filter by locale"),
     type: EntityType | None = Query(None, description="Filter by entity type"),
 ) -> OkResponse[ResolveResult]:
+    user, api_key = auth
     policy = AccessPolicy(session)
-    visible_ids = await policy.get_visible_project_ids(user)
+    visible_ids = await policy.get_visible_project_ids(user, api_key)
     result = await AliasService(session).resolve(alias, locale, type, visible_project_ids=visible_ids)
     return OkResponse(data=result)

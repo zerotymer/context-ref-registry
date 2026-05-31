@@ -28,6 +28,11 @@ async def batch_ingest(
     for item in body.entities:
         project_id = getattr(item, "project_id", None)
         await policy.check_can_assign_project(project_id, user)
+        if api_key is not None:
+            user_project_ids = await policy.get_user_project_ids(user.id)
+            policy.check_can_mutate_entity(
+                str(project_id) if project_id else None, user, user_project_ids, api_key
+            )
     actor = actor_identifier(user, api_key)
     result = await IngestService(session).batch_ingest(body, actor=actor)
     return OkResponse(data=result)
