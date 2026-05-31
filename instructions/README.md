@@ -31,6 +31,8 @@ Phase 2   — 운영 준비 (보안·감사로그·백업·모니터링)    ✅ 
 Phase 2.3 — 관리자 콘솔 UI & 인증 고급                ✅ 완료 (2026-05-29)
 Phase 3   — 확장 기능 (pgvector, Revision, Export)    ✅ 완료 (2026-05-30)
 Phase 3.1 — API Key 관리 UI (사용자 + 관리자 화면)    ✅ 완료 (2026-05-31)
+Phase 3.2 — API Key 프로젝트 접근 제어 강화            ✅ 완료 (2026-05-31)
+Phase 3.3 — Project ID 특수문자 제한 (_만 허용)        ✅ 완료 (2026-05-31)
 ```
 
 ---
@@ -41,8 +43,9 @@ Phase 3.1 — API Key 관리 UI (사용자 + 관리자 화면)    ✅ 완료 (20
 
 | 완료일 | UUID | 제목 |
 |--------|------|------|
-| 2026-05-30 | da294ef0-436c-4884-85ae-221369c72f97 | ISSUE EntityType 추가 및 타입별 CSS 색상 정상화 |
-| 2026-05-31 | c4309c75-5633-4187-a785-3b40c8e037b2 | API Key 관리 UI — 사용자/관리자 화면 구현 (298 passed) |
+| 2026-05-31 | c4309c75-5633-4187-a785-3b40c8e037b2 | API Key 관리 UI — 사용자/관리자 화면 구현 |
+| 2026-05-31 | d679e0e0-ed7e-4de0-ba3d-554a83d3601c | API Key 프로젝트 기반 발급 및 접근 제어 강화 |
+| 2026-05-31 | 4d7b7053-162b-4e15-99cc-d6700354008f | Project ID 특수문자 제한 — 언더바(_)만 허용 (304 passed) |
 
 ---
 
@@ -73,8 +76,8 @@ Phase 3.1 — API Key 관리 UI (사용자 + 관리자 화면)    ✅ 완료 (20
 
 | UUID | 파일 | 분류 | 상태 |
 |------|------|------|------|
-| 6dc18568 | .completed/ | enhancement | `completed` 2026-05-30 |
-| da294ef0 | .completed/ | enhancement | `completed` 2026-05-30 |
+| d679e0e0 | .completed/ | Phase 3.2 | `completed` 2026-05-31 |
+| 4d7b7053 | .completed/ | Phase 3.3 | `completed` 2026-05-31 |
 | c4309c75 | .completed/ | Phase 3.1 | `completed` 2026-05-31 |
 
 > 완료된 지침 세부 내용은 `instructions/.completed/{uuid}.md`에 보관.

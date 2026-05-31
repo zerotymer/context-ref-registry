@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Reference Registry — API 현황 보고서</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #222536;
+      --border: #2e3147;
+      --accent: #6c8ef5;
+      --accent2: #a78bfa;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --blue: #60a5fa;
+      --cyan: #22d3ee;
+      --text: #e2e8f0;
+      --text-muted: #8892a4;
+      --text-dim: #4b5563;
+      --radius: 8px;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sidebar-logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .sidebar-logo h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .sidebar-logo p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .nav-section {
+      padding: 6px 20px 2px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 0;
+      transition: background 0.15s, color 0.15s;
+      cursor: pointer;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Main */
+    .main {
+      flex: 1;
+      padding: 40px 48px;
+      max-width: 960px;
+    }
+
+    /* Hero */
+    .hero {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(108, 142, 245, 0.1);
+      border: 1px solid rgba(108, 142, 245, 0.3);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: 0.05em;
+    }
+    .hero h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .hero p {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 600px;
+    }
+    .meta-row {
+      display: flex;
+      gap: 24px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .meta-item strong { color: var(--text); }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .stat-card .num {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-card .label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Section */
+    section { margin-bottom: 48px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .section-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .section-tag {
+      font-size: 11px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* Response format box */
+    .info-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .info-box h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* Code */
+    pre {
+      background: #0d0f18;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.7;
+      overflow-x: auto;
+      color: var(--text);
+    }
+    code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: rgba(108,142,245,0.1);
+      color: var(--accent);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    /* Syntax highlight tokens */
+    .t-key   { color: #60a5fa; }
+    .t-str   { color: #34d399; }
+    .t-num   { color: #fbbf24; }
+    .t-bool  { color: #a78bfa; }
+    .t-null  { color: #f87171; }
+    .t-comment { color: #4b5563; font-style: italic; }
+    .t-method-get    { color: var(--green); font-weight: 700; }
+    .t-method-post   { color: var(--yellow); font-weight: 700; }
+    .t-method-patch  { color: var(--cyan); font-weight: 700; }
+    .t-method-put    { color: var(--cyan); font-weight: 700; }
+    .t-method-delete { color: var(--red); font-weight: 700; }
+    .t-path  { color: var(--text); }
+    .t-curl  { color: var(--text-muted); }
+    .t-flag  { color: var(--accent2); }
+    .t-url   { color: var(--accent); }
+
+    /* Table */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: var(--surface2); }
+    thead th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 10px 16px; font-size: 13px; vertical-align: top; }
+
+    /* Method badge */
+    .method {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+      min-width: 52px;
+      text-align: center;
+    }
+    .GET    { background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+    .POST   { background: rgba(251,191,36,.12); color: #fbbf24; border: 1px solid rgba(251,191,36,.3); }
+    .PATCH  { background: rgba(34,211,238,.12); color: #22d3ee; border: 1px solid rgba(34,211,238,.3); }
+    .PUT    { background: rgba(34,211,238,.12); color: #22d3ee; border: 1px solid rgba(34,211,238,.3); }
+    .DELETE { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+
+    /* Auth badge */
+    .auth {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .auth-none   { background: rgba(75,85,99,.2); color: var(--text-dim); border: 1px solid var(--border); }
+    .auth-login  { background: rgba(108,142,245,.12); color: var(--accent); border: 1px solid rgba(108,142,245,.3); }
+    .auth-opt    { background: rgba(167,139,250,.12); color: var(--accent2); border: 1px solid rgba(167,139,250,.3); }
+    .auth-admin  { background: rgba(248,113,113,.12); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+    .auth-padmin { background: rgba(251,191,36,.12); color: var(--yellow); border: 1px solid rgba(251,191,36,.3); }
+
+    /* Path text */
+    .path { font-family: var(--mono); font-size: 12.5px; color: var(--text); }
+    .path .param { color: var(--accent2); }
+
+    /* Param table */
+    .param-name { font-family: var(--mono); font-size: 12px; color: var(--cyan); }
+    .param-type { font-size: 11px; color: var(--yellow); font-family: var(--mono); }
+    .param-default { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+    .param-required {
+      font-size: 10px; color: var(--red);
+      border: 1px solid rgba(248,113,113,.3);
+      padding: 1px 5px; border-radius: 3px;
+    }
+
+    /* MCP card */
+    .mcp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mcp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .mcp-card h4 {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .mcp-card p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* Rule card */
+    .rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .rule-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .rule-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .rule-card h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .rule-card p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 2px; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; }
+    .tab {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .tab.active { background: var(--surface2); color: var(--text); }
+
+    /* Enum pills */
+    .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .pill {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+    }
+    .pill.type   { color: var(--cyan); border-color: rgba(34,211,238,.3); background: rgba(34,211,238,.06); }
+    .pill.status { color: var(--green); border-color: rgba(52,211,153,.3); background: rgba(52,211,153,.06); }
+    .pill.ctx    { color: var(--accent2); border-color: rgba(167,139,250,.3); background: rgba(167,139,250,.06); }
+    .pill.rel    { color: var(--yellow); border-color: rgba(251,191,36,.3); background: rgba(251,191,36,.06); }
+
+    /* UUID flow */
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .flow-step {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-size: 13px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .flow-step .step-num {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .flow-step .step-label { color: var(--text); font-weight: 500; }
+    .flow-arrow {
+      color: var(--border);
+      font-size: 20px;
+      padding: 0 8px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Anchor offset for sticky nav */
+    [id] { scroll-margin-top: 24px; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h2>LLM Ref Registry</h2>
+      <p>API 현황 보고서 · 2026-05-31</p>
+    </div>
+
+    <span class="nav-section">개요</span>
+    <a class="nav-item" href="#overview"><span class="dot"></span>시스템 개요</a>
+    <a class="nav-item" href="#auth-method"><span class="dot"></span>인증 방식</a>
+    <a class="nav-item" href="#enums"><span class="dot"></span>도메인 Enum</a>
+
+    <span class="nav-section">엔드포인트</span>
+    <a class="nav-item" href="#ep-auth"><span class="dot"></span>인증 /auth</a>
+    <a class="nav-item" href="#ep-projects"><span class="dot"></span>프로젝트 /projects</a>
+    <a class="nav-item" href="#ep-entities"><span class="dot"></span>Entity /entities</a>
+    <a class="nav-item" href="#ep-alias"><span class="dot"></span>Alias /resolve</a>
+    <a class="nav-item" href="#ep-context"><span class="dot"></span>Context</a>
+    <a class="nav-item" href="#ep-relation"><span class="dot"></span>Relation</a>
+    <a class="nav-item" href="#ep-tag"><span class="dot"></span>Tag</a>
+    <a class="nav-item" href="#ep-history"><span class="dot"></span>History & Revision</a>
+    <a class="nav-item" href="#ep-ingest"><span class="dot"></span>Ingest / Bundle</a>
+    <a class="nav-item" href="#ep-search"><span class="dot"></span>Search / Export</a>
+    <a class="nav-item" href="#ep-admin"><span class="dot"></span>관리자 /admin</a>
+
+    <span class="nav-section">기타</span>
+    <a class="nav-item" href="#mcp"><span class="dot"></span>MCP Tools</a>
+    <a class="nav-item" href="#uuid-guide"><span class="dot"></span>UUID 조회 가이드</a>
+    <a class="nav-item" href="#rules"><span class="dot"></span>핵심 불변 규칙</a>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Hero -->
+    <div class="hero" id="overview">
+      <div class="hero-badge">⬡ LLM Reference Registry</div>
+      <h1>API 현황 보고서</h1>
+      <p>코딩 에이전트가 UI, 기능, 인프라, 코드 심볼 등을 UUID 기반으로 안정적으로 참조할 수 있게 하는 경량 레지스트리 서비스의 REST API 및 MCP 도구 전체 목록입니다.</p>
+      <div class="meta-row">
+        <div class="meta-item">📅 <strong>기준일</strong> 2026-05-31</div>
+        <div class="meta-item">⚙️ <strong>스택</strong> FastAPI / Python 3.12 / SQLAlchemy 2.x</div>
+        <div class="meta-item">🗄️ <strong>DB</strong> PostgreSQL 16 + JSONB</div>
+        <div class="meta-item">✅ <strong>테스트</strong> 304 passed</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="num">45</div>
+        <div class="label">REST 엔드포인트</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">7</div>
+        <div class="label">MCP Tools</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">16</div>
+        <div class="label">API 모듈 파일</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">304</div>
+        <div class="label">테스트 케이스</div>
+      </div>
+    </div>
+
+    <!-- 응답 형식 + 인증 -->
+    <section id="auth-method">
+      <div class="section-header">
+        <h2>응답 형식 &amp; 인증 방식</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="info-box">
+            <h3>공통 응답 형식</h3>
+            <pre><code><span class="t-comment">// 성공</span>
+{
+  <span class="t-key">"ok"</span>: <span class="t-bool">true</span>,
+  <span class="t-key">"data"</span>: { ... }
+}
+
+<span class="t-comment">// 실패</span>
+{
+  <span class="t-key">"ok"</span>: <span class="t-bool">false</span>,
+  <span class="t-key">"error"</span>: {
+    <span class="t-key">"code"</span>: <span class="t-str">"ERROR_CODE"</span>,
+    <span class="t-key">"message"</span>: <span class="t-str">"설명"</span>
+  }
+}</code></pre>
+          </div>
+        </div>
+        <div>
+          <div class="info-box">
+            <h3>인증 방식</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>방식</th>
+                  <th>헤더 / Cookie</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>JWT 세션</strong></td>
+                  <td><code>Cookie: access_token=&lt;token&gt;</code></td>
+                </tr>
+                <tr>
+                  <td><strong>API Key</strong></td>
+                  <td><code>Authorization: Bearer &lt;key&gt;</code></td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="margin-top:12px;font-size:12px;color:var(--text-muted);">
+              비관리자 API Key는 발급 시 <code>project_id</code> 지정 필수.<br/>
+              Raw key는 발급 시 한 번만 노출됩니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Domain Enums -->
+    <section id="enums">
+      <div class="section-header">
+        <h2>도메인 Enum 값</h2>
+        <span class="section-tag">domain/enums.py</span>
+      </div>
+      <div class="info-box">
+        <h3>EntityType</h3>
+        <div class="pills">
+          <span class="pill type">UI_AREA</span>
+          <span class="pill type">FEATURE</span>
+          <span class="pill type">INFRA_UNIT</span>
+          <span class="pill type">API</span>
+          <span class="pill type">CODE_SYMBOL</span>
+          <span class="pill type">ISSUE</span>
+        </div>
+        <h3 style="margin-top:16px;">EntityStatus</h3>
+        <div class="pills">
+          <span class="pill status">candidate</span>
+          <span class="pill status">active</span>
+          <span class="pill status">deprecated</span>
+          <span class="pill status">archived</span>
+        </div>
+        <h3 style="margin-top:16px;">ContextType</h3>
+        <div class="pills">
+          <span class="pill ctx">summary</span>
+          <span class="pill ctx">details</span>
+          <span class="pill ctx">business_rule</span>
+          <span class="pill ctx">validation_rule</span>
+          <span class="pill ctx">implementation_hint</span>
+          <span class="pill ctx">security_note</span>
+          <span class="pill ctx">infra_note</span>
+          <span class="pill ctx">compatibility_note</span>
+          <span class="pill ctx">exception_case</span>
+        </div>
+        <h3 style="margin-top:16px;">RelationType</h3>
+        <div class="pills">
+          <span class="pill rel">CONTAINS</span>
+          <span class="pill rel">RELATED_TO</span>
+          <span class="pill rel">USES</span>
+          <span class="pill rel">IMPLEMENTED_BY</span>
+          <span class="pill rel">READS_FROM</span>
+          <span class="pill rel">WRITES_TO</span>
+          <span class="pill rel">DEPENDS_ON</span>
+          <span class="pill rel">CALLS</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 인증 ── -->
+    <section id="ep-auth">
+      <div class="section-header">
+        <h2>인증</h2>
+        <span class="section-tag">/auth</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/auth/users</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>사용자 등록</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/auth/login</span></td>
+              <td><span class="auth auth-none">없음</span></td>
+              <td>로그인 — JWT 발급, Cookie 설정</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/auth/logout</span></td>
+              <td><span class="auth auth-none">없음</span></td>
+              <td>로그아웃 — Cookie 삭제</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/auth/me</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>현재 사용자 조회</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/auth/api-keys</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>API Key 발급 (비관리자는 project_id 필수)</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/auth/api-keys</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>내 API Key 목록</td>
+            </tr>
+            <tr>
+              <td><span class="method DELETE">DELETE</span></td>
+              <td><span class="path">/auth/api-keys/<span class="param">{key_id}</span></span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>API Key 폐기 <em style="color:var(--text-muted);font-size:12px;">key_id: UUID</em></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── 프로젝트 ── -->
+    <section id="ep-projects">
+      <div class="section-header">
+        <h2>프로젝트</h2>
+        <span class="section-tag">/projects</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/projects</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>프로젝트 생성</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/projects</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>프로젝트 목록</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/projects/<span class="param">{project_id}</span></span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>프로젝트 단건 조회</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/projects/<span class="param">{project_id}</span>/members</span></td>
+              <td><span class="auth auth-padmin">프로젝트 관리자</span></td>
+              <td>멤버 목록</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/projects/<span class="param">{project_id}</span>/members</span></td>
+              <td><span class="auth auth-padmin">프로젝트 관리자</span></td>
+              <td>멤버 추가</td>
+            </tr>
+            <tr>
+              <td><span class="method PUT">PUT</span></td>
+              <td><span class="path">/projects/<span class="param">{project_id}</span>/members/<span class="param">{user_id}</span>/role</span></td>
+              <td><span class="auth auth-padmin">프로젝트 관리자</span></td>
+              <td>멤버 역할 변경</td>
+            </tr>
+            <tr>
+              <td><span class="method DELETE">DELETE</span></td>
+              <td><span class="path">/projects/<span class="param">{project_id}</span>/members/<span class="param">{user_id}</span></span></td>
+              <td><span class="auth auth-padmin">프로젝트 관리자</span></td>
+              <td>멤버 제거</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box" style="font-size:12px;color:var(--text-muted);">
+        <code>project_id</code> — 문자열 식별자, 허용 문자: <code>[A-Za-z0-9_]</code>&nbsp;&nbsp;·&nbsp;&nbsp;
+        <code>user_id</code> — UUID v4
+      </div>
+    </section>
+
+    <!-- ── Entity ── -->
+    <section id="ep-entities">
+      <div class="section-header">
+        <h2>Entity</h2>
+        <span class="section-tag">/entities</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/entities</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>Entity 생성 (id 지정 가능)</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities</span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>Entity 목록 조회 (필터 · 페이징)</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span></span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td><strong>UUID로 Entity 단건 조회</strong></td>
+            </tr>
+            <tr>
+              <td><span class="method PATCH">PATCH</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span></span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>Entity 수정 — <code>id</code>, <code>type</code> 변경 불가</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"><strong style="color:var(--text);">GET /entities</strong> 쿼리 파라미터</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>파라미터</th><th>타입</th><th>기본값</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="param-name">status</span></td>
+              <td><span class="param-type">string</span></td>
+              <td><span class="param-default">-</span></td>
+              <td>candidate / active / deprecated / archived</td>
+            </tr>
+            <tr>
+              <td><span class="param-name">types</span></td>
+              <td><span class="param-type">string[]</span></td>
+              <td><span class="param-default">-</span></td>
+              <td>EntityType 목록</td>
+            </tr>
+            <tr>
+              <td><span class="param-name">tags</span></td>
+              <td><span class="param-type">string[]</span></td>
+              <td><span class="param-default">-</span></td>
+              <td>AND 필터 — 지정 태그 모두 보유한 entity만</td>
+            </tr>
+            <tr>
+              <td><span class="param-name">limit</span></td>
+              <td><span class="param-type">int</span></td>
+              <td><span class="param-default">20</span></td>
+              <td>1–100</td>
+            </tr>
+            <tr>
+              <td><span class="param-name">offset</span></td>
+              <td><span class="param-type">int</span></td>
+              <td><span class="param-default">0</span></td>
+              <td>페이지 오프셋</td>
+            </tr>
+            <tr>
+              <td><span class="param-name">sort</span></td>
+              <td><span class="param-type">string</span></td>
+              <td><span class="param-default">created_at</span></td>
+              <td>created_at / updated_at / canonical_name</td>
+            </tr>
+            <tr>
+              <td><span class="param-name">order</span></td>
+              <td><span class="param-type">string</span></td>
+              <td><span class="param-default">desc</span></td>
+              <td>asc / desc</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Alias ── -->
+    <section id="ep-alias">
+      <div class="section-header">
+        <h2>Alias &amp; Resolve</h2>
+        <span class="section-tag">/entities/{id}/aliases · /resolve</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/aliases</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>Alias 추가</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/aliases</span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>Alias 목록</td>
+            </tr>
+            <tr>
+              <td><span class="method DELETE">DELETE</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/aliases/<span class="param">{alias_id}</span></span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>Alias 비활성화 <em style="color:var(--text-muted);font-size:12px;">alias_id: UUID</em></td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/resolve?alias=&amp;locale=&amp;type=</span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>Alias → Entity UUID 변환</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box">
+        <h3>/resolve 응답 상태</h3>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div>
+            <span class="pill status">resolved</span>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">단일 entity에 매핑 성공</p>
+          </div>
+          <div>
+            <span class="pill rel">ambiguous</span>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">복수 entity에 매핑 — 임의 선택 금지</p>
+          </div>
+          <div>
+            <span class="pill">not_found</span>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">매핑 entity 없음</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Context ── -->
+    <section id="ep-context">
+      <div class="section-header">
+        <h2>Context</h2>
+        <span class="section-tag">/entities/{id}/contexts</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/contexts</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>Context 추가</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/contexts</span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>Context 목록 (<code>context_type</code>, <code>language</code> 필터)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Relation ── -->
+    <section id="ep-relation">
+      <div class="section-header">
+        <h2>Relation</h2>
+        <span class="section-tag">/relations · /entities/{id}/relations</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/relations</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>Relation 생성</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/relations</span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>Relation 목록 (<code>direction</code>: out/in/both, <code>max_depth</code>: 1–10)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Tag ── -->
+    <section id="ep-tag">
+      <div class="section-header">
+        <h2>Tag</h2>
+        <span class="section-tag">/tags · /entities/{id}/tags</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/tags</span></td>
+              <td><span class="auth auth-none">없음</span></td>
+              <td>전체 태그 목록 + 사용 횟수</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/tags</span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>Entity 태그 목록</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/tags</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>태그 부착</td>
+            </tr>
+            <tr>
+              <td><span class="method DELETE">DELETE</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/tags/<span class="param">{tag}</span></span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>태그 제거</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── History ── -->
+    <section id="ep-history">
+      <div class="section-header">
+        <h2>History &amp; Revision</h2>
+        <span class="section-tag">/entities/{id}/history</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/history</span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>변경 이력 목록 (limit 50, offset 0)</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/history/<span class="param">{revision_no}</span></span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>특정 revision 조회</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/entities/<span class="param">{entity_id}</span>/history/<span class="param">{rev_a}</span>/compare/<span class="param">{rev_b}</span></span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>두 revision 비교 (diff)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Ingest / Bundle ── -->
+    <section id="ep-ingest">
+      <div class="section-header">
+        <h2>Ingest &amp; Bundle</h2>
+        <span class="section-tag">/ingest · /context-bundle</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/ingest/batch</span></td>
+              <td><span class="auth auth-login">로그인</span></td>
+              <td>일괄 ingest — entity/alias/context/relation upsert</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/context-bundle</span></td>
+              <td><span class="auth auth-none">없음</span></td>
+              <td>BFS context 묶음 조회 (root_ids 기준)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box">
+        <h3>Batch Ingest 처리 순서</h3>
+        <div class="flow">
+          <div class="flow-step"><div class="step-num">1</div><div class="step-label">source_ref upsert</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="step-num">2</div><div class="step-label">entity upsert</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="step-num">3</div><div class="step-label">alias upsert</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="step-num">4</div><div class="step-label">context insert</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="step-num">5</div><div class="step-label">relation 검증 &amp; insert</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Search / Export / Validate ── -->
+    <section id="ep-search">
+      <div class="section-header">
+        <h2>Search / Export / Validate / Health</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/search?q=</span></td>
+              <td><span class="auth auth-opt">선택</span></td>
+              <td>Entity 검색 — alias exact → canonical_name partial → tsvector</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/export/agents-md?root_ids=</span></td>
+              <td><span class="auth auth-none">없음</span></td>
+              <td>AGENTS.md 형식 내보내기 (comma-separated UUID)</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/export/openapi?format=json|yaml</span></td>
+              <td><span class="auth auth-none">없음</span></td>
+              <td>OpenAPI 3.1.0 spec 내보내기</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/validate-references</span></td>
+              <td><span class="auth auth-none">없음</span></td>
+              <td>UUID / alias 참조 일괄 검증 → valid / resolved / ambiguous / missing</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/health</span></td>
+              <td><span class="auth auth-none">없음</span></td>
+              <td>헬스체크 — DB 연결 포함</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Admin ── -->
+    <section id="ep-admin">
+      <div class="section-header">
+        <h2>관리자 API</h2>
+        <span class="section-tag">/admin/*</span>
+      </div>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">사용자 관리 <code>/admin/users</code></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/admin/users</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>사용자 목록 (role, is_active, search 필터)</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/admin/users</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>사용자 생성 (Audit Log 기록)</td>
+            </tr>
+            <tr>
+              <td><span class="method PATCH">PATCH</span></td>
+              <td><span class="path">/admin/users/<span class="param">{user_id}</span></span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>사용자 정보 수정</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/admin/users/<span class="param">{user_id}</span>/reset-password</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>비밀번호 초기화</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px;margin-top:20px;">프로젝트 관리 <code>/admin/projects</code></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/admin/projects</span></td>
+              <td><span class="auth auth-padmin">admin / project_admin</span></td>
+              <td>프로젝트 전체 목록 (is_active, search 필터)</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/admin/projects</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>프로젝트 생성 (Audit Log 기록)</td>
+            </tr>
+            <tr>
+              <td><span class="method PATCH">PATCH</span></td>
+              <td><span class="path">/admin/projects/<span class="param">{project_id}</span></span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>프로젝트 수정 (alias, description, is_active)</td>
+            </tr>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/admin/projects/<span class="param">{project_id}</span>/members</span></td>
+              <td><span class="auth auth-padmin">admin / project_admin</span></td>
+              <td>멤버 목록</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/admin/projects/<span class="param">{project_id}</span>/members</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>멤버 추가 (Audit Log 기록)</td>
+            </tr>
+            <tr>
+              <td><span class="method PATCH">PATCH</span></td>
+              <td><span class="path">/admin/projects/<span class="param">{project_id}</span>/members/<span class="param">{user_id}</span></span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>멤버 역할 변경</td>
+            </tr>
+            <tr>
+              <td><span class="method DELETE">DELETE</span></td>
+              <td><span class="path">/admin/projects/<span class="param">{project_id}</span>/members/<span class="param">{user_id}</span></span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>멤버 제거</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px;margin-top:20px;">API Key 관리 <code>/admin/api-keys</code></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>메서드</th><th>경로</th><th>권한</th><th>설명</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="method GET">GET</span></td>
+              <td><span class="path">/admin/api-keys</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>전체 API Key 목록 (email, is_active 필터)</td>
+            </tr>
+            <tr>
+              <td><span class="method POST">POST</span></td>
+              <td><span class="path">/admin/api-keys</span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>API Key 생성 (project_id=null → 전역 키)</td>
+            </tr>
+            <tr>
+              <td><span class="method DELETE">DELETE</span></td>
+              <td><span class="path">/admin/api-keys/<span class="param">{key_id}</span></span></td>
+              <td><span class="auth auth-admin">admin</span></td>
+              <td>API Key 폐기 <em style="color:var(--text-muted);font-size:12px;">key_id: UUID</em></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── MCP ── -->
+    <section id="mcp">
+      <div class="section-header">
+        <h2>MCP Tools</h2>
+        <span class="section-tag">read-only · stdio transport</span>
+      </div>
+      <div class="mcp-grid">
+        <div class="mcp-card">
+          <h4>resolve_alias</h4>
+          <p>alias → entity UUID 변환.<br/>결과: resolved / ambiguous / not_found. ambiguous 시 사용자에게 선택 위임.</p>
+        </div>
+        <div class="mcp-card">
+          <h4>get_entity</h4>
+          <p>UUID로 entity 단건 조회. deprecated 시 경고 + replacement_entity_id 반환.</p>
+        </div>
+        <div class="mcp-card">
+          <h4>search_entities</h4>
+          <p>키워드 검색. alias exact → canonical_name partial 순서. types / tags 필터 지원.</p>
+        </div>
+        <div class="mcp-card">
+          <h4>get_related_entities</h4>
+          <p>Relation 그래프 탐색. direction(out/in/both), relation_types, max_depth 파라미터.</p>
+        </div>
+        <div class="mcp-card">
+          <h4>get_context_bundle</h4>
+          <p>핵심 tool. BFS로 root entity 기준 연관 entity/context/relation 전체 반환. token_budget 지원.</p>
+        </div>
+        <div class="mcp-card">
+          <h4>get_entity_history</h4>
+          <p>UUID로 entity 변경 이력 조회. revision 목록을 내림차순으로 반환.</p>
+        </div>
+        <div class="mcp-card">
+          <h4>validate_references</h4>
+          <p>UUID / alias 목록 일괄 검증. → valid / resolved / ambiguous / missing 분류.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── UUID 조회 가이드 ── -->
+    <section id="uuid-guide">
+      <div class="section-header">
+        <h2>UUID를 통한 조회 가이드</h2>
+      </div>
+
+      <div class="info-box" style="margin-bottom:20px;">
+        <h3>조회 흐름</h3>
+        <div class="flow" style="flex-wrap:wrap;gap:8px;">
+          <div class="flow-step" style="min-width:100px;">
+            <div class="step-num">UUID 보유</div>
+            <div class="step-label" style="font-size:12px;">직접 조회</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step" style="min-width:140px;background:rgba(108,142,245,.08);border-color:rgba(108,142,245,.3);">
+            <div class="step-num">GET /entities/{id}</div>
+            <div class="step-label" style="font-size:12px;color:var(--accent);">단건 조회</div>
+          </div>
+          <div style="width:100%;height:0;"></div>
+          <div class="flow-step" style="min-width:100px;">
+            <div class="step-num">Alias 보유</div>
+            <div class="step-label" style="font-size:12px;">변환 후 조회</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-num">GET /resolve</div>
+            <div class="step-label" style="font-size:12px;">→ UUID 획득</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step" style="background:rgba(108,142,245,.08);border-color:rgba(108,142,245,.3);">
+            <div class="step-num">GET /entities/{id}</div>
+            <div class="step-label" style="font-size:12px;color:var(--accent);">단건 조회</div>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;">1. Entity 단건 조회</p>
+      <pre><code><span class="t-comment"># REST API</span>
+<span class="t-curl">curl</span> <span class="t-flag">-b</span> <span class="t-str">"access_token=&lt;JWT&gt;"</span> \
+  <span class="t-url">http://localhost:8000/entities/550e8400-e29b-41d4-a716-446655440000</span>
+
+<span class="t-comment"># 또는 API Key</span>
+<span class="t-curl">curl</span> <span class="t-flag">-H</span> <span class="t-str">"Authorization: Bearer &lt;key&gt;"</span> \
+  <span class="t-url">http://localhost:8000/entities/550e8400-e29b-41d4-a716-446655440000</span></code></pre>
+
+      <pre><code><span class="t-comment">// 응답</span>
+{
+  <span class="t-key">"ok"</span>: <span class="t-bool">true</span>,
+  <span class="t-key">"data"</span>: {
+    <span class="t-key">"id"</span>:             <span class="t-str">"550e8400-e29b-41d4-a716-446655440000"</span>,
+    <span class="t-key">"type"</span>:           <span class="t-str">"FEATURE"</span>,
+    <span class="t-key">"canonical_name"</span>: <span class="t-str">"user-auth"</span>,
+    <span class="t-key">"status"</span>:         <span class="t-str">"active"</span>,
+    <span class="t-key">"confidence"</span>:     <span class="t-num">0.95</span>,
+    <span class="t-key">"project_id"</span>:    <span class="t-str">"my_project"</span>,
+    <span class="t-key">"description"</span>:   <span class="t-str">"..."</span>,
+    <span class="t-key">"tags"</span>:           [<span class="t-str">"auth"</span>, <span class="t-str">"security"</span>]
+  }
+}</code></pre>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text);margin:20px 0 10px;">2. UUID 기반 하위 리소스 조회</p>
+      <pre><code><span class="t-comment"># Alias 목록</span>
+<span class="t-method-get">GET</span> <span class="t-path">/entities/{entity_id}/aliases</span>
+
+<span class="t-comment"># Context 조회 (요약만)</span>
+<span class="t-method-get">GET</span> <span class="t-path">/entities/{entity_id}/contexts?context_type=summary&amp;language=ko</span>
+
+<span class="t-comment"># Relation 탐색 (BFS depth 2)</span>
+<span class="t-method-get">GET</span> <span class="t-path">/entities/{entity_id}/relations?direction=both&amp;max_depth=2</span>
+
+<span class="t-comment"># 변경 이력</span>
+<span class="t-method-get">GET</span> <span class="t-path">/entities/{entity_id}/history?limit=50</span>
+
+<span class="t-comment"># 특정 Revision</span>
+<span class="t-method-get">GET</span> <span class="t-path">/entities/{entity_id}/history/3</span>
+
+<span class="t-comment"># Revision diff</span>
+<span class="t-method-get">GET</span> <span class="t-path">/entities/{entity_id}/history/1/compare/3</span></code></pre>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text);margin:20px 0 10px;">3. Context Bundle — UUID 리스트 기반 BFS</p>
+      <pre><code><span class="t-curl">curl</span> <span class="t-flag">-X POST</span> <span class="t-url">http://localhost:8000/context-bundle</span> \
+  <span class="t-flag">-H</span> <span class="t-str">"Content-Type: application/json"</span> \
+  <span class="t-flag">-d</span> '{
+    <span class="t-key">"root_ids"</span>:    [<span class="t-str">"550e8400-e29b-41d4-a716-446655440000"</span>],
+    <span class="t-key">"max_depth"</span>:   <span class="t-num">2</span>,
+    <span class="t-key">"token_budget"</span>: <span class="t-num">8000</span>,
+    <span class="t-key">"language"</span>:   <span class="t-str">"ko"</span>
+  }'</code></pre>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text);margin:20px 0 10px;">4. AGENTS.md 내보내기 (UUID 콤마 구분)</p>
+      <pre><code><span class="t-method-get">GET</span> <span class="t-url">/export/agents-md?root_ids=uuid1,uuid2&amp;max_depth=2&amp;language=ko</span></code></pre>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text);margin:20px 0 10px;">5. 참조 검증 (UUID / alias 혼용)</p>
+      <pre><code><span class="t-curl">curl</span> <span class="t-flag">-X POST</span> <span class="t-url">http://localhost:8000/validate-references</span> \
+  <span class="t-flag">-d</span> '{
+    <span class="t-key">"references"</span>: [
+      <span class="t-str">"550e8400-e29b-41d4-a716-446655440000"</span>,
+      <span class="t-str">"user-auth-alias"</span>
+    ]
+  }'
+
+<span class="t-comment">// 응답</span>
+{
+  <span class="t-key">"ok"</span>: <span class="t-bool">true</span>,
+  <span class="t-key">"data"</span>: {
+    <span class="t-key">"valid"</span>:    [<span class="t-str">"550e8400-..."</span>],
+    <span class="t-key">"resolved"</span>: { <span class="t-key">"user-auth-alias"</span>: <span class="t-str">"550e8400-..."</span> },
+    <span class="t-key">"ambiguous"</span>: [],
+    <span class="t-key">"missing"</span>:   []
+  }
+}</code></pre>
+
+      <p style="font-size:13px;font-weight:600;color:var(--text);margin:20px 0 10px;">6. MCP Tool — 코딩 에이전트용</p>
+      <pre><code><span class="t-comment"># UUID 직접 조회</span>
+get_entity(id=<span class="t-str">"550e8400-e29b-41d4-a716-446655440000"</span>)
+
+<span class="t-comment"># alias → UUID 변환 후 조회</span>
+result = resolve_alias(alias=<span class="t-str">"user-auth"</span>, locale=<span class="t-str">"ko"</span>)
+<span class="t-bool">if</span> result[<span class="t-str">"status"</span>] == <span class="t-str">"resolved"</span>:
+    get_entity(id=result[<span class="t-str">"entity"</span>][<span class="t-str">"id"</span>])
+
+<span class="t-comment"># UUID 루트로 BFS 탐색</span>
+get_context_bundle(
+    root_ids=[<span class="t-str">"550e8400-e29b-41d4-a716-446655440000"</span>],
+    max_depth=<span class="t-num">2</span>,
+    token_budget=<span class="t-num">8000</span>
+)</code></pre>
+    </section>
+
+    <!-- ── 핵심 불변 규칙 ── -->
+    <section id="rules">
+      <div class="section-header">
+        <h2>핵심 불변 규칙</h2>
+      </div>
+      <div class="rules-grid">
+        <div class="rule-card">
+          <div class="rule-icon">🔒</div>
+          <div>
+            <h4>UUID 불변</h4>
+            <p><code>entity.id</code>는 생성 후 절대 변경 불가. PATCH에서 <code>id</code> 필드 수신 시 무시됨.</p>
+          </div>
+        </div>
+        <div class="rule-card">
+          <div class="rule-icon">🚫</div>
+          <div>
+            <h4>type 불변</h4>
+            <p>PATCH에서 <code>type</code> 수정 불가. Batch ingest 중 type 변경 시도 시 <code>400 TYPE_CHANGE_FORBIDDEN</code>.</p>
+          </div>
+        </div>
+        <div class="rule-card">
+          <div class="rule-icon">⚠️</div>
+          <div>
+            <h4>deprecated 보호</h4>
+            <p>deprecated entity는 DELETE 금지. <code>status=deprecated</code> + <code>replacement_entity_id</code> 기록.</p>
+          </div>
+        </div>
+        <div class="rule-card">
+          <div class="rule-icon">❓</div>
+          <div>
+            <h4>alias ambiguous 처리</h4>
+            <p>동일 alias가 복수 entity에 매핑되면 <code>ambiguous</code> 반환. 에이전트가 임의 선택 금지 — 사용자에게 선택 위임.</p>
+          </div>
+        </div>
+        <div class="rule-card">
+          <div class="rule-icon">📖</div>
+          <div>
+            <h4>MCP read-only</h4>
+            <p>MCP 서버는 조회 전용. write tool 추가 금지. stdio transport로 실행 (포트 미사용).</p>
+          </div>
+        </div>
+        <div class="rule-card">
+          <div class="rule-icon">🔑</div>
+          <div>
+            <h4>API Key 프로젝트 제한</h4>
+            <p>비관리자 API Key는 특정 project_id에만 발급 가능. 레거시 키(project_id=null)는 제한됨.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr />
+    <p style="text-align:center;font-size:12px;color:var(--text-dim);padding:24px 0;">
+      LLM Reference Registry · API 현황 보고서 · 2026-05-31
+    </p>
+
+  </main>
+</div>
+
+<script>
+  // Smooth scroll for sidebar links
+  document.querySelectorAll('.nav-item').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  // Active nav highlight on scroll
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const navItems = document.querySelectorAll('.nav-item');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navItems.forEach(n => n.style.color = '');
+        const active = document.querySelector(`.nav-item[href="#${entry.target.id}"]`);
+        if (active) {
+          active.style.color = 'var(--accent)';
+          active.style.background = 'var(--surface2)';
+        }
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
