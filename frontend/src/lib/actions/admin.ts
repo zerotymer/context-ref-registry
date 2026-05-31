@@ -9,10 +9,11 @@ import { backendFetch } from "@/lib/api/server";
 
 export interface AdminUser {
   id: string;
-  email: string;
+  login_id: string;
   display_name: string;
   role: string;
   is_active: boolean;
+  must_change_password: boolean;
 }
 
 export interface AdminProject {
@@ -47,7 +48,7 @@ export async function listAdminUsers(params?: {
 }
 
 export async function createAdminUser(data: {
-  email: string;
+  login_id: string;
   password: string;
   display_name: string;
   role: string;

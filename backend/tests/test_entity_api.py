@@ -113,10 +113,10 @@ async def test_patch_public_entity_by_non_admin_forbidden(admin_client: AsyncCli
     # create a regular user
     async with async_session_factory() as session:
         await AuthService(session).create_user(
-            email="user@test.com", password="pw", display_name="User", role="user"
+            login_id="user_test", password="pw", display_name="User", role="user"
         )
     await admin_client.post("/auth/logout")
-    await admin_client.post("/auth/login", json={"email": "user@test.com", "password": "pw"})
+    await admin_client.post("/auth/login", json={"login_id": "user_test", "password": "pw"})
 
     patch_resp = await admin_client.patch(f"/entities/{entity_id}", json={"canonical_name": "변경"})
     assert patch_resp.status_code == 403

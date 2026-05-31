@@ -74,7 +74,7 @@ function AddMemberModal({
             >
               <option value="">선택하세요</option>
               {available.map((u) => (
-                <option key={u.id} value={u.id}>{u.email}</option>
+                <option key={u.id} value={u.id}>{u.login_id}</option>
               ))}
             </select>
           </div>

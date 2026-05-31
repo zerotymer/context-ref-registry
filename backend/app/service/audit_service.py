@@ -10,7 +10,7 @@ def actor_identifier(user: UserAccount | None, api_key: ApiKey | None) -> str:
     if api_key is not None:
         return f"api_key:{api_key.name}"
     if user is not None:
-        return user.email
+        return user.login_id
     return "system"
 
 

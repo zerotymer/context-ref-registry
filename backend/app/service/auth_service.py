@@ -30,8 +30,8 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
-def _normalize_email(email: str) -> str:
-    return email.strip().lower()
+def _normalize_login_id(login_id: str) -> str:
+    return login_id.strip().lower()
 
 
 def create_access_token(user_id: uuid.UUID) -> str:
@@ -61,9 +61,9 @@ class AuthService:
         self._user_repo = UserRepository(session)
         self._api_key_repo = ApiKeyRepository(session)
 
-    async def login(self, email: str, password: str) -> tuple[UserAccount, str]:
-        norm_email = _normalize_email(email)
-        user = await self._user_repo.get_by_email(norm_email)
+    async def login(self, login_id: str, password: str) -> tuple[UserAccount, str]:
+        norm_id = _normalize_login_id(login_id)
+        user = await self._user_repo.get_by_login_id(norm_id)
         if user is None or not verify_password(password, user.password_hash):
             raise RegistryError("UNAUTHORIZED", "Invalid credentials", status_code=401)
         if not user.is_active:
@@ -91,26 +91,45 @@ class AuthService:
     async def create_user(
         self,
         *,
-        email: str,
+        login_id: str,
         password: str,
         display_name: str,
         role: str = "user",
+        must_change_password: bool = False,
         created_by: uuid.UUID | None = None,
     ) -> UserAccount:
-        norm_email = _normalize_email(email)
-        existing = await self._user_repo.get_by_email(norm_email)
+        norm_id = _normalize_login_id(login_id)
+        existing = await self._user_repo.get_by_login_id(norm_id)
         if existing is not None:
-            raise RegistryError("CONFLICT", "Email already registered", status_code=409)
+            raise RegistryError("CONFLICT", "Login ID already registered", status_code=409)
         pw_hash = hash_password(password)
         user = await self._user_repo.create(
-            email=norm_email,
+            login_id=norm_id,
             password_hash=pw_hash,
             display_name=display_name,
             role=role,
+            must_change_password=must_change_password,
             created_by=created_by,
         )
         await self._session.commit()
         return user
+
+    async def change_password(
+        self,
+        user_id: uuid.UUID,
+        current_password: str,
+        new_password: str,
+    ) -> None:
+        """Verify current password, update to new, and hard-delete all API keys."""
+        user = await self._user_repo.get_by_id(user_id)
+        if user is None:
+            raise RegistryError("NOT_FOUND", "User not found", status_code=404)
+        if not verify_password(current_password, user.password_hash):
+            raise RegistryError("UNAUTHORIZED", "Current password is incorrect", status_code=401)
+        pw_hash = hash_password(new_password)
+        await self._user_repo.update(user, password_hash=pw_hash, must_change_password=False)
+        await self._api_key_repo.delete_all_by_user(user_id)
+        await self._session.commit()
 
     async def create_api_key(
         self,
@@ -142,12 +161,12 @@ class AuthService:
     async def list_all_api_keys(
         self,
         *,
-        created_by_email: str | None = None,
+        created_by_login_id: str | None = None,
         is_active: bool | None = None,
     ) -> list[tuple[ApiKey, str | None, str | None, str | None]]:
-        """Returns (ApiKey, owner_email, project_name, owner_role) tuples."""
+        """Returns (ApiKey, owner_login_id, project_name, owner_role) tuples."""
         return await self._api_key_repo.list_all(
-            created_by_email=created_by_email,
+            created_by_login_id=created_by_login_id,
             is_active=is_active,
         )
 
@@ -199,28 +218,31 @@ class AuthService:
         return updated
 
     async def reset_password(self, user_id: uuid.UUID, new_password: str) -> None:
+        """Admin password reset — updates password and hard-deletes all API keys."""
         user = await self._user_repo.get_by_id(user_id)
         if user is None:
             raise RegistryError("NOT_FOUND", "User not found", status_code=404)
         pw_hash = hash_password(new_password)
-        await self._user_repo.update(user, password_hash=pw_hash)
+        await self._user_repo.update(user, password_hash=pw_hash, must_change_password=True)
+        await self._api_key_repo.delete_all_by_user(user_id)
         await self._session.commit()
 
     async def bootstrap_admin(self) -> None:
-        """Create initial admin account if credentials are configured and no admin exists."""
-        if not settings.bootstrap_admin_email or not settings.bootstrap_admin_password:
+        """Create initial admin account if no admin exists."""
+        if not settings.bootstrap_admin_login_id or not settings.bootstrap_admin_password:
             return
         if await self._user_repo.exists_admin():
             return
-        norm_email = _normalize_email(settings.bootstrap_admin_email)
-        existing = await self._user_repo.get_by_email(norm_email)
+        norm_id = _normalize_login_id(settings.bootstrap_admin_login_id)
+        existing = await self._user_repo.get_by_login_id(norm_id)
         if existing is not None:
             return
         pw_hash = hash_password(settings.bootstrap_admin_password)
         await self._user_repo.create(
-            email=norm_email,
+            login_id=norm_id,
             password_hash=pw_hash,
             display_name=settings.bootstrap_admin_display_name,
             role="admin",
+            must_change_password=True,
         )
         await self._session.commit()

@@ -11,6 +11,9 @@ export default async function AuthenticatedLayout({
   if (!user) {
     redirect("/login");
   }
+  if (user.must_change_password) {
+    redirect("/change-password");
+  }
 
   return <AppLayout user={user}>{children}</AppLayout>;
 }

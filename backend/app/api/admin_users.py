@@ -27,16 +27,17 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 class UserRead(BaseModel):
     id: uuid.UUID
-    email: str
+    login_id: str
     display_name: str
     role: str
     is_active: bool
+    must_change_password: bool
 
     model_config = {"from_attributes": True}
 
 
 class UserCreateRequest(BaseModel):
-    email: str
+    login_id: str
     password: str
     display_name: str
     role: str = "user"
@@ -77,7 +78,7 @@ async def create_user(
 ) -> OkResponse[UserRead]:
     svc = AuthService(session)
     user = await svc.create_user(
-        email=body.email,
+        login_id=body.login_id,
         password=body.password,
         display_name=body.display_name,
         role=body.role,
@@ -88,7 +89,7 @@ async def create_user(
         action="user.create",
         target_type="user",
         target_id=str(user.id),
-        after_snapshot={"email": user.email, "role": user.role, "is_active": user.is_active},
+        after_snapshot={"login_id": user.login_id, "role": user.role, "is_active": user.is_active},
     )
     await session.commit()
     return OkResponse(data=UserRead.model_validate(user))

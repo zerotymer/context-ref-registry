@@ -18,9 +18,9 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_email(self, email: str) -> UserAccount | None:
+    async def get_by_login_id(self, login_id: str) -> UserAccount | None:
         result = await self._session.execute(
-            select(UserAccount).where(UserAccount.email == email)
+            select(UserAccount).where(UserAccount.login_id == login_id)
         )
         return result.scalar_one_or_none()
 
@@ -33,17 +33,19 @@ class UserRepository:
     async def create(
         self,
         *,
-        email: str,
+        login_id: str,
         password_hash: str,
         display_name: str,
         role: str = "user",
+        must_change_password: bool = False,
         created_by: uuid.UUID | None = None,
     ) -> UserAccount:
         user = UserAccount(
-            email=email,
+            login_id=login_id,
             password_hash=password_hash,
             display_name=display_name,
             role=role,
+            must_change_password=must_change_password,
             created_by=created_by,
         )
         self._session.add(user)
@@ -66,12 +68,12 @@ class UserRepository:
         if is_active is not None:
             conditions.append(UserAccount.is_active.is_(is_active))
         if search:
-            conditions.append(UserAccount.email.ilike(f"%{search}%"))
+            conditions.append(UserAccount.login_id.ilike(f"%{search}%"))
 
         stmt = select(UserAccount)
         if conditions:
             stmt = stmt.where(and_(*conditions))
-        stmt = stmt.order_by(sqlfunc.lower(UserAccount.email))
+        stmt = stmt.order_by(sqlfunc.lower(UserAccount.login_id))
         result = await self._session.execute(stmt)
         return list(result.scalars())
 
@@ -83,6 +85,7 @@ class UserRepository:
         role: str | None = None,
         is_active: bool | None = None,
         password_hash: str | None = None,
+        must_change_password: bool | None = None,
     ) -> UserAccount:
         if display_name is not None:
             user.display_name = display_name
@@ -92,6 +95,8 @@ class UserRepository:
             user.is_active = is_active
         if password_hash is not None:
             user.password_hash = password_hash
+        if must_change_password is not None:
+            user.must_change_password = must_change_password
         await self._session.flush()
         await self._session.refresh(user)
         return user

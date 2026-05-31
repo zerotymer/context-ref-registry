@@ -26,7 +26,7 @@ function RoleBadge({ role }: { role: string }) {
 function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ email: "", display_name: "", password: "", role: "user" });
+  const [form, setForm] = useState({ login_id: "", display_name: "", password: "", role: "user" });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,12 +48,12 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
         <h3 className="font-semibold text-gray-900 mb-4">사용자 생성</h3>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">이메일</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">아이디</label>
             <input
-              type="email"
+              type="text"
               required
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              value={form.login_id}
+              onChange={(e) => setForm({ ...form, login_id: e.target.value })}
               className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
             />
           </div>
@@ -306,7 +306,7 @@ export function UsersTable({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-          placeholder="이메일 검색..."
+          placeholder="아이디 검색..."
           className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400 w-40"
         />
         <div className="text-xs text-gray-400 ml-auto">{initialUsers.length}명</div>
@@ -325,7 +325,7 @@ export function UsersTable({
         <table className="w-full text-xs">
           <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
             <tr className="text-gray-500">
-              <th className="text-left px-6 py-2.5 font-medium">이메일</th>
+              <th className="text-left px-6 py-2.5 font-medium">아이디</th>
               <th className="text-left px-3 py-2.5 font-medium">이름</th>
               <th className="text-left px-3 py-2.5 font-medium">역할</th>
               <th className="text-left px-3 py-2.5 font-medium">상태</th>
@@ -338,7 +338,12 @@ export function UsersTable({
                 key={user.id}
                 className={cn("hover:bg-gray-50", !user.is_active && "opacity-60")}
               >
-                <td className="px-6 py-2.5 font-medium text-gray-800">{user.email}</td>
+                <td className="px-6 py-2.5 font-medium text-gray-800">
+                  {user.login_id}
+                  {user.must_change_password && (
+                    <span className="ml-1.5 text-amber-500 text-xs">(비밀번호 변경 필요)</span>
+                  )}
+                </td>
                 <td className="px-3 py-2.5 text-gray-600">{user.display_name}</td>
                 <td className="px-3 py-2.5">
                   <RoleBadge role={user.role} />

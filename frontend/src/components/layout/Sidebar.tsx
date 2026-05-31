@@ -156,7 +156,7 @@ export function Sidebar({ candidateCount = 0, user }: SidebarProps) {
     },
   ];
 
-  const initials = user.email[0]?.toUpperCase() ?? "U";
+  const initials = user.login_id[0]?.toUpperCase() ?? "U";
 
   return (
     <aside className="w-56 bg-white border-r border-gray-200 flex flex-col shrink-0">
@@ -202,7 +202,7 @@ export function Sidebar({ candidateCount = 0, user }: SidebarProps) {
           <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold text-xs shrink-0">
             {initials}
           </span>
-          <span className="truncate">{user.email}</span>
+          <span className="truncate">{user.login_id}</span>
         </div>
         <div className="flex items-center justify-between">
           <RoleBadge role={user.role} />

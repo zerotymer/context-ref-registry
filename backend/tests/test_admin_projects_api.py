@@ -8,10 +8,10 @@ from app.service.auth_service import AuthService
 from app.service.project_service import ProjectService
 
 
-async def _create_user(email: str, role: str = "user") -> str:
+async def _create_user(login_id: str, role: str = "user") -> str:
     async with async_session_factory() as session:
         user = await AuthService(session).create_user(
-            email=email, password="pass123", display_name=email, role=role
+            login_id=login_id, password="pass123", display_name=login_id, role=role
         )
     return str(user.id)
 
@@ -67,8 +67,8 @@ async def test_list_admin_projects_search(admin_client: AsyncClient):
 
 
 async def test_list_projects_forbidden_non_admin(client: AsyncClient):
-    uid = await _create_user("u@test.com")
-    await client.post("/auth/login", json={"email": "u@test.com", "password": "pass123"})
+    uid = await _create_user("user_test")
+    await client.post("/auth/login", json={"login_id": "user_test", "password": "pass123"})
     resp = await client.get("/admin/projects")
     assert resp.status_code == 403
 
@@ -147,7 +147,7 @@ async def test_get_members_admin_only(admin_client: AsyncClient, client: AsyncCl
     admin_id = admin_resp.json()["data"]["id"]
     await _create_project("mbrproj", "Member Project", admin_id)
 
-    uid = await _create_user("member@test.com")
+    uid = await _create_user("member_test")
     await admin_client.post("/admin/projects/mbrproj/members", json={"user_id": uid, "role": "member"})
 
     resp = await admin_client.get("/admin/projects/mbrproj/members")
@@ -165,7 +165,7 @@ async def test_add_member(admin_client: AsyncClient):
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
     await _create_project("addmbrp", "Add Member Project", admin_id)
-    uid = await _create_user("newmember@test.com")
+    uid = await _create_user("newmember_test")
 
     resp = await admin_client.post("/admin/projects/addmbrp/members", json={"user_id": uid, "role": "member"})
     assert resp.status_code == 201
@@ -178,7 +178,7 @@ async def test_add_project_admin_member(admin_client: AsyncClient):
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
     await _create_project("padminp", "Project Admin Project", admin_id)
-    uid = await _create_user("padmin@test.com")
+    uid = await _create_user("padmin_test")
 
     resp = await admin_client.post("/admin/projects/padminp/members", json={"user_id": uid, "role": "project_admin"})
     assert resp.status_code == 201
@@ -194,7 +194,7 @@ async def test_update_member_role(admin_client: AsyncClient):
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
     await _create_project("roleproj", "Role Project", admin_id)
-    uid = await _create_user("role@test.com")
+    uid = await _create_user("role_test")
     await admin_client.post("/admin/projects/roleproj/members", json={"user_id": uid, "role": "member"})
 
     resp = await admin_client.patch(f"/admin/projects/roleproj/members/{uid}", json={"role": "project_admin"})
@@ -211,7 +211,7 @@ async def test_remove_member(admin_client: AsyncClient):
     admin_resp = await admin_client.get("/auth/me")
     admin_id = admin_resp.json()["data"]["id"]
     await _create_project("rmproj", "Remove Project", admin_id)
-    uid = await _create_user("rm@test.com")
+    uid = await _create_user("rm_test")
     await admin_client.post("/admin/projects/rmproj/members", json={"user_id": uid, "role": "member"})
 
     resp = await admin_client.delete(f"/admin/projects/rmproj/members/{uid}")
@@ -281,8 +281,8 @@ async def test_project_admin_cannot_list_other_projects(
 
 async def test_user_role_still_gets_403_on_list(client: AsyncClient):
     """Regular user role is still forbidden from GET /admin/projects."""
-    await _create_user("plain@test.com", role="user")
-    await client.post("/auth/login", json={"email": "plain@test.com", "password": "pass123"})
+    await _create_user("plain_test", role="user")
+    await client.post("/auth/login", json={"login_id": "plain_test", "password": "pass123"})
     resp = await client.get("/admin/projects")
     assert resp.status_code == 403
 
@@ -337,7 +337,7 @@ async def test_project_admin_cannot_add_member(
     padmin_id = padmin_resp.json()["data"]["id"]
     await admin_client.post("/admin/projects/pa_addmbr/members", json={"user_id": padmin_id, "role": "member"})
 
-    other_uid = await _create_user("other-for-add@test.com")
+    other_uid = await _create_user("other_add_test")
     resp = await project_admin_client.post(
         "/admin/projects/pa_addmbr/members", json={"user_id": other_uid, "role": "member"}
     )

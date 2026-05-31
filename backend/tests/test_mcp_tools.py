@@ -23,12 +23,12 @@ async def admin_client():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         async with async_session_factory() as session:
             await AuthService(session).create_user(
-                email="admin@mcptest.com",
+                login_id="admin_mcptest",
                 password="admin123",
                 display_name="MCP Admin",
                 role="admin",
             )
-        resp = await ac.post("/auth/login", json={"email": "admin@mcptest.com", "password": "admin123"})
+        resp = await ac.post("/auth/login", json={"login_id": "admin_mcptest", "password": "admin123"})
         assert resp.status_code == 200, resp.text
         yield ac
 

@@ -4,7 +4,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_actor, get_current_admin, get_current_user
@@ -27,22 +27,28 @@ _COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
 
 
 class LoginRequest(BaseModel):
-    email: str
+    login_id: str
     password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class UserRead(BaseModel):
     id: uuid.UUID
-    email: str
+    login_id: str
     display_name: str
     role: str
     is_active: bool
+    must_change_password: bool
 
     model_config = {"from_attributes": True}
 
 
 class UserCreateRequest(BaseModel):
-    email: str
+    login_id: str
     password: str
     display_name: str
     role: str = "user"
@@ -89,13 +95,13 @@ class ApiKeyRead(BaseModel):
 
 
 class AdminApiKeyRead(ApiKeyRead):
-    created_by_email: str | None = None
+    created_by_login_id: str | None = None
 
     @classmethod
     def from_orm_with_email(
         cls,
         key: "ApiKey",
-        email: str | None,
+        login_id: str | None,
         project_name: str | None = None,
         owner_role: str | None = None,
     ) -> "AdminApiKeyRead":
@@ -110,7 +116,7 @@ class AdminApiKeyRead(ApiKeyRead):
             created_at=key.created_at.isoformat(),
             revoked_at=key.revoked_at.isoformat() if key.revoked_at else None,
             is_active=key.revoked_at is None,
-            created_by_email=email,
+            created_by_login_id=login_id,
         )
 
 
@@ -131,7 +137,7 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 @router.post("/login", response_model=OkResponse[UserRead])
 async def login(body: LoginRequest, response: Response, session: SessionDep) -> OkResponse[UserRead]:
-    user, token = await AuthService(session).login(body.email, body.password)
+    user, token = await AuthService(session).login(body.login_id, body.password)
     response.set_cookie(
         key=_COOKIE_NAME,
         value=token,
@@ -154,6 +160,16 @@ async def me(user: Annotated[UserAccount, Depends(get_current_user)]) -> OkRespo
     return OkResponse(data=UserRead.model_validate(user))
 
 
+@router.post("/change-password", response_model=OkResponse[dict])
+async def change_password(
+    body: ChangePasswordRequest,
+    session: SessionDep,
+    user: Annotated[UserAccount, Depends(get_current_user)],
+) -> OkResponse[dict]:
+    await AuthService(session).change_password(user.id, body.current_password, body.new_password)
+    return OkResponse(data={"message": "password changed"})
+
+
 # ---------------------------------------------------------------------------
 # User management (admin only)
 # ---------------------------------------------------------------------------
@@ -166,7 +182,7 @@ async def create_user(
     admin: Annotated[UserAccount, Depends(get_current_admin)],
 ) -> OkResponse[UserRead]:
     user = await AuthService(session).create_user(
-        email=body.email,
+        login_id=body.login_id,
         password=body.password,
         display_name=body.display_name,
         role=body.role,

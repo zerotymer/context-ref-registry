@@ -61,12 +61,12 @@ class ApiKeyRepository:
     async def list_all(
         self,
         *,
-        created_by_email: str | None = None,
+        created_by_login_id: str | None = None,
         is_active: bool | None = None,
     ) -> list[tuple[ApiKey, str | None, str | None, str | None]]:
-        """Returns (ApiKey, owner_email, project_name, owner_role) for admin view."""
+        """Returns (ApiKey, owner_login_id, project_name, owner_role) for admin view."""
         stmt = (
-            select(ApiKey, UserAccount.email, Project.alias, UserAccount.role)
+            select(ApiKey, UserAccount.login_id, Project.alias, UserAccount.role)
             .outerjoin(UserAccount, ApiKey.created_by == UserAccount.id)
             .outerjoin(Project, ApiKey.project_id == Project.id)
             .order_by(ApiKey.created_at.desc())
@@ -75,10 +75,19 @@ class ApiKeyRepository:
             stmt = stmt.where(ApiKey.revoked_at.is_(None))
         elif is_active is False:
             stmt = stmt.where(ApiKey.revoked_at.is_not(None))
-        if created_by_email:
-            stmt = stmt.where(UserAccount.email.ilike(f"%{created_by_email}%"))
+        if created_by_login_id:
+            stmt = stmt.where(UserAccount.login_id.ilike(f"%{created_by_login_id}%"))
         result = await self._session.execute(stmt)
         return [(row[0], row[1], row[2], row[3]) for row in result.all()]
+
+    async def delete_all_by_user(self, user_id: uuid.UUID) -> int:
+        """Hard-delete all API keys owned by user. Returns number of deleted rows."""
+        from sqlalchemy import delete
+        result = await self._session.execute(
+            delete(ApiKey).where(ApiKey.created_by == user_id)
+        )
+        await self._session.flush()
+        return result.rowcount
 
     async def revoke(self, api_key_id: uuid.UUID) -> ApiKey | None:
         key = await self.get_by_id(api_key_id)

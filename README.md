@@ -62,9 +62,20 @@ cp .env.example .env
 |------|------|
 | `DATABASE_URL` | PostgreSQL 접속 URL |
 | `SECRET_KEY` | JWT 서명 키 |
-| `BOOTSTRAP_ADMIN_EMAIL` | 최초 관리자 계정 이메일 |
-| `BOOTSTRAP_ADMIN_PASSWORD` | 최초 관리자 계정 비밀번호 |
+| `BOOTSTRAP_ADMIN_LOGIN_ID` | 최초 관리자 계정 아이디 (기본값: `admin`) |
+| `BOOTSTRAP_ADMIN_PASSWORD` | 최초 관리자 계정 비밀번호 (기본값: `admin`) |
 | `OPENAI_API_KEY` | pgvector 시맨틱 검색용 (선택, 미설정 시 키워드 검색만) |
+
+### 기본 관리자 계정
+
+서버 최초 기동 시 관리자 계정이 자동으로 생성됩니다:
+
+| 항목 | 값 |
+|------|-----|
+| 아이디 | `admin` |
+| 비밀번호 | `admin` |
+
+> **보안 주의**: 최초 로그인 후 반드시 비밀번호를 변경하세요. 로그인 시 비밀번호 변경 화면으로 자동 이동됩니다. 비밀번호 변경 시 기존 API 키가 모두 삭제됩니다.
 
 ---
 

@@ -24,16 +24,16 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 async def list_all_api_keys(
     session: SessionDep,
     admin: Annotated[UserAccount, Depends(get_current_admin)],
-    search: str | None = Query(default=None, description="Filter by owner email"),
+    search: str | None = Query(default=None, description="Filter by owner login_id"),
     is_active: bool | None = Query(default=None),
 ) -> OkResponse[list[AdminApiKeyRead]]:
     rows = await AuthService(session).list_all_api_keys(
-        created_by_email=search,
+        created_by_login_id=search,
         is_active=is_active,
     )
     return OkResponse(data=[
-        AdminApiKeyRead.from_orm_with_email(k, email, project_name=pn, owner_role=role)
-        for k, email, pn, role in rows
+        AdminApiKeyRead.from_orm_with_email(k, login_id, project_name=pn, owner_role=role)
+        for k, login_id, pn, role in rows
     ])
 
 
@@ -77,6 +77,6 @@ async def admin_revoke_api_key(
         is_admin=True,
     )
     rows = await AuthService(session).list_all_api_keys()
-    row = next(((k, email, pn, role) for k, email, pn, role in rows if k.id == key.id), None)
-    email, pn, role = (row[1], row[2], row[3]) if row else (None, None, None)
-    return OkResponse(data=AdminApiKeyRead.from_orm_with_email(key, email, project_name=pn, owner_role=role))
+    row = next(((k, login_id, pn, role) for k, login_id, pn, role in rows if k.id == key.id), None)
+    login_id, pn, role = (row[1], row[2], row[3]) if row else (None, None, None)
+    return OkResponse(data=AdminApiKeyRead.from_orm_with_email(key, login_id, project_name=pn, owner_role=role))

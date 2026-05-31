@@ -177,7 +177,7 @@ async def test_audit_log_actor_uses_email_for_user_session(admin_client: AsyncCl
 
     logs = await _get_audit_logs("entity_create")
     assert len(logs) == 1
-    assert "admin@test.com" in logs[0].actor
+    assert "admin" in logs[0].actor
 
 
 async def test_audit_log_actor_uses_api_key_name(client: AsyncClient):
@@ -186,7 +186,7 @@ async def test_audit_log_actor_uses_api_key_name(client: AsyncClient):
         from app.service.auth_service import AuthService
         svc = AuthService(session)
         user = await svc.create_user(
-            email="apikey_user@test.com",
+            login_id="apikey_user",
             password="pass1234",
             display_name="API Key User",
             role="admin",

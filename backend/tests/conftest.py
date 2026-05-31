@@ -47,12 +47,12 @@ async def admin_client() -> AsyncClient:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         async with async_session_factory() as session:
             await AuthService(session).create_user(
-                email="admin@test.com",
+                login_id="admin",
                 password="admin123",
                 display_name="Test Admin",
                 role="admin",
             )
-        resp = await ac.post("/auth/login", json={"email": "admin@test.com", "password": "admin123"})
+        resp = await ac.post("/auth/login", json={"login_id": "admin", "password": "admin123"})
         assert resp.status_code == 200, resp.text
         yield ac
 
@@ -63,12 +63,12 @@ async def project_admin_client() -> AsyncClient:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         async with async_session_factory() as session:
             await AuthService(session).create_user(
-                email="padmin@test.com",
+                login_id="padmin",
                 password="padmin123",
                 display_name="Project Admin",
                 role="project_admin",
             )
-        resp = await ac.post("/auth/login", json={"email": "padmin@test.com", "password": "padmin123"})
+        resp = await ac.post("/auth/login", json={"login_id": "padmin", "password": "padmin123"})
         assert resp.status_code == 200, resp.text
         yield ac
 
