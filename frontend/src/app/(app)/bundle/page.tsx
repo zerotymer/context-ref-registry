@@ -1,19 +1,13 @@
 "use client";
 
 import { useState, useEffect, useTransition, Suspense } from "react";
-import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { fetchContextBundle } from "@/lib/actions/bundle";
 import { JsonViewer } from "@/components/shared/JsonViewer";
 import { ENTITY_TYPES, CONTEXT_TYPE_COLORS, ENTITY_TYPE_COLORS } from "@/lib/constants";
 import type { ContextBundleResponse, EntityType } from "@/types/api";
 
-const BundleGraphView = dynamic(
-  () => import("@/components/bundle/BundleGraphView").then((m) => ({ default: m.BundleGraphView })),
-  { ssr: false, loading: () => <div className="flex items-center justify-center h-64 text-xs text-gray-400">그래프 로딩 중...</div> },
-);
-
-type ResultTab = "context" | "entities" | "relations" | "json" | "graph";
+type ResultTab = "context" | "entities" | "relations" | "json";
 
 const APPROX_CHARS_PER_TOKEN = 4;
 
@@ -216,12 +210,11 @@ function BundlePageInner() {
 
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="flex border-b border-gray-100 px-1 pt-1">
-                  {(["context", "entities", "relations", "graph", "json"] as ResultTab[]).map((t) => {
+                  {(["context", "entities", "relations", "json"] as ResultTab[]).map((t) => {
                     const labels: Record<ResultTab, string> = {
                       context: `Context (${result.contexts.length})`,
                       entities: `Entities (${result.entities.length})`,
                       relations: `Relations (${result.relations.length})`,
-                      graph: `Graph (${result.relations.length} edges)`,
                       json: "JSON",
                     };
                     return (
@@ -305,14 +298,6 @@ function BundlePageInner() {
                       <div className="text-xs text-gray-400 text-center py-4">relation 없음</div>
                     )}
                   </div>
-                )}
-
-                {resultTab === "graph" && (
-                  <BundleGraphView
-                    entities={result.entities}
-                    relations={result.relations}
-                    roots={result.roots}
-                  />
                 )}
 
                 {resultTab === "json" && (
