@@ -1,6 +1,10 @@
 """Entity list API tests — GET /entities."""
 
+import uuid
 from httpx import AsyncClient
+from app.db.session import async_session_factory
+from app.service.auth_service import AuthService
+from app.service.project_service import ProjectService
 
 
 async def _create(admin_client: AsyncClient, **kwargs) -> str:
@@ -90,3 +94,49 @@ async def test_list_entities_invalid_sort(client: AsyncClient):
 async def test_list_entities_limit_max(client: AsyncClient):
     resp = await client.get("/entities", params={"limit": 101})
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Project ID filter tests
+# ---------------------------------------------------------------------------
+
+async def _create_project(alias: str) -> str:
+    project_id = alias.upper()
+    async with async_session_factory() as session:
+        admin = await AuthService(session).create_user(
+            login_id=f"admin_{alias.lower()}",
+            password="pass123",
+            display_name=alias,
+            role="admin",
+        )
+        await ProjectService(session).create_project(
+            id=project_id, alias=alias, description=None, created_by=admin.id
+        )
+    return project_id
+
+
+async def test_list_entities_filter_project_id(admin_client: AsyncClient):
+    """GET /entities?project_id=X returns only entities in that project."""
+    proj_a = await _create_project("PROJ_A")
+    proj_b = await _create_project("PROJ_B")
+
+    id_a = await _create(admin_client, type="FEATURE", canonical_name="feat-a", project_id=proj_a)
+    await _create(admin_client, type="FEATURE", canonical_name="feat-b", project_id=proj_b)
+
+    resp = await admin_client.get("/entities", params={"project_id": proj_a})
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["total"] == 1
+    assert data["items"][0]["id"] == id_a
+
+
+async def test_list_entities_filter_project_id_inaccessible_returns_empty(client: AsyncClient, admin_client: AsyncClient):
+    """Unauthenticated user gets empty list when filtering by a project_id they cannot see."""
+    proj = await _create_project("PRIVATE_PROJ")
+    await _create(admin_client, type="FEATURE", canonical_name="secret-feat", project_id=proj)
+
+    resp = await client.get("/entities", params={"project_id": proj})
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["total"] == 0
+    assert data["items"] == []

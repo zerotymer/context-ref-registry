@@ -9,14 +9,17 @@ import { ConfidenceBar } from "@/components/shared/ConfidenceBar";
 import { formatDate } from "@/lib/utils";
 import { ENTITY_TYPES, ENTITY_STATUSES } from "@/lib/constants";
 import type { EntityListResponse, EntityStatus, EntityType } from "@/types/api";
+import type { ProjectRead } from "@/lib/actions/projects";
 import { NewEntityModal } from "./NewEntityModal";
 
 export function EntityList({
   data,
   pageSize,
+  projects,
 }: {
   data: EntityListResponse;
   pageSize: number;
+  projects: ProjectRead[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +29,7 @@ export function EntityList({
   const status = searchParams.get("status") ?? "";
   const typeFilter = searchParams.get("types") ?? "";
   const tagFilter = searchParams.get("tags") ?? "";
+  const projectFilter = searchParams.get("project_id") ?? "";
   const offset = parseInt(searchParams.get("offset") ?? "0");
 
   const [tagInput, setTagInput] = useState("");
@@ -83,6 +87,18 @@ export function EntityList({
       </header>
 
       <div className="bg-white border-b border-gray-100 px-6 py-2.5 flex items-center gap-3 shrink-0">
+        {projects.length > 0 && (
+          <select
+            value={projectFilter}
+            onChange={(e) => setFilter("project_id", e.target.value)}
+            className="border border-gray-200 rounded-md text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          >
+            <option value="">전체 프로젝트</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.alias}</option>
+            ))}
+          </select>
+        )}
         <select
           value={typeFilter}
           onChange={(e) => setFilter("types", e.target.value)}

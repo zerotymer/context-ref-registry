@@ -106,9 +106,9 @@ docker compose up -d
 
 | UUID | 파일 | 상태 |
 |------|------|------|
-| d679e0e0-ed7e-4de0-ba3d-554a83d3601c | .completed/ | completed (2026-05-31) — API Key 프로젝트 기반 발급 및 접근 제어 강화 |
 | 4d7b7053-162b-4e15-99cc-d6700354008f | .completed/ | completed (2026-05-31) — Project ID 특수문자 제한 — 언더바(_)만 허용 |
 | 498fd32d-b55b-4e14-9e6b-cdfa4639b6b0 | .completed/ | completed (2026-05-31) — Entity 배치 저장 및 참조 패턴 확장 (UUID / PROJECT_ID@UUID / PROJECT_ID@TAG) |
+| 612ab97e-df2b-4d1b-98ed-f3a928665606 | .completed/ | completed (2026-06-02) — Entity 프로젝트 필터 + 번들 그래프 뷰 |
 
 ## Git Branch 전략
 
