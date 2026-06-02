@@ -57,6 +57,15 @@ export const ENTITY_TYPE_BAR_COLORS: Record<EntityType, string> = {
   ISSUE: "bg-rose-400",
 };
 
+export const ENTITY_TYPE_PIE_COLORS: Record<EntityType, string> = {
+  UI_AREA: "#6366f1",
+  FEATURE: "#a78bfa",
+  INFRA_UNIT: "#2dd4bf",
+  API: "#fb923c",
+  CODE_SYMBOL: "#38bdf8",
+  ISSUE: "#fb7185",
+};
+
 export const CONTEXT_TYPE_COLORS: Record<ContextType, string> = {
   summary: "bg-green-50 text-green-700",
   details: "bg-blue-50 text-blue-700",

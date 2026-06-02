@@ -3,7 +3,7 @@ import { getEntities } from "@/lib/actions/entities";
 import { EntityStatusBadge } from "@/components/shared/EntityStatusBadge";
 import { EntityTypeBadge } from "@/components/shared/EntityTypeBadge";
 import { formatDate } from "@/lib/utils";
-import { ENTITY_TYPES, ENTITY_TYPE_BAR_COLORS } from "@/lib/constants";
+import { TypePieChart } from "@/components/dashboard/TypePieChart";
 import type { EntityType } from "@/types/api";
 
 function StatCard({
@@ -92,26 +92,7 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-white rounded-lg border border-gray-200 p-4 col-span-1">
             <div className="font-medium text-gray-700 mb-3 text-sm">타입별 분포</div>
-            <div className="space-y-2.5">
-              {ENTITY_TYPES.map((type) => {
-                const count = typeCounts[type];
-                const pct = totalAll > 0 ? (count / totalAll) * 100 : 0;
-                return (
-                  <div key={type}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-600">{type}</span>
-                      <span className="font-medium">{count}</span>
-                    </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full">
-                      <div
-                        className={`h-1.5 rounded-full ${ENTITY_TYPE_BAR_COLORS[type]}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <TypePieChart typeCounts={typeCounts} total={totalAll} />
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4 col-span-2">
