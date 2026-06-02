@@ -67,8 +67,15 @@ class EntityRepository:
         sort: str = "created_at",
         order: str = "desc",
         visible_project_ids: list[str] | None = None,
+        project_id: str | None = None,
     ) -> tuple[list[Entity], int]:
+        # If project_id is requested but not visible, return empty immediately
+        if project_id is not None and visible_project_ids is not None and project_id not in visible_project_ids:
+            return [], 0
+
         count_stmt = _apply_visibility(select(func.count()).select_from(Entity), visible_project_ids)
+        if project_id is not None:
+            count_stmt = count_stmt.where(Entity.project_id == project_id)
         if status:
             count_stmt = count_stmt.where(Entity.status == status)
         if types:
@@ -86,6 +93,8 @@ class EntityRepository:
         }[sort]
         order_fn = desc if order == "desc" else asc
         stmt = _apply_visibility(select(Entity), visible_project_ids)
+        if project_id is not None:
+            stmt = stmt.where(Entity.project_id == project_id)
         if status:
             stmt = stmt.where(Entity.status == status)
         if types:

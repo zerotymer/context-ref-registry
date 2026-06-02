@@ -42,11 +42,12 @@ async def list_entities(
     offset: int = Query(0, ge=0),
     sort: Literal["created_at", "updated_at", "canonical_name"] = Query("created_at"),
     order: Literal["asc", "desc"] = Query("desc"),
+    project_id: str | None = Query(None, description="프로젝트 ID로 필터"),
 ) -> OkResponse[EntityListResponse]:
     user, api_key = auth
     visible_ids = await AccessPolicy(session).get_visible_project_ids(user, api_key)
     items, total = await EntityService(session).list(
-        status, types, tags, limit, offset, sort, order, visible_project_ids=visible_ids
+        status, types, tags, limit, offset, sort, order, visible_project_ids=visible_ids, project_id=project_id
     )
     return OkResponse(data=EntityListResponse(
         items=[EntityRead.model_validate(e) for e in items],
