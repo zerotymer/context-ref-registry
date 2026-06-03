@@ -10,7 +10,14 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.config import (
+    BOOTSTRAP_ADMIN_DISPLAY_NAME,
+    BOOTSTRAP_ADMIN_LOGIN_ID,
+    BOOTSTRAP_ADMIN_PASSWORD,
+    JWT_ALGORITHM,
+    JWT_EXPIRE_MINUTES,
+    JWT_SECRET,
+)
 from app.domain.models import ApiKey, UserAccount
 from app.exceptions import RegistryError
 from app.repository.api_key_repository import ApiKeyRepository
@@ -35,14 +42,14 @@ def _normalize_login_id(login_id: str) -> str:
 
 
 def create_access_token(user_id: uuid.UUID) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
     payload = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def decode_access_token(token: str) -> uuid.UUID:
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return uuid.UUID(payload["sub"])
     except Exception:
         raise RegistryError("UNAUTHORIZED", "Invalid or expired token", status_code=401)
@@ -229,19 +236,17 @@ class AuthService:
 
     async def bootstrap_admin(self) -> None:
         """Create initial admin account if no admin exists."""
-        if not settings.bootstrap_admin_login_id or not settings.bootstrap_admin_password:
-            return
         if await self._user_repo.exists_admin():
             return
-        norm_id = _normalize_login_id(settings.bootstrap_admin_login_id)
+        norm_id = _normalize_login_id(BOOTSTRAP_ADMIN_LOGIN_ID)
         existing = await self._user_repo.get_by_login_id(norm_id)
         if existing is not None:
             return
-        pw_hash = hash_password(settings.bootstrap_admin_password)
+        pw_hash = hash_password(BOOTSTRAP_ADMIN_PASSWORD)
         await self._user_repo.create(
             login_id=norm_id,
             password_hash=pw_hash,
-            display_name=settings.bootstrap_admin_display_name,
+            display_name=BOOTSTRAP_ADMIN_DISPLAY_NAME,
             role="admin",
             must_change_password=True,
         )
