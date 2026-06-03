@@ -98,6 +98,11 @@ docker compose up -d
 
 운영 환경변수는 **접속 정보(DB/내부 URL)와 backup 정책**으로만 최소화되어 있다. JWT 서명 키와 만료, 초기 관리자 계정은 더 이상 환경변수가 아니며 코드에 고정된다.
 
+> **DB 스키마는 컨테이너 기동 시 자동 적용된다.** `api` 컨테이너 entrypoint가 앱 실행 전
+> `alembic upgrade head`를 수행하므로, **DB만 생성해 두면 스키마(테이블)는 자동 생성**된다.
+> 이미 최신이면 무충돌 no-op이라 수동 마이그레이션이 필요 없다. 스키마 생성 후 최초 기동에서
+> `admin/admin` 계정이 만들어진다.
+
 #### Backend (`api` 서비스)
 
 | 변수 | 필수 | 기본값 | 설명 |
@@ -148,7 +153,7 @@ uvicorn app.main:app --reload --port 8000
 
 # 테스트 (실제 PostgreSQL 필요)
 .venv/bin/pytest tests/ -q
-# 현재: 286 passed
+# 현재: 331 passed
 ```
 
 ### Frontend
@@ -250,6 +255,7 @@ instructions/     # 구현 지침 파일
 | 운영 준비 | Audit Log, Backup, Observability | ✅ 완료 |
 | 관리자 콘솔 | 로그인·사용자·프로젝트·멤버 관리 화면 | ✅ 완료 |
 | 확장 기능 | pgvector, Revision, Review UI, Export, PR 검증, OpenAPI | ✅ 완료 |
+| 배포 운영 | 컨테이너 startup 시 DB 스키마 자동 적용 (`alembic upgrade head`, 멱등) | ✅ 완료 |
 
 ---
 
