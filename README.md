@@ -153,7 +153,7 @@ uvicorn app.main:app --reload --port 8000
 
 # 테스트 (실제 PostgreSQL 필요)
 .venv/bin/pytest tests/ -q
-# 현재: 286 passed
+# 현재: 331 passed
 ```
 
 ### Frontend
@@ -255,6 +255,7 @@ instructions/     # 구현 지침 파일
 | 운영 준비 | Audit Log, Backup, Observability | ✅ 완료 |
 | 관리자 콘솔 | 로그인·사용자·프로젝트·멤버 관리 화면 | ✅ 완료 |
 | 확장 기능 | pgvector, Revision, Review UI, Export, PR 검증, OpenAPI | ✅ 완료 |
+| 배포 운영 | 컨테이너 startup 시 DB 스키마 자동 적용 (`alembic upgrade head`, 멱등) | ✅ 완료 |
 
 ---
 
