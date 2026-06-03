@@ -39,7 +39,9 @@ services:
   mcp:
     build: ./backend
     # Read-only MCP server over stdio — clients spawn this process, no port.
-    command: python -m app.mcp
+    # Bypass the image entrypoint (alembic upgrade head): the api service owns
+    # migrations, so the read-only MCP must not race it on schema changes.
+    entrypoint: ["python", "-m", "app.mcp"]
     stdin_open: true
     tty: true
     env_file:
