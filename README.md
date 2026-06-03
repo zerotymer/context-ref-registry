@@ -62,11 +62,7 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://llmref:llmref@postgres:5432/llmref
-      JWT_SECRET: "change-me-to-a-long-random-string"   # 필수 변경
-      JWT_EXPIRE_MINUTES: 10080
-      BOOTSTRAP_ADMIN_LOGIN_ID: admin
-      BOOTSTRAP_ADMIN_PASSWORD: admin                   # 필수 변경
-      BOOTSTRAP_ADMIN_DISPLAY_NAME: Admin
+      # JWT 서명 키는 기동 시 자동 생성, 초기 관리자는 admin/admin 고정 (환경변수 불필요)
     depends_on:
       postgres:
         condition: service_healthy
