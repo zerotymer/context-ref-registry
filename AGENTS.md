@@ -21,8 +21,9 @@
 | API Key 프로젝트 접근 제어 (project_id 기반 발급·레거시 키 제한) | ✅ 완료 |
 | Project ID 특수문자 제한 (`[A-Za-z0-9_]`만 허용) | ✅ 완료 |
 | 배치 저장 & 참조 패턴 (`POST /entities/batch`, UUID/PROJECT_ID@UUID/PROJECT_ID@TAG) | ✅ 완료 |
+| 에이전트 API 게이트웨이 (Next BFF `/api/v1/*` → 백엔드 프록시, API Key passthrough) | ✅ 완료 |
 
-테스트: **320 passed** (`cd backend && .venv/bin/pytest tests/`)
+테스트: 백엔드 **331 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **16 passed** (`cd frontend && pnpm test`)
 
 ### 진행상태 점검 / 지침 업데이트 시 필수 작업
 
