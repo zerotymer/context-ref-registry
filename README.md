@@ -100,34 +100,44 @@ docker compose up -d
 
 ### 환경 변수
 
+운영 환경변수는 **접속 정보(DB/내부 URL)와 backup 정책**으로만 최소화되어 있다. JWT 서명 키와 만료, 초기 관리자 계정은 더 이상 환경변수가 아니며 코드에 고정된다.
+
 #### Backend (`api` 서비스)
 
 | 변수 | 필수 | 기본값 | 설명 |
 |------|:----:|--------|------|
-| `DATABASE_URL` | ✅ | — | PostgreSQL 접속 URL (`postgresql+asyncpg://...`) |
-| `JWT_SECRET` | ✅ | `change-me-in-production` | JWT 서명 키 — 운영 환경에서 반드시 긴 랜덤 문자열로 변경 |
-| `JWT_ALGORITHM` | | `HS256` | JWT 알고리즘 |
-| `JWT_EXPIRE_MINUTES` | | `10080` | JWT 만료 시간 (분, 기본 7일) |
-| `BOOTSTRAP_ADMIN_LOGIN_ID` | | `admin` | 최초 관리자 계정 아이디 |
-| `BOOTSTRAP_ADMIN_PASSWORD` | | `admin` | 최초 관리자 계정 비밀번호 — 운영 환경에서 반드시 변경 |
-| `BOOTSTRAP_ADMIN_DISPLAY_NAME` | | `Admin` | 최초 관리자 표시 이름 |
+| `DATABASE_URL` | ✅ | — | PostgreSQL 접속 URL (`postgresql+asyncpg://...`) — 외부 DB 연결 시 변경 |
+
+> JWT 서명 키(`JWT_SECRET`)는 **프로세스 기동 시마다 임의 문자열로 자동 생성**되며 시작 로그에 기록된다. 외부 서비스와 연결되지 않으므로 재기동 시 기존 세션은 무효화된다. 알고리즘(`HS256`)과 만료(7일)는 코드에 고정.
 
 #### Frontend (`frontend` 서비스)
 
 | 변수 | 필수 | 기본값 | 설명 |
 |------|:----:|--------|------|
-| `BACKEND_API_URL` | ✅ | — | Frontend → Backend 내부 URL (예: `http://api:8000`) |
+| `BACKEND_API_URL` | ✅ | — | Frontend → Backend 내부 URL (예: `http://api:8000`) — 백엔드 포트 변경 시 조정 |
+
+#### Backup (`backup` 서비스)
+
+| 변수 | 필수 | 기본값 | 설명 |
+|------|:----:|--------|------|
+| `PGHOST` | ✅ | — | 백업 대상 PostgreSQL 호스트 (예: `postgres`) |
+| `PGPORT` | | `5432` | 대상 포트 |
+| `PGUSER` | ✅ | — | 대상 사용자 (postgres와 동일) |
+| `PGPASSWORD` | ✅ | — | 대상 비밀번호 (postgres와 동일) |
+| `PGDATABASE` | ✅ | — | 대상 DB (예: `llmref`) |
+| `BACKUP_SCHEDULE` | | `0 2 * * *` | 백업 cron 스케줄 |
+| `BACKUP_RETAIN_DAYS` | | `7` | 백업 보존 기간(일) |
 
 ### 기본 관리자 계정
 
-서버 최초 기동 시 관리자 계정이 자동으로 생성됩니다:
+서버 최초 기동 시(관리자 계정이 하나도 없을 때) 관리자 계정이 자동으로 생성됩니다. 계정 정보는 **`admin` / `admin`으로 고정**되어 있습니다:
 
 | 항목 | 값 |
 |------|-----|
 | 아이디 | `admin` |
 | 비밀번호 | `admin` |
 
-> **보안 주의**: 최초 로그인 후 반드시 비밀번호를 변경하세요. 로그인 시 비밀번호 변경 화면으로 자동 이동됩니다. 비밀번호 변경 시 기존 API 키가 모두 삭제됩니다.
+> **보안 주의**: 초기 계정은 `admin/admin`으로 **고정**되며, 이를 변경하는 책임은 전적으로 운영 관리자에게 있습니다. 최초 로그인 후 반드시 비밀번호를 변경하세요. 로그인 시 비밀번호 변경 화면으로 자동 이동됩니다. 비밀번호 변경 시 기존 API 키가 모두 삭제됩니다.
 
 ---
 
