@@ -1,4 +1,5 @@
 import logging
+import os
 import secrets
 
 from pydantic_settings import BaseSettings
@@ -16,11 +17,15 @@ settings = Settings()
 
 # --- Fixed operational constants (intentionally NOT env-configurable) ---
 
-# JWT signing secret: regenerated on every process start. It is not shared with
-# any external service, so a fresh per-process secret is fine — the only effect
-# is that existing sessions are invalidated on restart. Logged on startup so
-# operators can correlate token validity windows.
-JWT_SECRET = secrets.token_hex(32)
+# JWT signing secret. MUST be identical across every worker process, otherwise a
+# token signed by one worker is rejected by another (round-robin) with a 401,
+# which drives the frontend into an infinite re-login loop. Because uvicorn
+# --workers spawns independent processes, we cannot rely on a per-process random
+# value here. The secret is sourced from the JWT_SECRET environment variable,
+# which entrypoint.sh generates once and exports so all workers inherit the same
+# value (rotating on container restart). The per-process fallback below only
+# applies to single-process local runs that set no env var.
+JWT_SECRET = os.environ.get("JWT_SECRET") or secrets.token_hex(32)
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
@@ -30,4 +35,8 @@ BOOTSTRAP_ADMIN_LOGIN_ID = "admin"
 BOOTSTRAP_ADMIN_PASSWORD = "admin"
 BOOTSTRAP_ADMIN_DISPLAY_NAME = "Admin"
 
-logger.info("JWT secret generated for this process: %s", JWT_SECRET)
+# Do not log the secret itself; only whether it came from the environment.
+logger.info(
+    "JWT secret loaded (source=%s)",
+    "env" if os.environ.get("JWT_SECRET") else "per-process-fallback",
+)
