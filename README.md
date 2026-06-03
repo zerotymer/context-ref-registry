@@ -36,8 +36,56 @@ CI/CD → POST /validate-references → 레지스트리 참조 검증
 
 ## 빠른 시작
 
+### Docker Compose (배포 이미지 사용)
+
+아래 `docker-compose.yml`을 사용하면 빌드 없이 바로 실행할 수 있다.
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: llmref
+      POSTGRES_USER: llmref
+      POSTGRES_PASSWORD: llmref        # 운영 환경에서는 반드시 변경
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llmref"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: zerotymer/llm-registry-api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://llmref:llmref@postgres:5432/llmref
+      JWT_SECRET: "change-me-to-a-long-random-string"   # 필수 변경
+      JWT_EXPIRE_MINUTES: 10080
+      BOOTSTRAP_ADMIN_LOGIN_ID: admin
+      BOOTSTRAP_ADMIN_PASSWORD: admin                   # 필수 변경
+      BOOTSTRAP_ADMIN_DISPLAY_NAME: Admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: zerotymer/llm-registry-front:latest
+    ports:
+      - "3000:3000"
+    environment:
+      BACKEND_API_URL: http://api:8000
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+```
+
 ```bash
-# 전체 스택 실행
+# 실행
 docker compose up -d
 ```
 
@@ -48,23 +96,27 @@ docker compose up -d
 | Frontend | http://localhost:3000 |
 | PostgreSQL | localhost:5432 |
 
+---
+
 ### 환경 변수
 
-`.env.example`을 복사 후 값 설정:
+#### Backend (`api` 서비스)
 
-```bash
-cp .env.example .env
-```
+| 변수 | 필수 | 기본값 | 설명 |
+|------|:----:|--------|------|
+| `DATABASE_URL` | ✅ | — | PostgreSQL 접속 URL (`postgresql+asyncpg://...`) |
+| `JWT_SECRET` | ✅ | `change-me-in-production` | JWT 서명 키 — 운영 환경에서 반드시 긴 랜덤 문자열로 변경 |
+| `JWT_ALGORITHM` | | `HS256` | JWT 알고리즘 |
+| `JWT_EXPIRE_MINUTES` | | `10080` | JWT 만료 시간 (분, 기본 7일) |
+| `BOOTSTRAP_ADMIN_LOGIN_ID` | | `admin` | 최초 관리자 계정 아이디 |
+| `BOOTSTRAP_ADMIN_PASSWORD` | | `admin` | 최초 관리자 계정 비밀번호 — 운영 환경에서 반드시 변경 |
+| `BOOTSTRAP_ADMIN_DISPLAY_NAME` | | `Admin` | 최초 관리자 표시 이름 |
 
-주요 항목:
+#### Frontend (`frontend` 서비스)
 
-| 변수 | 설명 |
-|------|------|
-| `DATABASE_URL` | PostgreSQL 접속 URL |
-| `SECRET_KEY` | JWT 서명 키 |
-| `BOOTSTRAP_ADMIN_LOGIN_ID` | 최초 관리자 계정 아이디 (기본값: `admin`) |
-| `BOOTSTRAP_ADMIN_PASSWORD` | 최초 관리자 계정 비밀번호 (기본값: `admin`) |
-| `OPENAI_API_KEY` | pgvector 시맨틱 검색용 (선택, 미설정 시 키워드 검색만) |
+| 변수 | 필수 | 기본값 | 설명 |
+|------|:----:|--------|------|
+| `BACKEND_API_URL` | ✅ | — | Frontend → Backend 내부 URL (예: `http://api:8000`) |
 
 ### 기본 관리자 계정
 

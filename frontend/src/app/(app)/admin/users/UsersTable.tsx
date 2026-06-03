@@ -175,7 +175,7 @@ function ActionMenu({
               onClick={() => { setOpen(false); setShowReset(true); }}
               className="w-full text-left px-3 py-2 hover:bg-gray-50"
             >
-              비밀번호 초기화
+              비밀번호 변경
             </button>
             <button
               onClick={deactivate}
@@ -220,31 +220,47 @@ function ResetPasswordModal({
         onDone();
         onClose();
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "초기화에 실패했습니다.");
+        setError(err instanceof Error ? err.message : "비밀번호 변경에 실패했습니다.");
       }
     });
   }
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-xs p-5">
-        <h3 className="font-semibold text-gray-900 mb-3 text-sm">비밀번호 초기화</h3>
-        <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6">
+        <h3 className="font-semibold text-gray-900 mb-1 text-base">비밀번호 변경</h3>
+        <p className="text-xs text-gray-500 mb-4">사용자의 새 비밀번호를 설정합니다.</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">새 비밀번호</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">새 비밀번호</label>
             <input
               type="password"
               required
               value={pw}
               onChange={(e) => setPw(e.target.value)}
               className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              placeholder="새 비밀번호 입력"
             />
           </div>
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-sm text-gray-600">취소</button>
-            <button type="submit" disabled={pending} className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md disabled:opacity-60">
-              초기화
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 text-xs text-red-700">
+              {error}
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-3 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {pending ? "변경 중..." : "변경"}
             </button>
           </div>
         </form>

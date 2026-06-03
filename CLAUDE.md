@@ -52,6 +52,7 @@ ci/                     # PR 참조 검증 스크립트 (validate-pr-refs.py)
 .github/workflows/      # GitHub Actions CI (pr-validate-refs.yml)
 docs/                   # 설계 문서 00~11
 instructions/           # 구현 지침 파일
+  deploy-build.md       #   배포 빌드 명령어 (영구 참조)
 output/                 # 생성된 산출물 (목업 HTML, 보고서 등)
   admin-console-mockup/ #   관리자 콘솔 UI 목업
   review-ui-mockup/     #   Review UI 목업
@@ -63,6 +64,26 @@ output/                 # 생성된 산출물 (목업 HTML, 보고서 등)
 ```bash
 # 루트에서 실행
 docker compose up -d
+```
+
+## 배포 빌드
+
+> 상세 절차는 **[`instructions/deploy-build.md`](instructions/deploy-build.md)** 참고.
+
+이미지: `llm-registry-api` (backend) + `llm-registry-front` (frontend)  
+레지스트리: Docker Hub (`zerotymer/`) + Nexus OSS (`nexus.zerotymer.net/docker/`)  
+태그: `latest` + 버전 태그 → 2×2×2 = **8개**
+
+```bash
+make release              # VERSION=1.0.0 (기본값)
+make release VERSION=1.1.0  # 버전 지정
+```
+
+빌드 전 레지스트리 로그인 필요:
+
+```bash
+docker login                          # Docker Hub
+docker login nexus.zerotymer.net      # Nexus OSS
 ```
 
 ## 설계 문서
@@ -109,6 +130,7 @@ docker compose up -d
 | 4d7b7053-162b-4e15-99cc-d6700354008f | .completed/ | completed (2026-05-31) — Project ID 특수문자 제한 — 언더바(_)만 허용 |
 | 498fd32d-b55b-4e14-9e6b-cdfa4639b6b0 | .completed/ | completed (2026-05-31) — Entity 배치 저장 및 참조 패턴 확장 (UUID / PROJECT_ID@UUID / PROJECT_ID@TAG) |
 | 612ab97e-df2b-4d1b-98ed-f3a928665606 | .completed/ | completed (2026-06-02) — Entity 프로젝트 필터 + 번들 그래프 뷰 |
+| 19e52237-68d4-4952-8c30-dd0eb9285ff0 | `deploy-build.md` | **reference** (영구) — 배포 빌드 명령어 (Docker Hub + Nexus OSS, 8개 태그) |
 
 ## Git Branch 전략
 

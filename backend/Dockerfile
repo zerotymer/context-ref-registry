@@ -8,3 +8,5 @@ RUN pip install uv
 # .dockerignore excludes .venv/.env/tests from the build context.
 COPY . .
 RUN uv pip install --system -e .
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
