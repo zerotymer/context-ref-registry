@@ -13,6 +13,8 @@
                                               ↓
 Coding Agent ← MCP read-only server ← REST API (:8000)
 
+Coding Agent → Next BFF 게이트웨이 (:3000 /api/v1/*) → FastAPI Backend (:8000)   # API Key passthrough
+
 Browser → Next.js Admin UI (:3000, BFF) → FastAPI Backend (:8000)
 
 CI/CD → POST /validate-references → 레지스트리 참조 검증
@@ -90,6 +92,7 @@ docker compose up -d
 | Backend API | http://localhost:8000 |
 | API 문서 | http://localhost:8000/docs |
 | Frontend | http://localhost:3000 |
+| 에이전트 API 게이트웨이 | http://localhost:3000/api/v1/* (백엔드 동일 경로 프록시, API Key passthrough) |
 | PostgreSQL | localhost:5432 |
 
 ---
@@ -256,6 +259,7 @@ instructions/     # 구현 지침 파일
 | 관리자 콘솔 | 로그인·사용자·프로젝트·멤버 관리 화면 | ✅ 완료 |
 | 확장 기능 | pgvector, Revision, Review UI, Export, PR 검증, OpenAPI | ✅ 완료 |
 | 배포 운영 | 컨테이너 startup 시 DB 스키마 자동 적용 (`alembic upgrade head`, 멱등) | ✅ 완료 |
+| 에이전트 게이트웨이 | Next BFF `/api/v1/*` → 백엔드 프록시 (API Key passthrough) | ✅ 완료 |
 
 ---
 
