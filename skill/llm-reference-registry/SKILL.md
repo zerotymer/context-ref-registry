@@ -29,7 +29,7 @@ the MCP server configured; otherwise use the **HTTP API**.
 
 | Method | Endpoint | When to Use |
 |--------|----------|-------------|
-| **MCP** | stdio (`python -m app.mcp`) | Agent platform has the MCP server configured. Read-only. |
+| **MCP** | streamable-http `https://llm-api.zerotymer.net/mcp` (API key header) | Agent platform has the MCP server configured. Read-only, project-scoped. |
 | **HTTP API (gateway)** | `https://llm-reg.zerotymer.net/api/v1/*` | **Preferred HTTP path.** Next BFF Route Handler → backend proxy. |
 | **HTTP API (direct)** | `https://llm-api.zerotymer.net/*` | Fallback: backend API directly (no `/api/v1` prefix). |
 

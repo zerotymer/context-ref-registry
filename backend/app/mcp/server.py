@@ -14,7 +14,6 @@ mcp: FastMCP = FastMCP(
 # Import tools module to trigger @mcp.tool() registrations
 import app.mcp.tools  # noqa: E402, F401
 
-
-if __name__ == "__main__":
-    # Read-only registry server over stdio. MCP clients spawn this process.
-    mcp.run()
+# Mount at /mcp so the streamable-http endpoint is exactly /mcp (the mount adds
+# the prefix; without this the endpoint would be /mcp/mcp).
+mcp.settings.streamable_http_path = "/"

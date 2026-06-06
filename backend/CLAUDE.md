@@ -62,8 +62,10 @@ backend/
       export_service.py     # AGENTS.md / OpenAPI 3.1.0 export
       validate_service.py   # PR 참조 검증 (UUID / alias 일괄 검증)
     mcp/
-      server.py             # FastMCP 인스턴스
-      tools.py              # 6개 read-only tool
+      server.py             # FastMCP 인스턴스 (streamable_http_path="/")
+      tools.py              # 7개 read-only tool (프로젝트 범위 필터 적용)
+      http_auth.py          # /mcp API Key 인증 ASGI 미들웨어
+      scope.py              # per-request 프로젝트 가시성 헬퍼
     db/
       session.py            # async_session_factory
       migrations/           # Alembic (versions/)
@@ -113,8 +115,8 @@ uvicorn app.main:app --reload --port 8000
 alembic upgrade head
 alembic revision --autogenerate -m "describe change"
 
-# MCP 서버 단독 실행 (stdio)
-python -m app.mcp
+# MCP 서버는 api 앱에 streamable-http로 마운트됨 (/mcp). 단독 실행 없음.
+# uvicorn app.main:app 기동 후 http://localhost:8000/mcp 로 접속.
 ```
 
 ## 환경변수
@@ -229,13 +231,18 @@ Locale:       ko | en
 
 ## MCP Tool 목록
 
+streamable-http로 `api` 앱의 `/mcp`에 마운트(read-only, API Key 인증). 모든 tool은
+호출자의 API Key 프로젝트 범위(`visible_project_ids`)로 결과를 필터링한다 —
+범위 밖 entity는 `ENTITY_NOT_FOUND`로 은닉되거나 결과에서 제외된다.
+
 | Tool | 설명 |
 |------|------|
 | `resolve_alias` | alias → entity (not_found/resolved/ambiguous) |
-| `get_entity` | UUID로 entity 조회, deprecated warning 포함 |
-| `search_entities` | alias exact → canonical_name partial → tsvector 순 검색 |
+| `get_entity` | 참조(UUID/PROJECT@UUID/PROJECT@TAG)로 entity 조회, deprecated warning 포함 |
+| `search_entities` | alias exact → canonical_name partial 순 검색 |
 | `get_related_entities` | 관련 entity 조회 (direction, max_depth) |
 | `get_context_bundle` | 핵심 tool — BFS로 관련 entity/context/relation 묶음 반환 |
+| `get_entity_history` | entity 변경 이력 조회 |
 | `validate_references` | ID/alias 유효성 일괄 검증 |
 
 ## API 응답 형식
@@ -308,5 +315,5 @@ test_observability.py          Observability 엔드포인트
 각 테스트는 `_clean_tables` fixture로 테이블 전체 truncate 후 실행.
 
 ## 주의사항
-- MCP server는 `stdio` transport로 실행 (`python -m app.mcp` → `app/mcp/__main__.py`). 포트 미사용, 클라이언트가 프로세스를 spawn. docker-compose `mcp` 서비스도 stdio (`stdin_open: true`).
+- MCP server는 **streamable-http** transport로 `api` 앱의 `/mcp`에 마운트 (`app/main.py`의 `app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))`). stdio(`python -m app.mcp`)는 폐기. 클라이언트는 `http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 또는 `X-API-Key` 헤더 필수. lifespan에서 `mcp.session_manager.run()`을 bootstrap_admin과 `AsyncExitStack`으로 합쳐 기동한다.
 - `pyproject.toml`의 `mcp>=1.0.0` 의존성은 시스템 Python이 아닌 `.venv`에만 설치됨 — 항상 `.venv/bin/python` 사용.

@@ -143,6 +143,7 @@ make release VERSION=1.1.0  # 버전 지정
 - **DB 마이그레이션은 컨테이너 startup에 자동 적용** — `backend/entrypoint.sh`가 앱 실행 전
   `alembic upgrade head`를 수행한다(`ENTRYPOINT`). 빈 DB면 스키마 자동 생성, 최신이면 무충돌 no-op.
   신규 배포 시 수동 마이그레이션 단계 불필요. (CMD는 이미 `uvicorn ... --workers 2`로 고정됨)
-- **MCP 서버는 배포 이미지에서 제외** — stdio 방식으로 클라이언트가 직접 프로세스를 생성하므로 별도 이미지 배포 불필요.
-  (dev `docker-compose.yml`에서는 read-only이므로 `entrypoint` 오버라이드로 마이그레이션을 건너뛴다.)
+- **MCP 서버는 `api` 이미지에 포함** — streamable-http로 `api` 앱의 `/mcp`에 마운트되므로
+  별도 이미지·태그 추가 없이 기존 `llm-registry-api` 이미지로 함께 배포된다(8개 태그 영향 없음).
+  stdio 단독 `mcp` 서비스는 폐기. 외부 노출 표면 단일화(BFF `/api/v1/mcp`)는 단계 C에서 처리.
 - **backup 서비스도 배포 이미지에서 제외** — 운영 환경에서 별도 스케줄러(cron 등)로 대체.

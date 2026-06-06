@@ -28,7 +28,7 @@ UI 화면, 기능, 인프라 단위, API, 코드 심볼, 이슈를 등록하고,
 
 | 방법 | 엔드포인트 | 사용 시점 |
 |------|------------|-----------|
-| **MCP** | stdio (`python -m app.mcp`) | 에이전트 플랫폼에 MCP 서버가 설정된 경우. 읽기 전용. |
+| **MCP** | streamable-http `https://llm-api.zerotymer.net/mcp` (API key 헤더) | 에이전트 플랫폼에 MCP 서버가 설정된 경우. 읽기 전용, 프로젝트 범위 적용. |
 | **HTTP API (게이트웨이)** | `https://llm-reg.zerotymer.net/api/v1/*` | **권장 HTTP 경로.** Next BFF Route Handler → 백엔드 프록시. |
 | **HTTP API (직접)** | `https://llm-api.zerotymer.net/*` | 대체: 백엔드 API 직접 호출 (`/api/v1` 프리픽스 없음). |
 

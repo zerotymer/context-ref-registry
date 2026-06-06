@@ -1,7 +1,7 @@
 ---
 uuid: 216b0864-6b7f-4057-8b06-b2865dc9bc53
 title: MCP HTTP transport 전환 (stdio 폐기, 단계 A 백엔드 마운트 → 단계 C BFF 프록시)
-status: planned
+status: in_progress
 created: 2026-06-06
 ---
 
@@ -103,33 +103,32 @@ app.mount("/mcp", mcp.streamable_http_app())
 
 ### 구현 단계 (체크리스트)
 
-- [ ] **A-1 — server.py / __main__.py 정리**
-  - `mcp.run()` (stdio) 제거. `server.py`는 `FastMCP` 인스턴스 정의 + tools import
-    트리거만 남긴다.
-  - `__main__.py`의 stdio 실행 경로 폐기(파일 삭제 또는 http 안내로 대체).
-- [ ] **A-2 — main.py 마운트 + lifespan 병합**
-  - `mcp.session_manager.run()` 을 기존 lifespan과 합친다(AsyncExitStack).
-  - `app.mount("/mcp", mcp.streamable_http_app())`.
-  - `mcp.settings.streamable_http_path` 로 최종 경로가 `/mcp` 임을 보장.
-- [ ] **A-3 — 인증 적용** (미해결 결정 #1 확정 후)
-  - `/mcp` 경로에 API Key 검사 ASGI 미들웨어/래퍼 추가 (기존 키 검증 로직 재사용)
-    — 또는 결정에 따라 단계 C로 위임.
-- [ ] **A-4 — docker-compose 정리**
-  - stdio `mcp` 서비스 제거 (MCP는 이제 `api` 서비스가 `:8000/mcp`로 서빙).
-  - (검증 편의) 필요 시 주석으로 `api`의 `/mcp` 노출 명시.
-- [ ] **A-5 — 테스트 (⚠️ 테스트 없는 PR 금지 — 전역 규칙)**
-  - **기존 `test_mcp_tools.py`(call_tool 직접)는 유지** — tool 로직 회귀 방지.
-  - **신규: 실제 HTTP transport end-to-end 테스트** (그동안의 미검증 갭 해소)
-    - ASGITransport 또는 MCP HTTP 클라이언트로 `/mcp` 핸드셰이크 →
-      `list_tools` → 최소 1개 tool 호출(`get_context_bundle` 등) 성공 확인.
-    - (인증 적용 시) 키 없음 → 401, 키 있음 → 200 검증.
-- [ ] **A-6 — 문서 동기화**
-  - `backend/CLAUDE.md` "주의사항"의 stdio 설명 → HTTP 마운트로 갱신.
-  - 루트 `CLAUDE.md` 구현 현황 / 아키텍처 흐름의 MCP 항목 갱신.
-  - `AGENTS.md` MCP 상태 갱신.
-  - `instructions/deploy-build.md` — "MCP 배포 제외" 문구 수정(이제 `api` 이미지에
-    포함). 8개 태그 빌드 영향 검토.
-  - `instructions/README.md` 로드맵 갱신.
+- [x] **A-1 — server.py / __main__.py 정리**
+  - `mcp.run()` (stdio) 제거. `server.py`는 `FastMCP` 인스턴스 + tools import +
+    `mcp.settings.streamable_http_path = "/"` 만 남김.
+  - `__main__.py`는 http 안내 메시지 출력 후 exit(1)로 대체.
+- [x] **A-2 — main.py 마운트 + lifespan 병합**
+  - `mcp.session_manager.run()` 을 기존 lifespan과 `AsyncExitStack`으로 병합.
+  - `app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))`.
+  - `streamable_http_path="/"` 로 엔드포인트 `/mcp` (클라이언트는 `/mcp`→`/mcp/`
+    307 리다이렉트를 자동 추종).
+- [x] **A-3 — 인증 적용** (결정 #1: ASGI 미들웨어 API Key 검사)
+  - `app/mcp/http_auth.py` `McpApiKeyAuthMiddleware` — `Authorization: Bearer` /
+    `X-API-Key` 추출 → `AuthService.get_user_by_api_key` 재사용, 실패 시 401.
+  - 결정 #2(프로젝트 범위 반영): `AccessPolicy.get_visible_project_ids` 결과를
+    ASGI `scope`에 심고(`app/mcp/scope.py`), 7개 tool이 `mcp.get_context()`로
+    읽어 범위 필터링. 범위 밖 entity는 `ENTITY_NOT_FOUND`/결과 제외로 은닉.
+- [x] **A-4 — docker-compose 정리**
+  - stdio `mcp` 서비스 제거 (MCP는 `api` 서비스가 `:8000/mcp`로 서빙).
+- [x] **A-5 — 테스트**
+  - 기존 `test_mcp_tools.py`(call_tool 직접) 유지 — 16 passed.
+  - 신규 `test_mcp_http.py` — uvicorn 실서버 + MCP 클라이언트로 핸드셰이크 →
+    `list_tools`(7종) → tool 호출, 키 없음/오류 → 401, 프로젝트 범위 필터 검증. 5 passed.
+  - 전체 백엔드 **339 passed**.
+- [x] **A-6 — 문서 동기화**
+  - `backend/CLAUDE.md` (주의사항·구조·tool 표·dev 명령), 루트 `CLAUDE.md`
+    (구현 현황·아키텍처·구조·테스트 수), `AGENTS.md`, `instructions/deploy-build.md`
+    ("MCP 배포 제외" → `api` 이미지 포함), `instructions/README.md` 갱신 완료.
 
 ### 단계 A 완료 기준 (DoD)
 

@@ -246,9 +246,9 @@ python ci/validate-pr-refs.py \
 
 ### MCP Server (read-only)
 
-```bash
-python -m app.mcp
-```
+streamable-http transport로 `api` 앱의 `/mcp`에 마운트된다(stdio 폐기). MCP 클라이언트는
+`http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 또는 `X-API-Key`
+헤더가 필요하다. 모든 도구는 API Key의 프로젝트 범위로 결과를 필터링한다.
 
 read-only 도구 7종 제공: `resolve_alias`, `get_entity`, `search_entities`,
 `get_related_entities`, `get_context_bundle`, `get_entity_history`, `validate_references`.
