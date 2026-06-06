@@ -80,9 +80,9 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | UUID | 파일 | 분류 | 상태 |
 |------|------|------|------|
-| 612ab97e | .completed/ | Phase 3.5 | `completed` 2026-06-02 |
 | d494a542 | .completed/ | Phase 3.6 | `completed` 2026-06-03 |
 | 2214f2c4 | .completed/ | Phase 3.7 | `completed` 2026-06-03 |
+| 216b0864 | .completed/ | MCP HTTP | `completed` 2026-06-06 — 단계 A(백엔드 `/mcp`) + 단계 C(Next BFF `/api/v1/mcp` 스트리밍 프록시) |
 
 > 완료된 지침 세부 내용은 `instructions/.completed/{uuid}.md`에 보관.
 

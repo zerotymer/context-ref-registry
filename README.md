@@ -20,6 +20,42 @@ Browser → Next.js Admin UI (:3000, BFF) → FastAPI Backend (:8000)
 CI/CD → POST /validate-references → 레지스트리 참조 검증
 ```
 
+### 공개 엔드포인트 (외부 에이전트용)
+
+| 용도 | URL | 비고 |
+|------|-----|------|
+| **에이전트 API (권장)** | `https://llm-reg.zerotymer.net/api/v1/*` | Next BFF 게이트웨이 → 백엔드 프록시. API Key passthrough, 응답 봉투 미해제 |
+| **백엔드 직접 API (대체)** | `https://llm-api.zerotymer.net/*` | 게이트웨이 우회. `/api/v1` 프리픽스 없음 |
+
+> 에이전트는 **게이트웨이(`llm-reg`)를 우선** 사용하고, 닿지 않을 때만 백엔드 직접
+> (`llm-api`)으로 폴백한다. 게이트웨이는 `entities` · `relations` · `search` · `resolve` ·
+> `tags` · `context-bundle` · `ingest` · `export` · `validate-references` · `projects`
+> 프리픽스만 프록시하며 `auth/*` · `admin/*`은 404로 차단한다.
+
+### 인증 (API Key)
+
+모든 에이전트 HTTP 요청은 API Key로 인증한다. 두 헤더 중 하나를 전송:
+
+```
+X-API-Key: <api-key>
+# 또는
+Authorization: Bearer <api-key>
+```
+
+키는 관리자 콘솔 `/settings/api-keys` 또는 `POST /auth/api-keys`로 발급하며,
+프로젝트 단위로 스코프된다. 키는 코드에 하드코딩하지 말고 환경변수에서 읽는다.
+
+```bash
+curl -H "X-API-Key: $REGISTRY_API_KEY" \
+  "https://llm-reg.zerotymer.net/api/v1/resolve?alias=사용자%20검색&locale=ko"
+```
+
+### 에이전트 스킬
+
+코딩 에이전트가 레지스트리를 활용하는 방법(MCP 도구 7종 · HTTP API · 인증 · 워크플로우)은
+[`skill/llm-reference-registry/`](skill/llm-reference-registry/) 스킬 문서를 따른다
+(영문 `SKILL.md` / 국문 `SKILL_ko.md`).
+
 ---
 
 ## 기술 스택
@@ -185,7 +221,7 @@ pnpm dev
 
 ### Context Bundle
 
-- `GET /bundles?root_ids=&max_depth=&token_budget=` — depth-first traversal, 토큰 예산 제한
+- `POST /context-bundle` (`root_ids`, `max_depth`, `token_budget`) — BFS traversal, 토큰 예산 제한
 
 ### Export
 
@@ -210,11 +246,12 @@ python ci/validate-pr-refs.py \
 
 ### MCP Server (read-only)
 
-```bash
-python -m app.mcp
-```
+streamable-http transport로 `api` 앱의 `/mcp`에 마운트된다(stdio 폐기). MCP 클라이언트는
+`http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 또는 `X-API-Key`
+헤더가 필요하다. 모든 도구는 API Key의 프로젝트 범위로 결과를 필터링한다.
 
-`search_entities`, `get_entity`, `get_context_bundle`, `validate_references` 도구 제공.
+read-only 도구 7종 제공: `resolve_alias`, `get_entity`, `search_entities`,
+`get_related_entities`, `get_context_bundle`, `get_entity_history`, `validate_references`.
 
 ### 관리자 콘솔
 

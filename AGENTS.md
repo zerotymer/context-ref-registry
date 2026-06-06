@@ -22,8 +22,12 @@
 | Project ID 특수문자 제한 (`[A-Za-z0-9_]`만 허용) | ✅ 완료 |
 | 배치 저장 & 참조 패턴 (`POST /entities/batch`, UUID/PROJECT_ID@UUID/PROJECT_ID@TAG) | ✅ 완료 |
 | 에이전트 API 게이트웨이 (Next BFF `/api/v1/*` → 백엔드 프록시, API Key passthrough) | ✅ 완료 |
+| MCP HTTP transport 단계 A (stdio 폐기 → `api` 앱 `/mcp` streamable-http, API Key 인증, 프로젝트 범위 필터) | ✅ 완료 |
+| MCP HTTP transport 단계 C (Next BFF 스트리밍 프록시 `/api/v1/mcp` → 백엔드 `/mcp/`, SSE pipe·세션 헤더 passthrough) | ✅ 완료 |
 
-테스트: 백엔드 **331 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **16 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **339 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **27 passed** (`cd frontend && pnpm test`)
+
+에이전트 MCP 진입점: `http://<host>:3000/api/v1/mcp` (streamable-http, `Authorization: Bearer <api-key>` 또는 `X-API-Key`).
 
 ### 진행상태 점검 / 지침 업데이트 시 필수 작업
 

@@ -1,3 +1,4 @@
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 
@@ -24,6 +25,8 @@ from app.db.session import async_session_factory
 from app.exceptions import RegistryError
 from app.logging_config import configure_logging
 from app.middleware import RequestLoggingMiddleware
+from app.mcp.http_auth import McpApiKeyAuthMiddleware
+from app.mcp.server import mcp
 from app.service.auth_service import AuthService
 
 configure_logging()
@@ -33,18 +36,24 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create the fixed admin/admin account on first startup if no admin exists.
-    # Best-effort: never block startup if the DB/schema is not ready yet.
-    try:
-        async with async_session_factory() as session:
-            await AuthService(session).bootstrap_admin()
-    except Exception:
-        logger.warning("bootstrap_admin skipped (DB not ready?)", exc_info=True)
-    yield
+    async with contextlib.AsyncExitStack() as stack:
+        # Run the MCP streamable-http session manager for the mounted /mcp app.
+        await stack.enter_async_context(mcp.session_manager.run())
+        # Create the fixed admin/admin account on first startup if no admin exists.
+        # Best-effort: never block startup if the DB/schema is not ready yet.
+        try:
+            async with async_session_factory() as session:
+                await AuthService(session).bootstrap_admin()
+        except Exception:
+            logger.warning("bootstrap_admin skipped (DB not ready?)", exc_info=True)
+        yield
 
 
 app = FastAPI(title="LLM Reference Registry", version="0.1.0", lifespan=lifespan)
 app.add_middleware(RequestLoggingMiddleware)
+
+# Read-only MCP server over streamable-http at /mcp, gated by API key auth.
+app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))
 
 
 @app.exception_handler(RegistryError)

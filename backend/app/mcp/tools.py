@@ -7,6 +7,7 @@ from app.db.session import async_session_factory
 from app.domain.enums import EntityType, Locale, RelationType
 from app.domain.schemas import ContextBundleRequest
 from app.exceptions import RegistryError
+from app.mcp.scope import current_visible_project_ids, is_visible
 from app.mcp.server import mcp
 from app.repository.alias_repository import AliasRepository
 from app.repository.entity_repository import EntityRepository
@@ -46,10 +47,11 @@ async def resolve_alias(
 ) -> dict:
     locale_enum = Locale(locale) if locale else None
     type_enum = EntityType(type) if type else None
+    visible = current_visible_project_ids()
 
     async with async_session_factory() as session:
         service = AliasService(session)
-        result = await service.resolve(alias, locale_enum, type_enum)
+        result = await service.resolve(alias, locale_enum, type_enum, visible_project_ids=visible)
 
     if result.result == "not_found":
         return {"status": "not_found"}
@@ -96,6 +98,8 @@ async def resolve_alias(
     )
 )
 async def get_entity(id: str) -> dict:
+    visible = current_visible_project_ids()
+
     async with async_session_factory() as session:
         service = EntityService(session)
         alias_repo = AliasRepository(session)
@@ -104,6 +108,10 @@ async def get_entity(id: str) -> dict:
             entity = await service.resolve_ref(id)
         except RegistryError as exc:
             return {"error": exc.code, "message": exc.message}
+
+        # Hide entities outside the caller's project scope.
+        if not is_visible(entity.project_id, visible):
+            return {"error": "ENTITY_NOT_FOUND", "message": f"Entity {id} not found"}
 
         entity_id = entity.id
 
@@ -165,10 +173,11 @@ async def search_entities(
     limit: int = 10,
 ) -> dict:
     type_enums = [EntityType(t) for t in types] if types else None
+    visible = current_visible_project_ids()
 
     async with async_session_factory() as session:
         repo = EntityRepository(session)
-        hits = await repo.search(query, type_enums, tags, limit)
+        hits = await repo.search(query, type_enums, tags, limit, visible_project_ids=visible)
 
     results = []
     for entity, match_reason in hits:
@@ -198,10 +207,15 @@ async def get_related_entities(
 ) -> dict:
     entity_id = uuid.UUID(id)
     rel_type_enums = [RelationType(r) for r in relation_types] if relation_types else None
+    visible = current_visible_project_ids()
 
     async with async_session_factory() as session:
         service = RelationService(session)
         entity_repo = EntityRepository(session)
+
+        root = await entity_repo.get_by_id(entity_id)
+        if root is None or not is_visible(root.project_id, visible):
+            return {"error": "ENTITY_NOT_FOUND", "message": f"Entity {id} not found"}
 
         try:
             relations = await service.list_relations(
@@ -222,9 +236,11 @@ async def get_related_entities(
                 neighbor_ids.add(rel.to_entity_id)
 
         entities = []
+        visible_ids: set[uuid.UUID] = {entity_id}
         for nid in neighbor_ids:
             e = await entity_repo.get_by_id(nid)
-            if e:
+            if e and is_visible(e.project_id, visible):
+                visible_ids.add(e.id)
                 entities.append(_entity_summary(e))
 
     rel_list = [
@@ -234,8 +250,11 @@ async def get_related_entities(
             "relation_type": r.relation_type.value if hasattr(r.relation_type, "value") else r.relation_type,
         }
         for r in relations
-        # filter by relation_types if multiple types requested
+        # filter by relation_types if multiple types requested, and drop edges to
+        # entities outside the caller's project scope.
         if (not rel_type_enums or r.relation_type in rel_type_enums)
+        and r.from_entity_id in visible_ids
+        and r.to_entity_id in visible_ids
     ]
 
     return {
@@ -269,6 +288,7 @@ async def get_context_bundle(
     type_enums = [EntityType(t) for t in include_types] if include_types else None
     rel_enums = [RelationType(r) for r in include_relations] if include_relations else None
     locale_enum = Locale(language)
+    visible = current_visible_project_ids()
 
     async with async_session_factory() as session:
         entity_svc = EntityService(session)
@@ -276,9 +296,12 @@ async def get_context_bundle(
         for ref in root_ids:
             try:
                 entity = await entity_svc.resolve_ref(ref)
-                resolved_uuids.append(entity.id)
             except RegistryError as exc:
                 return {"error": exc.code, "message": exc.message}
+            # Hide roots outside the caller's project scope.
+            if not is_visible(entity.project_id, visible):
+                return {"error": "ENTITY_NOT_FOUND", "message": f"Entity {ref} not found"}
+            resolved_uuids.append(entity.id)
 
         req = ContextBundleRequest(
             root_ids=[str(r) for r in resolved_uuids],
@@ -294,6 +317,15 @@ async def get_context_bundle(
             bundle = await service.get_context_bundle(req)
         except RegistryError as exc:
             return {"error": exc.code, "message": exc.message}
+
+        # BFS may reach related entities in other projects; hide those outside
+        # the caller's scope. Roots are already scope-checked above.
+        hidden_ids: set[str] = set()
+        if visible is not None:
+            for be in bundle.entities:
+                ent = await entity_svc.get_by_id(be.id)
+                if not is_visible(ent.project_id, visible):
+                    hidden_ids.add(str(be.id))
 
     def _ser_entity(e: Any) -> dict:
         return {
@@ -327,12 +359,23 @@ async def get_context_bundle(
             d["replacement_entity_id"] = str(w.replacement_entity_id)
         return d
 
+    visible_entities = [e for e in bundle.entities if str(e.id) not in hidden_ids]
+    visible_id_set = {str(e.id) for e in bundle.roots} | {str(e.id) for e in visible_entities}
+
     return {
         "roots": [_ser_entity(e) for e in bundle.roots],
-        "entities": [_ser_entity(e) for e in bundle.entities],
-        "contexts": [_ser_context(c) for c in bundle.contexts],
-        "relations": [_ser_relation(r) for r in bundle.relations],
-        "warnings": [_ser_warning(w) for w in bundle.warnings],
+        "entities": [_ser_entity(e) for e in visible_entities],
+        "contexts": [
+            _ser_context(c) for c in bundle.contexts if str(c.entity_id) in visible_id_set
+        ],
+        "relations": [
+            _ser_relation(r)
+            for r in bundle.relations
+            if str(r.from_entity_id) in visible_id_set and str(r.to_entity_id) in visible_id_set
+        ],
+        "warnings": [
+            _ser_warning(w) for w in bundle.warnings if str(w.entity_id) in visible_id_set
+        ],
         "ambiguities": bundle.ambiguities,
     }
 
@@ -352,9 +395,13 @@ async def get_context_bundle(
 )
 async def get_entity_history(id: str, limit: int = 20) -> dict:
     entity_id = uuid.UUID(id)
+    visible = current_visible_project_ids()
 
     async with async_session_factory() as session:
         from app.repository.history_repository import HistoryRepository
+        entity = await EntityRepository(session).get_by_id(entity_id)
+        if entity is None or not is_visible(entity.project_id, visible):
+            return {"error": "ENTITY_NOT_FOUND", "message": f"Entity {id} not found"}
         hist_repo = HistoryRepository(session)
         items, total = await hist_repo.list_by_entity(entity_id, limit=limit)
 
@@ -387,12 +434,51 @@ async def get_entity_history(id: str, limit: int = 20) -> dict:
     )
 )
 async def validate_references(references: list[str]) -> dict:
+    visible = current_visible_project_ids()
+
     async with async_session_factory() as session:
         result = await ValidateService(session).validate_references(references)
 
+        if visible is None:
+            resolved, ambiguous, missing = result.resolved, result.ambiguous, result.missing
+        else:
+            # Re-classify references that resolve outside the caller's scope as
+            # missing, hiding cross-project entities.
+            repo = EntityRepository(session)
+
+            async def _vis(entity_id_str: str) -> bool:
+                ent = await repo.get_by_id(uuid.UUID(entity_id_str))
+                return ent is not None and is_visible(ent.project_id, visible)
+
+            resolved = []
+            ambiguous = []
+            missing = list(result.missing)
+
+            for item in result.resolved:
+                if await _vis(item["id"]):
+                    resolved.append(item)
+                else:
+                    missing.append(item["input"])
+
+            for item in result.ambiguous:
+                vis_candidates = [c for c in item["candidates"] if await _vis(c)]
+                if not vis_candidates:
+                    missing.append(item["input"])
+                elif len(vis_candidates) == 1:
+                    ent = await repo.get_by_id(uuid.UUID(vis_candidates[0]))
+                    resolved.append({
+                        "input": item["input"],
+                        "status": "resolved",
+                        "id": str(ent.id),
+                        "canonical_name": ent.canonical_name,
+                        "entity_status": ent.status.value if hasattr(ent.status, "value") else ent.status,
+                    })
+                else:
+                    ambiguous.append({"input": item["input"], "candidates": vis_candidates})
+
     return {
-        "valid": result.valid,
-        "resolved": result.resolved,
-        "ambiguous": result.ambiguous,
-        "missing": result.missing,
+        "valid": len(ambiguous) == 0 and len(missing) == 0,
+        "resolved": resolved,
+        "ambiguous": ambiguous,
+        "missing": missing,
     }

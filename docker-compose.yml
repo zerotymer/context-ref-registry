@@ -36,23 +36,11 @@ services:
       retries: 3
       start_period: 15s
 
-  mcp:
-    build: ./backend
-    # Read-only MCP server over stdio — clients spawn this process, no port.
-    # Bypass the image entrypoint (alembic upgrade head): the api service owns
-    # migrations, so the read-only MCP must not race it on schema changes.
-    entrypoint: ["python", "-m", "app.mcp"]
-    stdin_open: true
-    tty: true
-    env_file:
-      - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://llmref:llmref@postgres:5432/llmref
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./backend:/app
+  # MCP is served by the `api` service as a streamable-http endpoint at
+  # :8000/mcp (read-only, API key auth). No separate stdio service.
+  # Recommended external entry point is the frontend BFF proxy
+  # (`:3000/api/v1/mcp`); the direct `:8000` publish is kept for local dev
+  # (/docs, REST). Recovering it to internal-only is deferred to deployment.
 
   frontend:
     build:
