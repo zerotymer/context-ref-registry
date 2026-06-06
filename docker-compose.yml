@@ -38,6 +38,9 @@ services:
 
   # MCP is served by the `api` service as a streamable-http endpoint at
   # :8000/mcp (read-only, API key auth). No separate stdio service.
+  # Recommended external entry point is the frontend BFF proxy
+  # (`:3000/api/v1/mcp`); the direct `:8000` publish is kept for local dev
+  # (/docs, REST). Recovering it to internal-only is deferred to deployment.
 
   frontend:
     build:
