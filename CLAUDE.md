@@ -143,6 +143,9 @@ docker login nexus.zerotymer.net      # Nexus OSS
 | 2214f2c4-30a9-4555-bd24-073a841cadc3 | .completed/ | completed (2026-06-03) — 에이전트 API 게이트웨이 (Next BFF `/api/v1/*` 프록시, API Key passthrough) |
 | 216b0864-6b7f-4057-8b06-b2865dc9bc53 | .completed/ | completed (2026-06-06) — MCP HTTP transport 전환. 단계 A(백엔드 `/mcp` 마운트·인증·범위 필터) + 단계 C(Next BFF 스트리밍 프록시 `/api/v1/mcp`) |
 | 19e52237-68d4-4952-8c30-dd0eb9285ff0 | `deploy-build.md` | **reference** (영구) — 배포 빌드 명령어 (Docker Hub + Nexus OSS, 8개 태그) |
+| 71f9e0d0-7257-408b-b412-eef4e1e8e521 | `ingest-batch-return-identifiers.md` | **pending** (2026-06-22) — `/ingest/batch` 응답에 entity id·alias 매핑 반환 |
+| ad25787d-4392-4d35-9751-ba050ae7cf9e | `short-identifier-scheme.md` | **pending** (2026-06-22) — 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
+| c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | `ui-area-mockup-service.md` | **pending** (2026-06-22) — UI_AREA metadata → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
 
 ## Git Branch 전략
 
