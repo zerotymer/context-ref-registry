@@ -1,0 +1,91 @@
+---
+uuid: 71f9e0d0-7257-408b-b412-eef4e1e8e521
+title: Ingest 배치 응답에 엔티티 식별자 즉시 반환 (id·alias 매핑)
+status: pending
+created: 2026-06-22
+---
+
+# Ingest 배치 응답에 엔티티 식별자 즉시 반환
+
+## 배경 / 문제
+
+현재 `POST /ingest/batch`는 `BatchIngestResult`로 **집계 카운트만** 반환한다
+(`source_ref_id`, `created`/`updated` 개수, `warnings`). 어떤 입력 엔티티가
+어떤 UUID로 저장됐는지 응답에 없다.
+
+```python
+# backend/app/domain/schemas.py
+class BatchIngestResult(BaseModel):
+    source_ref_id: uuid.UUID
+    created: IngestCounts
+    updated: IngestCounts
+    warnings: list[str]
+```
+
+외부 파서/에이전트는 `id` 없이 엔티티를 업로드(서버가 UUID 발급)하는 경우,
+업로드 직후 그 엔티티를 참조할 방법이 없어 **재조회(GET /search 등)** 를 해야
+한다. 같은 배치 안의 relation 연결이나 후속 작업에서 식별자 매핑이 필요하다.
+
+> 참고: `POST /entities/batch`는 이미 per-item `id`를 반환한다
+> (`EntityBatchCreateResult.items[].id`). 이 갭은 `/ingest/batch` 한정.
+
+## 결정 사항 (확정)
+
+| 항목 | 결정 |
+|------|------|
+| 대상 | `POST /ingest/batch` 응답 스키마 확장 (`BatchIngestResult`) |
+| 반환 형태 | 입력 엔티티 순서(index) ↔ 저장된 `entity_id` 매핑 + `canonical_name` + `created`/`updated` 구분 |
+| alias 매핑 | entity별 활성 alias 목록 동봉 (resolve 없이 alias 확인 가능) |
+| 하위호환 | 기존 필드(`source_ref_id`, `created`, `updated`, `warnings`) **유지**, 필드 추가만 |
+| relation | 이번 범위 제외 (relation은 입력 시 id를 직접 지정하므로 매핑 불필요) |
+
+## 설계
+
+### 응답 스키마 확장
+
+```python
+class IngestedEntityRef(BaseModel):
+    index: int                 # 요청 entities[] 내 위치
+    entity_id: uuid.UUID       # 저장된 UUID (서버 발급 또는 입력값)
+    canonical_name: str
+    operation: Literal["created", "updated"]
+    aliases: dict[Locale, list[str]] = Field(default_factory=dict)  # 활성 alias
+
+class BatchIngestResult(BaseModel):
+    source_ref_id: uuid.UUID
+    created: IngestCounts
+    updated: IngestCounts
+    warnings: list[str] = Field(default_factory=list)
+    entities: list[IngestedEntityRef] = Field(default_factory=list)  # 신규 필드
+```
+
+### 서비스 변경
+
+- `IngestService.batch_ingest`가 entity upsert 루프에서 각 항목의
+  `(index, entity_id, canonical_name, operation, aliases)`를 누적해
+  `entities`에 채운다.
+- upsert 시 created/updated 판정은 이미 카운트 로직이 있으므로 그 분기에서
+  `operation` 값을 함께 기록한다.
+- alias는 해당 entity의 active alias만 (`is_active=True`) 수집.
+
+### 프록시/문서
+
+- Next BFF `/api/v1/ingest/batch`는 passthrough이므로 코드 변경 불필요
+  (응답 body 그대로 전달).
+- `docs/07-ingest-format.md` 응답 예시 갱신.
+- `backend/CLAUDE.md` Batch Ingest 섹션에 응답 매핑 설명 추가.
+
+## DoD (Definition of Done)
+
+- [ ] `IngestedEntityRef` 추가 + `BatchIngestResult.entities` 필드 추가
+- [ ] `IngestService.batch_ingest`가 index·entity_id·operation·alias 매핑 채움
+- [ ] 기존 카운트/warnings 필드 동작 불변 (하위호환)
+- [ ] 테스트(`test_ingest_batch.py`): id 미지정 입력 → 응답 `entities[].entity_id`로
+      재조회 성공, created/updated operation 정확성, alias 매핑 검증
+- [ ] 백엔드 전체 테스트 green
+- [ ] `docs/07-ingest-format.md` · `backend/CLAUDE.md` 갱신
+
+## 메모
+
+- 브랜치는 구현 착수 시 브랜치 전략 스킬
+  (`e03f48fb-3e00-41d7-b99d-c32854567d67`)로 생성.

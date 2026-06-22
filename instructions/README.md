@@ -94,6 +94,12 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | 항목 | 설명 | 처리 방향 |
 |------|------|-----------|
-| 화면설계 엔티티 목업 서비스 | UI_AREA 엔티티용 목업 서비스 제공 | 화면설계 도메인 범위 확정 후 지침화 |
-| 업로드 시 엔티티 식별자 즉시 반환 | `POST /ingest/batch` 응답에 entity id·alias 매핑 포함 | Ingest API 응답 스키마 확장 지침으로 승격 |
-| 짧은 식별자 반환 | UUID 외 `프로젝트ID-type-ID` 형태 식별자 생성·반환 | 프로젝트 ID 정책 지침으로 승격 |
+| _(없음)_ | 기존 백로그 3건 모두 지침화 (아래) | — |
+
+### 지침화된 백로그 (구현 대기, `status: pending`)
+
+| UUID | 지침 파일 | 내용 |
+|------|-----------|------|
+| 71f9e0d0-7257-408b-b412-eef4e1e8e521 | `ingest-batch-return-identifiers.md` | `POST /ingest/batch` 응답에 entity id·alias 매핑 반환 |
+| ad25787d-4392-4d35-9751-ba050ae7cf9e | `short-identifier-scheme.md` | 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
+| c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | `ui-area-mockup-service.md` | UI_AREA metadata → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |

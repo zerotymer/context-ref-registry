@@ -1,0 +1,88 @@
+---
+uuid: ad25787d-4392-4d35-9751-ba050ae7cf9e
+title: 짧은 식별자 (PROJECT_ID-TYPE-N) 생성 및 4번째 참조 패턴 등록
+status: pending
+created: 2026-06-22
+---
+
+# 짧은 식별자 (PROJECT_ID-TYPE-N)
+
+## 배경 / 문제
+
+현재 엔티티 식별자는 UUID뿐이고, 참조 패턴은 3종이다:
+
+```
+UUID                 (예: 71f9e0d0-7257-408b-b412-eef4e1e8e521)
+PROJECT_ID@UUID
+PROJECT_ID@TAG
+```
+
+UUID는 사람·LLM이 기억·구술하기 어렵다. 프로젝트·타입 맥락이 있는
+**짧고 읽기 쉬운 식별자**를 추가로 제공해, 에이전트가 안정적으로 참조할 수
+있게 한다.
+
+## 결정 사항 (확정)
+
+| 항목 | 결정 |
+|------|------|
+| 형태 | `PROJECT_ID-TYPE-N` (예: `WEB-FEATURE-12`) |
+| 생성 정책 | **프로젝트+타입 단위 순번(N)** — 1부터 증가, DB에 영구 저장 |
+| 불변성 | 부여 후 변경 금지 (UUID와 동급의 안정 식별자) |
+| 참조 패턴 | **4번째 참조 패턴으로 등록** — resolve / MCP get_entity 입력으로 수용 |
+| project_id 없는 엔티티 | 짧은 식별자 **미부여** (project_id 필수). 기존 UUID 참조만 가능 |
+| TYPE 표기 | `EntityType` enum 값 그대로 (`UI_AREA`, `FEATURE`, `INFRA_UNIT`, `API`, `CODE_SYMBOL`, `ISSUE`) |
+
+> project_id 허용 문자는 `[A-Za-z0-9_]`로 이미 제한됨. 구분자 `-`는
+> project_id·type에 등장하지 않으므로 파싱 모호성 없음.
+
+## 설계
+
+### 순번 발급 (동시성 안전)
+
+- 신규 테이블 `entity_short_id_seq(project_id, type, next_n)` 또는
+  엔티티 insert 시 `SELECT COALESCE(MAX(n),0)+1` + unique 제약으로 경합 방지.
+  - ponytail: 별도 시퀀스 테이블보다 `entity`에 `short_seq INT` 컬럼 +
+    `UNIQUE(project_id, type, short_seq)` 제약이 단순. 충돌 시 재시도.
+- `entity` 테이블에 컬럼 추가:
+  - `short_seq INT NULL` — 프로젝트+타입 내 순번 (project_id 있을 때만 채움)
+  - 짧은 식별자 문자열은 **저장하지 않고 파생** (`f"{project_id}-{type}-{n}"`),
+    또는 조회 편의상 generated column. 우선 파생으로.
+- Alembic 마이그레이션 + 기존 행 백필(프로젝트+타입별로 created 순 순번 부여).
+
+### 참조 해석 (resolve 경로 통합)
+
+기존 참조 파서(`PROJECT_ID@UUID` / `PROJECT_ID@TAG` 처리 위치)에 4번째 분기 추가:
+
+```
+입력이 정규식 ^(?P<pid>[A-Za-z0-9_]+)-(?P<type>UI_AREA|FEATURE|...)-(?P<n>\d+)$ 매칭
+ → (project_id, type, short_seq)로 entity 단일 조회
+ → 없으면 not_found, 범위 밖이면 기존과 동일하게 은닉
+```
+
+- 적용 지점:
+  - REST `GET /resolve` (또는 entity 참조 수용 엔드포인트)
+  - MCP `get_entity` (UUID/PROJECT@UUID/PROJECT@TAG 다음 분기)
+- MCP 프로젝트 범위 필터(`visible_project_ids`)는 기존과 동일 적용.
+
+### 응답 노출
+
+- `EntityRead` 등 엔티티 응답 스키마에 `short_id: str | None` 필드 추가
+  (project_id 없으면 null).
+
+## DoD (Definition of Done)
+
+- [ ] `entity.short_seq` 컬럼 + `UNIQUE(project_id, type, short_seq)` 마이그레이션
+- [ ] 기존 행 백필 마이그레이션 (project_id 있는 엔티티)
+- [ ] entity 생성/ingest 시 project_id 있으면 순번 발급 (동시성 안전)
+- [ ] 참조 파서에 `PROJECT_ID-TYPE-N` 분기 추가 — REST resolve + MCP get_entity
+- [ ] 엔티티 응답에 `short_id` 노출
+- [ ] 테스트: 순번 발급(동일 project+type 증가), 참조 해석(정상/not_found/범위밖 은닉),
+      project_id 없는 엔티티 short_id null, 동시 생성 시 순번 충돌 없음
+- [ ] 백엔드 전체 테스트 green
+- [ ] `docs/02-domain-model.md`(참조 패턴) · `backend/CLAUDE.md`(불변 규칙·참조) 갱신
+
+## 메모
+
+- 브랜치는 구현 착수 시 브랜치 전략 스킬
+  (`e03f48fb-3e00-41d7-b99d-c32854567d67`)로 생성.
+- 백필 시 created_at 동률 처리 순서 정의 필요(2차 정렬키: id) — 결정적이어야 재현 가능.
