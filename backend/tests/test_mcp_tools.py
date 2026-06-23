@@ -106,6 +106,20 @@ class TestGetEntity:
         result = await _call("get_entity", {"id": str(uuid.uuid4())})
         assert result.get("error") == "ENTITY_NOT_FOUND"
 
+    async def test_by_short_id(self, admin_client: AsyncClient):
+        await _post(admin_client, "/projects", {"id": "proj_mcp", "alias": "proj_mcp"})
+        created = await _post(admin_client, "/entities", {
+            "type": "FEATURE", "canonical_name": "짧은 식별자", "project_id": "proj_mcp"
+        })
+        # POST returns only {id}; GET yields the full EntityRead (incl. short_id).
+        entity = (await admin_client.get(f"/entities/{created['id']}")).json()["data"]
+        short_id = entity["short_id"]
+        assert short_id == "proj_mcp-FEATURE-1"
+
+        result = await _call("get_entity", {"id": short_id})
+        assert result["entity"]["id"] == entity["id"]
+        assert result["entity"]["short_id"] == short_id
+
     async def test_deprecated_warning(self, admin_client: AsyncClient):
         e1 = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "구 기능"})
         e2 = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "신 기능"})

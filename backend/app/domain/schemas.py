@@ -70,6 +70,7 @@ class EntityRead(BaseModel):
     replacement_entity_id: uuid.UUID | None
     deprecation_reason: str | None
     project_id: str | None = None
+    short_id: str | None = None
     created_at: datetime
     updated_at: datetime
     tags: list[str] = Field(default_factory=list)

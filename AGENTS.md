@@ -21,6 +21,7 @@
 | API Key 프로젝트 접근 제어 (project_id 기반 발급·레거시 키 제한) | ✅ 완료 |
 | Project ID 특수문자 제한 (`[A-Za-z0-9_]`만 허용) | ✅ 완료 |
 | 배치 저장 & 참조 패턴 (`POST /entities/batch`, UUID/PROJECT_ID@UUID/PROJECT_ID@TAG) | ✅ 완료 |
+| 짧은 식별자 4번째 참조 패턴 (`PROJECT_ID-TYPE-N`, `(project_id,type)` 순번 불변, `EntityRead.short_id` 노출) | ✅ 완료 |
 | 에이전트 API 게이트웨이 (Next BFF `/api/v1/*` → 백엔드 프록시, API Key passthrough) | ✅ 완료 |
 | MCP HTTP transport 단계 A (stdio 폐기 → `api` 앱 `/mcp` streamable-http, API Key 인증, 프로젝트 범위 필터) | ✅ 완료 |
 | MCP HTTP transport 단계 C (Next BFF 스트리밍 프록시 `/api/v1/mcp` → 백엔드 `/mcp/`, SSE pipe·세션 헤더 passthrough) | ✅ 완료 |

@@ -220,3 +220,20 @@ status: deprecated
 replacement_entity_id: "new-uuid"
 deprecation_reason: "영역이 검색 조건 영역과 목록 영역으로 분리됨"
 ```
+
+## 참조 패턴
+
+entity는 다음 4가지 패턴으로 참조한다 (`resolve_ref` / `parse_ref`가 모두 처리).
+
+| 패턴 | 예시 | 설명 |
+|------|------|------|
+| UUID | `71f9e0d0-7257-408b-b412-eef4e1e8e521` | entity.id 전역 참조 |
+| `PROJECT_ID@UUID` | `WEB@71f9e0d0-…` | 프로젝트 범위 검증 동반 |
+| `PROJECT_ID@TAG` | `WEB@auth` | tag로 단일 entity 지정 (복수 매칭 시 ambiguous) |
+| `PROJECT_ID-TYPE-N` | `WEB-FEATURE-12` | 짧은 식별자 — 사람·LLM이 기억·구술하기 쉬운 형태 |
+
+### 짧은 식별자 `PROJECT_ID-TYPE-N`
+
+- `project_id` 있는 entity에만 부여. `(project_id, type)` 단위 순번 `N`을 1부터 영구 발급하며 부여 후 불변(UUID와 동급의 안정 식별자).
+- `TYPE`은 `EntityType` enum 값 그대로(`UI_AREA`, `FEATURE`, `INFRA_UNIT`, `API`, `CODE_SYMBOL`, `ISSUE`). 구분자 `-`는 project_id·type에 등장하지 않아 파싱 모호성 없음.
+- 문자열은 저장하지 않고 `project_id`·`type`·`short_seq`에서 파생(`Entity.short_id`). project_id 없으면 `null`.
