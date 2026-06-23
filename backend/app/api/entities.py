@@ -3,10 +3,13 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, Header, Query
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_actor, get_optional_actor
+from app.exceptions import RegistryError
 from app.service.audit_service import actor_identifier
+from app.service.mockup_service import render_mockup
 from app.auth.policy import AccessPolicy
 from app.db.session import get_session
 from app.domain.enums import EntityStatus, EntityType
@@ -122,6 +125,29 @@ async def update_entity(
     actor = actor_identifier(user, api_key)
     entity = await EntityService(session).update(entity.id, body, changed_by=x_changed_by or actor)
     return OkResponse(data=EntityRead.model_validate(entity))
+
+
+@router.get("/{entity_ref}/mockup", response_class=HTMLResponse)
+async def get_entity_mockup(
+    entity_ref: str,
+    session: SessionDep,
+    auth: Annotated[tuple, Depends(get_optional_actor)],
+) -> HTMLResponse:
+    """Render a UI_AREA entity's metadata into a standalone mockup HTML document."""
+    user, api_key = auth
+    policy = AccessPolicy(session)
+    visible_ids = await policy.get_visible_project_ids(user, api_key)
+    entity = await EntityService(session).resolve_ref(entity_ref)
+    # Hide out-of-scope entities as 404 (do not leak existence via 403).
+    if (
+        entity.project_id is not None
+        and visible_ids is not None
+        and entity.project_id not in visible_ids
+    ):
+        raise RegistryError("ENTITY_NOT_FOUND", "Entity not found", status_code=404)
+    if entity.type != EntityType.UI_AREA.value:
+        raise RegistryError("NOT_A_UI_AREA", "Mockup is only available for UI_AREA entities", status_code=400)
+    return HTMLResponse(render_mockup(entity))
 
 
 # ---------------------------------------------------------------------------

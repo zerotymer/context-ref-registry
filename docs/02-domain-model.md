@@ -47,6 +47,29 @@ metadata:
   parent_area_id: "..."
 ```
 
+#### mockup 규약 (목업 HTML 자동 생성)
+
+`metadata.mockup`에 화면 구조를 담으면 `GET /entities/{id}/mockup`이 서버사이드로
+정적 목업 HTML을 렌더한다 (생성물 미저장, UI_AREA 한정). 없으면 canonical_name·
+description 기반 플레이스홀더를 렌더한다. 모든 사용자 텍스트는 HTML 이스케이프된다.
+
+```jsonc
+metadata:
+  mockup:
+    title: "주문 목록 화면"        // 없으면 canonical_name
+    layout: "stack"               // stack | grid | columns (그 외는 stack)
+    components:
+      - { kind: "header", text: "주문 목록" }
+      - { kind: "table",  columns: ["주문번호", "상태", "금액"] }
+      - { kind: "button", text: "신규 주문" }
+      - { kind: "field",  label: "검색", input: "text" }
+      - { kind: "text",   text: "안내 문구" }
+      - { kind: "image",  alt: "배너" }
+```
+
+component `kind` 화이트리스트: `header | text | table | button | field | image`.
+알 수 없는 kind는 회색 박스 + 라벨로 안전 렌더(에러로 죽지 않음).
+
 UI_AREA는 계층 구조를 가질 수 있다.
 
 ```text
