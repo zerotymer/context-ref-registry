@@ -239,7 +239,7 @@ streamable-http로 `api` 앱의 `/mcp`에 마운트(read-only, API Key 인증). 
 | Tool | 설명 |
 |------|------|
 | `resolve_alias` | alias → entity (not_found/resolved/ambiguous) |
-| `get_entity` | 참조(UUID/PROJECT@UUID/PROJECT@TAG)로 entity 조회, deprecated warning 포함 |
+| `get_entity` | 참조(UUID/PROJECT@UUID/PROJECT@TAG/PROJECT_ID-TYPE-N)로 entity 조회, deprecated warning 포함 |
 | `search_entities` | alias exact → canonical_name partial 순 검색 |
 | `get_related_entities` | 관련 entity 조회 (direction, max_depth) |
 | `get_context_bundle` | 핵심 tool — BFS로 관련 entity/context/relation 묶음 반환 |
@@ -253,9 +253,23 @@ streamable-http로 `api` 앱의 `/mcp`에 마운트(read-only, API Key 인증). 
 ## 핵심 불변 규칙
 
 - `entity.id` (UUID)는 생성 후 절대 변경 금지. PATCH에서 `id`·`type` 필드 수신 시 무시.
+- `entity.short_seq`(짧은 식별자 순번)는 부여 후 불변. project_id 있는 엔티티에만
+  `(project_id, type)` 단위로 1부터 발급(`pg_advisory_xact_lock`+`UNIQUE`로 동시성 안전).
+  짧은 식별자 `PROJECT_ID-TYPE-N`은 저장하지 않고 `Entity.short_id`로 파생.
 - alias는 unique 제약 없음. 중복 resolve 시 `ambiguous` 반환 — 임의 선택 금지.
 - deprecated entity는 DELETE 금지. `status=deprecated` + `replacement_entity_id` 기록.
 - MCP tool은 read-only만. write tool 추가 금지.
+
+## 참조 패턴 (4종)
+
+`EntityService.resolve_ref`(REST·MCP 공통 chokepoint) + `ref_pattern.parse_ref`에서 처리.
+
+| 패턴 | 예시 | 비고 |
+|------|------|------|
+| UUID | `71f9e0d0-...` | 전역 |
+| PROJECT_ID@UUID | `WEB@71f9e0d0-...` | project 불일치 시 `PROJECT_SCOPE_MISMATCH` |
+| PROJECT_ID@TAG | `WEB@auth` | 복수 매칭 시 `AMBIGUOUS_TAG_REF` |
+| PROJECT_ID-TYPE-N | `WEB-FEATURE-12` | 짧은 식별자. `(project_id,type,short_seq)` 단일 조회 |
 
 ## Batch Ingest 검증 순서
 

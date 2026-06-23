@@ -30,6 +30,12 @@ class EntityRepository:
         self._session = session
 
     async def create(self, data: EntityCreate) -> Entity:
+        type_val = data.type.value if hasattr(data.type, "value") else data.type
+        short_seq = (
+            await self.next_short_seq(data.project_id, type_val)
+            if data.project_id is not None
+            else None
+        )
         entity = Entity(
             id=data.id if data.id is not None else uuid.uuid4(),
             type=data.type,
@@ -38,11 +44,40 @@ class EntityRepository:
             status=data.status,
             confidence=data.confidence,
             project_id=data.project_id,
+            short_seq=short_seq,
         )
         self._session.add(entity)
         await self._session.flush()
         await self._session.refresh(entity)
         return entity
+
+    async def next_short_seq(self, project_id: str, type_: str) -> int:
+        """Next per-(project, type) short sequence number, concurrency-safe.
+
+        A transaction-scoped advisory lock keyed on (project_id, type)
+        serializes concurrent assignments, so MAX+1 can't collide. The lock
+        auto-releases at commit. ponytail: advisory lock over a sequence table
+        or IntegrityError-retry — one round-trip, no extra schema.
+        """
+        await self._session.execute(
+            select(func.pg_advisory_xact_lock(func.hashtext(f"{project_id}:{type_}")))
+        )
+        result = await self._session.execute(
+            select(func.coalesce(func.max(Entity.short_seq), 0) + 1).where(
+                Entity.project_id == project_id, Entity.type == type_
+            )
+        )
+        return int(result.scalar_one())
+
+    async def get_by_short_id(self, project_id: str, type_: str, short_seq: int) -> Entity | None:
+        result = await self._session.execute(
+            select(Entity).where(
+                Entity.project_id == project_id,
+                Entity.type == type_,
+                Entity.short_seq == short_seq,
+            )
+        )
+        return result.scalar_one_or_none()
 
     async def get_by_id(self, entity_id: uuid.UUID) -> Entity | None:
         result = await self._session.execute(

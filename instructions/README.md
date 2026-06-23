@@ -50,6 +50,7 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 | 2026-06-06 | 216b0864-6b7f-4057-8b06-b2865dc9bc53 | MCP HTTP transport 전환 (단계 A 백엔드 `/mcp` + 단계 C Next BFF 프록시) |
 | 2026-06-23 | c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | UI_AREA `metadata.mockup` → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
 | 2026-06-23 | 71f9e0d0-7257-408b-b412-eef4e1e8e521 | `/ingest/batch` 응답 `entities[]`에 entity id·operation·alias 매핑 반환 |
+| 2026-06-23 | ad25787d-4392-4d35-9751-ba050ae7cf9e | 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
 
 ---
 
@@ -80,9 +81,9 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | UUID | 파일 | 분류 | 상태 |
 |------|------|------|------|
-| 216b0864 | .completed/ | MCP HTTP | `completed` 2026-06-06 — 단계 A(백엔드 `/mcp`) + 단계 C(Next BFF `/api/v1/mcp` 스트리밍 프록시) |
 | c5e60dba | .completed/ | UI_AREA 목업 | `completed` 2026-06-23 — `GET /entities/{id}/mockup` |
 | 71f9e0d0 | .completed/ | Ingest 식별자 | `completed` 2026-06-23 — `/ingest/batch` 응답 `entities[]` 매핑 |
+| ad25787d | .completed/ | 짧은 식별자 | `completed` 2026-06-23 — `PROJECT_ID-TYPE-N` 4번째 참조 패턴 |
 
 > 완료된 지침 세부 내용은 `instructions/.completed/{uuid}.md`에 보관.
 
@@ -94,13 +95,8 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | 항목 | 설명 | 처리 방향 |
 |------|------|-----------|
-| _(없음)_ | 기존 백로그 3건 모두 지침화 (아래) | — |
-
-### 지침화된 백로그 (구현 대기, `status: pending`)
-
-| UUID | 지침 파일 | 내용 |
-|------|-----------|------|
-| ad25787d-4392-4d35-9751-ba050ae7cf9e | `short-identifier-scheme.md` | 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
+| _(없음)_ | 지침화된 백로그 3건 모두 완료 | — |
 
 > ~~c5e60dba — UI_AREA 목업 HTML 자동 생성~~ → **completed (2026-06-23)**, `.completed/`로 이동.
 > ~~71f9e0d0 — Ingest 식별자 반환~~ → **completed (2026-06-23)**, `.completed/`로 이동.
+> ~~ad25787d — 짧은 식별자 `PROJECT_ID-TYPE-N`~~ → **completed (2026-06-23)**, `.completed/`로 이동.

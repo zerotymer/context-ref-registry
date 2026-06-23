@@ -125,6 +125,12 @@ class IngestService:
 
         existing = await self._entity_repo.get_by_id(entity_id)
         if existing is None:
+            type_val = item.type.value if hasattr(item.type, "value") else item.type
+            short_seq = (
+                await self._entity_repo.next_short_seq(item.project_id, type_val)
+                if item.project_id is not None
+                else None
+            )
             entity = Entity(
                 id=entity_id,
                 type=item.type,
@@ -133,6 +139,7 @@ class IngestService:
                 status=item.status,
                 confidence=item.confidence,
                 project_id=item.project_id,
+                short_seq=short_seq,
             )
             self._session.add(entity)
             await self._session.flush()
@@ -152,6 +159,11 @@ class IngestService:
         existing.confidence = item.confidence
         if item.project_id is not None:
             existing.project_id = item.project_id
+            # Assign a short id the first time an entity gains a project scope.
+            if existing.short_seq is None:
+                existing.short_seq = await self._entity_repo.next_short_seq(
+                    existing.project_id, existing.type
+                )
         await self._session.flush()
         return False, existing
 

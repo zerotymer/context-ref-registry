@@ -108,8 +108,8 @@ async def test_upgrade_head_creates_schema_on_empty_db(temp_db):
     missing = EXPECTED_TABLES - tables
     assert not missing, f"missing tables after upgrade: {missing}"
 
-    # Exactly one revision recorded, and it is the single head ('011').
-    assert await _alembic_version(base, db_name) == ["011"]
+    # Exactly one revision recorded, and it is the single head ('012').
+    assert await _alembic_version(base, db_name) == ["012"]
 
 
 async def test_upgrade_head_is_idempotent(temp_db):

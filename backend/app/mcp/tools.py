@@ -140,6 +140,7 @@ async def get_entity(id: str) -> dict:
     return {
         "entity": {
             "id": str(entity.id),
+            "short_id": entity.short_id,
             "type": type_val,
             "canonical_name": entity.canonical_name,
             "description": entity.description,

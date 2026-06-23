@@ -61,6 +61,11 @@ class ProjectMember(Base):
 
 class Entity(Base):
     __tablename__ = "entity"
+    # short_seq: per-(project, type) running number for the short identifier
+    # PROJECT_ID-TYPE-N. NULL when project_id is absent (no short id assigned).
+    __table_args__ = (
+        UniqueConstraint("project_id", "type", "short_seq", name="uq_entity_short_seq"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
@@ -71,10 +76,19 @@ class Entity(Base):
     replacement_entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("entity.id"))
     deprecation_reason: Mapped[str | None] = mapped_column(Text)
     project_id: Mapped[str | None] = mapped_column(String(50), ForeignKey("project.id"), nullable=True, index=True)
+    short_seq: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    @property
+    def short_id(self) -> str | None:
+        """Derived short identifier PROJECT_ID-TYPE-N (None when unscoped)."""
+        if self.project_id is None or self.short_seq is None:
+            return None
+        type_val = self.type.value if hasattr(self.type, "value") else self.type
+        return f"{self.project_id}-{type_val}-{self.short_seq}"
 
     aliases: Mapped[list["EntityAlias"]] = relationship("EntityAlias", back_populates="entity", lazy="selectin")
     contexts: Mapped[list["EntityContext"]] = relationship("EntityContext", back_populates="entity", lazy="selectin")

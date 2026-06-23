@@ -194,6 +194,18 @@ class EntityService:
         if parsed.kind == RefKind.UUID:
             return await self.get_by_id(uuid.UUID(parsed.identifier))
 
+        if parsed.kind == RefKind.SHORT_ID:
+            entity = await self._repo.get_by_short_id(
+                parsed.project_id, parsed.entity_type, parsed.short_seq
+            )
+            if entity is None:
+                raise RegistryError(
+                    "ENTITY_NOT_FOUND",
+                    f"No entity for short id {parsed.identifier!r}",
+                    404,
+                )
+            return entity
+
         if parsed.kind == RefKind.SCOPED_UUID:
             entity = await self.get_by_id(uuid.UUID(parsed.identifier))
             if entity.project_id != parsed.project_id:
