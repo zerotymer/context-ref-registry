@@ -12,6 +12,7 @@ from app.domain.schemas import (
     BatchIngestRequest,
     BatchIngestResult,
     IngestCounts,
+    IngestedEntityRef,
     IngestEntityInput,
 )
 from app.exceptions import RegistryError
@@ -34,6 +35,7 @@ class IngestService:
         created = IngestCounts()
         updated = IngestCounts()
         warnings: list[str] = []
+        entity_refs: list[IngestedEntityRef] = []
 
         # Pre-assign UUIDs and build the set for relation validation
         assigned_ids: list[uuid.UUID] = [
@@ -42,7 +44,7 @@ class IngestService:
         ]
         batch_entity_ids: set[uuid.UUID] = set(assigned_ids)
 
-        for item, entity_id in zip(req.entities, assigned_ids):
+        for index, (item, entity_id) in enumerate(zip(req.entities, assigned_ids)):
             was_created, entity = await self._upsert_entity(item, entity_id)
             if was_created:
                 created.entities += 1
@@ -70,6 +72,16 @@ class IngestService:
                 changed_by=req.source.name,
             )
 
+            entity_refs.append(
+                IngestedEntityRef(
+                    index=index,
+                    entity_id=entity_id,
+                    canonical_name=entity.canonical_name,
+                    operation="created" if was_created else "updated",
+                    aliases=await self._active_aliases(entity_id),
+                )
+            )
+
         for rel_item in req.relations:
             await self._validate_relation_target(rel_item.from_entity_id, "from_entity_id", batch_entity_ids)
             await self._validate_relation_target(rel_item.to_entity_id, "to_entity_id", batch_entity_ids)
@@ -91,6 +103,7 @@ class IngestService:
             created=created,
             updated=updated,
             warnings=warnings,
+            entities=entity_refs,
         )
         await self._audit.log(
             actor=actor or "system",
@@ -205,6 +218,18 @@ class IngestService:
         if count:
             await self._session.flush()
         return count
+
+    async def _active_aliases(self, entity_id: uuid.UUID) -> dict:
+        """Active aliases grouped by locale, for the ingest response mapping."""
+        result = await self._session.execute(
+            select(EntityAlias.locale, EntityAlias.alias)
+            .where(EntityAlias.entity_id == entity_id, EntityAlias.is_active == True)  # noqa: E712
+            .order_by(EntityAlias.locale, EntityAlias.alias)
+        )
+        grouped: dict = {}
+        for locale, alias in result.all():
+            grouped.setdefault(locale, []).append(alias)
+        return grouped
 
     async def _add_contexts(self, entity_id: uuid.UUID, contexts: list, source_ref_id: uuid.UUID) -> int:
         for ctx_item in contexts:

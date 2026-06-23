@@ -268,6 +268,79 @@ ISSUE_ENTITY_ID = "2e4f7a1b-8c3d-4e5f-9a0b-1c2d3e4f5a6b"
 
 
 @pytest.mark.asyncio
+async def test_batch_ingest_returns_entity_refs(admin_client: AsyncClient):
+    """Response entities[] maps input index → stored id, operation, aliases."""
+    payload = {
+        "source": SAMPLE_SOURCE,
+        "entities": [
+            _make_entity(
+                ENTITY_A_ID,
+                "UI_AREA",
+                canonical_name="검색 영역",
+                aliases={"ko": ["검색 영역"], "en": ["Search Area"]},
+            ),
+            _make_entity(ENTITY_B_ID, "FEATURE", canonical_name="사용자 검색"),
+        ],
+        "relations": [],
+    }
+    res = await admin_client.post("/ingest/batch", json=payload)
+    assert res.status_code == 200
+    refs = res.json()["data"]["entities"]
+    assert len(refs) == 2
+
+    a, b = refs[0], refs[1]
+    assert a["index"] == 0
+    assert a["entity_id"] == ENTITY_A_ID
+    assert a["canonical_name"] == "검색 영역"
+    assert a["operation"] == "created"
+    assert a["aliases"] == {"ko": ["검색 영역"], "en": ["Search Area"]}
+    assert b["index"] == 1
+    assert b["entity_id"] == ENTITY_B_ID
+
+
+@pytest.mark.asyncio
+async def test_batch_ingest_server_assigned_id_is_resolvable(admin_client: AsyncClient):
+    """id-less input → server assigns UUID; returned entity_id is fetchable."""
+    payload = {
+        "source": SAMPLE_SOURCE,
+        "entities": [
+            {
+                "type": "UI_AREA",
+                "canonical_name": "신규 영역",
+                "aliases": {},
+                "contexts": [],
+            }
+        ],
+        "relations": [],
+    }
+    res = await admin_client.post("/ingest/batch", json=payload)
+    assert res.status_code == 200
+    refs = res.json()["data"]["entities"]
+    assert len(refs) == 1
+    entity_id = refs[0]["entity_id"]
+
+    # Re-fetch using the returned id — no re-search needed
+    got = await admin_client.get(f"/entities/{entity_id}")
+    assert got.status_code == 200
+    assert got.json()["data"]["canonical_name"] == "신규 영역"
+
+
+@pytest.mark.asyncio
+async def test_batch_ingest_ref_operation_updated(admin_client: AsyncClient):
+    """Re-ingesting an existing entity reports operation=updated."""
+    payload = {
+        "source": SAMPLE_SOURCE,
+        "entities": [_make_entity(ENTITY_A_ID, "UI_AREA")],
+        "relations": [],
+    }
+    res1 = await admin_client.post("/ingest/batch", json=payload)
+    assert res1.json()["data"]["entities"][0]["operation"] == "created"
+
+    res2 = await admin_client.post("/ingest/batch", json=payload)
+    assert res2.json()["data"]["entities"][0]["operation"] == "updated"
+
+
+@pytest.mark.asyncio
 async def test_batch_ingest_issue_type(admin_client: AsyncClient):
     """ISSUE entity type should be ingested successfully."""
     payload = {

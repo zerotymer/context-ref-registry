@@ -268,6 +268,11 @@ streamable-http로 `api` 앱의 `/mcp`에 마운트(read-only, API Key 인증). 
 5. relation 검증 — `from_entity_id`/`to_entity_id`가 배치 내부 또는 DB에 존재해야 함. 없으면 400 `INVALID_RELATION_TARGET`
 6. relation insert
 
+응답 `BatchIngestResult.entities[]` — 각 입력 entity를 `index`(요청 순서) ↔ 저장된
+`entity_id` 매핑으로 반환한다 (`canonical_name`, `operation: created|updated`,
+locale별 활성 `aliases` 동봉). `id` 없이 업로드해 서버가 UUID를 발급한 경우에도
+재조회 없이 식별자를 확보할 수 있다. relation은 입력 시 id를 직접 지정하므로 제외.
+
 ## Context Bundle BFS
 
 `POST /context-bundle` 알고리즘:
