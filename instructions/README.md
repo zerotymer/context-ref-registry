@@ -102,4 +102,5 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 |------|-----------|------|
 | 71f9e0d0-7257-408b-b412-eef4e1e8e521 | `ingest-batch-return-identifiers.md` | `POST /ingest/batch` 응답에 entity id·alias 매핑 반환 |
 | ad25787d-4392-4d35-9751-ba050ae7cf9e | `short-identifier-scheme.md` | 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
-| c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | `ui-area-mockup-service.md` | UI_AREA metadata → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
+
+> ~~c5e60dba — UI_AREA 목업 HTML 자동 생성~~ → **completed (2026-06-23)**, `.completed/`로 이동.
