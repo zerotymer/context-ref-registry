@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -317,11 +317,20 @@ class IngestCounts(BaseModel):
     relations: int = 0
 
 
+class IngestedEntityRef(BaseModel):
+    index: int  # position in request entities[]
+    entity_id: uuid.UUID  # stored UUID (server-assigned or input)
+    canonical_name: str
+    operation: Literal["created", "updated"]
+    aliases: dict[Locale, list[str]] = Field(default_factory=dict)  # active aliases
+
+
 class BatchIngestResult(BaseModel):
     source_ref_id: uuid.UUID
     created: IngestCounts
     updated: IngestCounts
     warnings: list[str] = Field(default_factory=list)
+    entities: list[IngestedEntityRef] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

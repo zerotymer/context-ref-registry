@@ -47,9 +47,9 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | 완료일 | UUID | 제목 |
 |--------|------|------|
-| 2026-06-02 | 612ab97e-df2b-4d1b-98ed-f3a928665606 | Entity 프로젝트 필터 + 번들 그래프 뷰 |
-| 2026-06-03 | d494a542-0049-44a7-913d-398926dbc857 | 컨테이너 startup DB 스키마 자동 적용 (alembic upgrade head) |
-| 2026-06-03 | 2214f2c4-30a9-4555-bd24-073a841cadc3 | 에이전트 API 게이트웨이 (Next BFF `/api/v1/*` 프록시, 프론트 16 passed) |
+| 2026-06-06 | 216b0864-6b7f-4057-8b06-b2865dc9bc53 | MCP HTTP transport 전환 (단계 A 백엔드 `/mcp` + 단계 C Next BFF 프록시) |
+| 2026-06-23 | c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | UI_AREA `metadata.mockup` → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
+| 2026-06-23 | 71f9e0d0-7257-408b-b412-eef4e1e8e521 | `/ingest/batch` 응답 `entities[]`에 entity id·operation·alias 매핑 반환 |
 
 ---
 
@@ -80,9 +80,9 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | UUID | 파일 | 분류 | 상태 |
 |------|------|------|------|
-| d494a542 | .completed/ | Phase 3.6 | `completed` 2026-06-03 |
-| 2214f2c4 | .completed/ | Phase 3.7 | `completed` 2026-06-03 |
 | 216b0864 | .completed/ | MCP HTTP | `completed` 2026-06-06 — 단계 A(백엔드 `/mcp`) + 단계 C(Next BFF `/api/v1/mcp` 스트리밍 프록시) |
+| c5e60dba | .completed/ | UI_AREA 목업 | `completed` 2026-06-23 — `GET /entities/{id}/mockup` |
+| 71f9e0d0 | .completed/ | Ingest 식별자 | `completed` 2026-06-23 — `/ingest/batch` 응답 `entities[]` 매핑 |
 
 > 완료된 지침 세부 내용은 `instructions/.completed/{uuid}.md`에 보관.
 
@@ -100,7 +100,7 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | UUID | 지침 파일 | 내용 |
 |------|-----------|------|
-| 71f9e0d0-7257-408b-b412-eef4e1e8e521 | `ingest-batch-return-identifiers.md` | `POST /ingest/batch` 응답에 entity id·alias 매핑 반환 |
 | ad25787d-4392-4d35-9751-ba050ae7cf9e | `short-identifier-scheme.md` | 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
 
 > ~~c5e60dba — UI_AREA 목업 HTML 자동 생성~~ → **completed (2026-06-23)**, `.completed/`로 이동.
+> ~~71f9e0d0 — Ingest 식별자 반환~~ → **completed (2026-06-23)**, `.completed/`로 이동.

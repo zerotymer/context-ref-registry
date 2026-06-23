@@ -72,3 +72,4 @@ d494a542-0049-44a7-913d-398926dbc857 | 컨테이너 startup 시 DB 스키마 자
 ad25787d-4392-4d35-9751-ba050ae7cf9e | 짧은 식별자 (PROJECT_ID-TYPE-N) 생성 및 4번째 참조 패턴 등록 | 2026-06-22T00:00:00+09:00 | created
 c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | 화면설계(UI_AREA) 엔티티 목업 HTML 자동 생성 서비스 | 2026-06-22T00:00:00+09:00 | created
 c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | 화면설계(UI_AREA) 엔티티 목업 HTML 자동 생성 서비스 | 2026-06-23T00:00:00+09:00 | completed
+71f9e0d0-7257-408b-b412-eef4e1e8e521 | Ingest 배치 응답에 엔티티 식별자 즉시 반환 (id·alias 매핑) | 2026-06-23T00:00:00+09:00 | completed

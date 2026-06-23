@@ -135,10 +135,25 @@ POST /ingest/batch
       "contexts": 0,
       "relations": 0
     },
-    "warnings": []
+    "warnings": [],
+    "entities": [
+      {
+        "index": 0,
+        "entity_id": "entity-uuid",
+        "canonical_name": "사용자 검색 조건 영역",
+        "operation": "created",
+        "aliases": { "ko": ["검색 영역"], "en": ["Search Area"] }
+      }
+    ]
   }
 }
 ```
+
+`entities[]`는 요청 `entities[]`의 각 항목을 입력 순서(`index`)대로 저장된
+`entity_id`에 매핑한다. `id` 없이 업로드해 서버가 UUID를 발급한 경우에도 응답에서
+바로 식별자를 얻을 수 있어 재조회(`GET /search`)가 필요 없다. `operation`은
+`created`/`updated`, `aliases`는 해당 entity의 활성 alias를 locale별로 동봉한다.
+(relation은 입력 시 id를 직접 지정하므로 매핑에서 제외.)
 
 ## Upsert 정책
 
