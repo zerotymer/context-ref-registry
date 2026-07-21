@@ -28,7 +28,7 @@ export default function BundlePage() {
 function BundlePageInner() {
   const searchParams = useSearchParams();
   const [rootId, setRootId] = useState(searchParams.get("root") ?? "");
-  const [maxDepth, setMaxDepth] = useState(1);
+  const [maxDepth, setMaxDepth] = useState(5);
   const [tokenBudget, setTokenBudget] = useState(6000);
   const [includeTypes, setIncludeTypes] = useState<Set<EntityType>>(
     new Set(ENTITY_TYPES.filter((t) => t !== "API")),

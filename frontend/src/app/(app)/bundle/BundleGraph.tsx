@@ -17,10 +17,10 @@ import { ENTITY_TYPE_COLORS } from "@/lib/constants";
 import { computeDepths } from "./graph-layout";
 import type { ContextBundleResponse, EntityType } from "@/types/api";
 
-// ponytail: BFS-depth column layout instead of a dagre/elk dependency.
-// Good enough for bundle-sized graphs; swap in dagre if trees get wide.
-const COL_W = 240;
-const ROW_H = 78;
+// ponytail: BFS-depth top-down layout instead of a dagre/elk dependency.
+// Depth flows down (rows), siblings spread horizontally. Swap in dagre if trees get wide.
+const COL_W = 230; // horizontal gap between siblings
+const ROW_H = 120; // vertical gap between depth levels
 
 type NodeData = {
   label: string;
@@ -36,7 +36,7 @@ function EntityNode({ data }: NodeProps) {
         isRoot ? "border-indigo-400 ring-2 ring-indigo-200" : "border-gray-200"
       }`}
     >
-      <Handle type="target" position={Position.Left} className="!bg-gray-400" />
+      <Handle type="target" position={Position.Top} className="!bg-gray-400" />
       <div className="flex items-center gap-1.5">
         <span
           className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${ENTITY_TYPE_COLORS[type]}`}
@@ -46,7 +46,7 @@ function EntityNode({ data }: NodeProps) {
         {isRoot && <span className="text-[10px] text-amber-500">root</span>}
       </div>
       <div className="text-xs font-medium text-gray-800 mt-1 truncate">{label}</div>
-      <Handle type="source" position={Position.Right} className="!bg-gray-400" />
+      <Handle type="source" position={Position.Bottom} className="!bg-gray-400" />
     </div>
   );
 }
@@ -67,7 +67,7 @@ export function BundleGraph({ result }: { result: ContextBundleResponse }) {
       return {
         id: e.id,
         type: "entity",
-        position: { x: d * COL_W, y: row * ROW_H },
+        position: { x: row * COL_W, y: d * ROW_H },
         data: { label: e.canonical_name, type: e.type, isRoot: rootIds.has(e.id) },
       };
     });
@@ -77,10 +77,16 @@ export function BundleGraph({ result }: { result: ContextBundleResponse }) {
       source: r.from_entity_id,
       target: r.to_entity_id,
       label: r.relation_type,
+      animated: true,
       labelStyle: { fontSize: 10, fill: "#6b7280" },
       labelBgStyle: { fill: "#fff" },
-      style: { stroke: "#9ca3af" },
-      markerEnd: { type: MarkerType.ArrowClosed, color: "#9ca3af" },
+      style: { stroke: "#6366f1", strokeWidth: 1.5 },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: "#6366f1",
+        width: 22,
+        height: 22,
+      },
     }));
 
     return { nodes, edges };
