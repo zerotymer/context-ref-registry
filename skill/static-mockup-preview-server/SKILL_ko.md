@@ -35,15 +35,15 @@ cd <목업-디렉터리> && python3 -m http.server <포트>
 
 | 디렉터리 | 내용 |
 |----------|------|
-| `output/tag-ui-mockup/` | 태그 기능 UI 목업 (entity-detail, entities, 새 Entity 모달) |
-| `output/review-ui-mockup/` | Review UI 목업 |
+| `.output/tag-ui-mockup/` | 태그 기능 UI 목업 (entity-detail, entities, 새 Entity 모달) |
+| `.output/review-ui-mockup/` | Review UI 목업 |
 
 ## 표준 포트
 
 백엔드 API(8000)와 충돌을 피하기 위해 목업 서버는 **8080 포트**를 사용한다.
 
 ```bash
-cd output/tag-ui-mockup && python3 -m http.server 8080
+cd .output/tag-ui-mockup && python3 -m http.server 8080
 ```
 
 진입점: `http://localhost:8080/index.html`

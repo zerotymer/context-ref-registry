@@ -49,3 +49,11 @@ Thumbs.db
 .idea/
 .vscode/
 *.code-workspace
+
+# Generated SBOM
+sbom.json
+
+# ─── Build / Deploy output ──────────────────────────────────
+# Generated artifacts (mockups, reports, sbom). Already-committed
+# deliverables stay tracked; new files here are ignored.
+/.output/

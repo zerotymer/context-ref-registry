@@ -33,8 +33,8 @@ cd <mockup-dir> && python3 -m http.server <port>
 
 | Directory | Contents |
 |-----------|----------|
-| `output/tag-ui-mockup/` | Tag feature UI mockup (entity-detail, entities, new-entity modal) |
-| `output/review-ui-mockup/` | Review UI mockup |
+| `.output/tag-ui-mockup/` | Tag feature UI mockup (entity-detail, entities, new-entity modal) |
+| `.output/review-ui-mockup/` | Review UI mockup |
 
 ## Standard Port
 
@@ -42,7 +42,7 @@ Use **port 8080** for mockup servers to avoid conflict with the backend API
 on port 8000.
 
 ```bash
-cd output/tag-ui-mockup && python3 -m http.server 8080
+cd .output/tag-ui-mockup && python3 -m http.server 8080
 ```
 
 Entry point: `http://localhost:8080/index.html`

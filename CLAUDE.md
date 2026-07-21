@@ -67,7 +67,7 @@ ci/                     # PR 참조 검증 스크립트 (validate-pr-refs.py)
 docs/                   # 설계 문서 00~11
 instructions/           # 구현 지침 파일
   deploy-build.md       #   배포 빌드 명령어 (영구 참조)
-output/                 # 생성된 산출물 (목업 HTML, 보고서 등)
+.output/                # 생성된 산출물 (목업 HTML, 보고서 등) — gitignore, 커밋된 딜리버러블만 추적 유지
   admin-console-mockup/ #   관리자 콘솔 UI 목업
   review-ui-mockup/     #   Review UI 목업
   tag-ui-mockup/        #   Tag UI 목업
@@ -158,10 +158,10 @@ Step별 `feat/step{N}-{slug}` 브랜치 → PR → main 머지.
 
 ```bash
 # npx serve
-npx serve "output/{파일_또는_디렉토리}" -s -l 8081
+npx serve ".output/{파일_또는_디렉토리}" -s -l 8081
 
 # Python fallback
-python3 -m http.server 8081 --directory output/
+python3 -m http.server 8081 --directory .output/
 ```
 
 접속: `http://localhost:8081`
