@@ -4,10 +4,11 @@ import { useState, useEffect, useTransition, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { fetchContextBundle } from "@/lib/actions/bundle";
 import { JsonViewer } from "@/components/shared/JsonViewer";
+import { BundleGraph } from "./BundleGraph";
 import { ENTITY_TYPES, CONTEXT_TYPE_COLORS, ENTITY_TYPE_COLORS } from "@/lib/constants";
 import type { ContextBundleResponse, EntityType } from "@/types/api";
 
-type ResultTab = "context" | "entities" | "relations" | "json";
+type ResultTab = "context" | "entities" | "relations" | "json" | "graph";
 
 const APPROX_CHARS_PER_TOKEN = 4;
 
@@ -27,7 +28,7 @@ export default function BundlePage() {
 function BundlePageInner() {
   const searchParams = useSearchParams();
   const [rootId, setRootId] = useState(searchParams.get("root") ?? "");
-  const [maxDepth, setMaxDepth] = useState(1);
+  const [maxDepth, setMaxDepth] = useState(5);
   const [tokenBudget, setTokenBudget] = useState(6000);
   const [includeTypes, setIncludeTypes] = useState<Set<EntityType>>(
     new Set(ENTITY_TYPES.filter((t) => t !== "API")),
@@ -210,12 +211,13 @@ function BundlePageInner() {
 
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="flex border-b border-gray-100 px-1 pt-1">
-                  {(["context", "entities", "relations", "json"] as ResultTab[]).map((t) => {
+                  {(["context", "entities", "relations", "json", "graph"] as ResultTab[]).map((t) => {
                     const labels: Record<ResultTab, string> = {
                       context: `Context (${result.contexts.length})`,
                       entities: `Entities (${result.entities.length})`,
                       relations: `Relations (${result.relations.length})`,
                       json: "JSON",
+                      graph: "Graph",
                     };
                     return (
                       <button
@@ -305,6 +307,8 @@ function BundlePageInner() {
                     <JsonViewer data={result} copyButton />
                   </div>
                 )}
+
+                {resultTab === "graph" && <BundleGraph result={result} />}
               </div>
             </div>
           )}

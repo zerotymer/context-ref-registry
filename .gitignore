@@ -57,3 +57,4 @@ sbom.json
 # Generated artifacts (mockups, reports, sbom). Already-committed
 # deliverables stay tracked; new files here are ignored.
 /.output/
+graphify-out/
