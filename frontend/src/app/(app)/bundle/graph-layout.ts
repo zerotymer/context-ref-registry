@@ -1,37 +1,16 @@
 import type { ContextBundleResponse } from "@/types/api";
 
-// BFS distance from any root over the undirected relation graph.
-// Disconnected nodes (no root path) land in a trailing column.
-export function computeDepths(
+// Undirected degree (connection count) per entity. Drives node size in the
+// force graph so hub nodes read bigger — relationship density at a glance.
+export function computeDegrees(
   entityIds: string[],
-  rootIds: Set<string>,
   relations: ContextBundleResponse["relations"],
 ): Map<string, number> {
-  const adj = new Map<string, string[]>();
-  for (const id of entityIds) adj.set(id, []);
+  const degree = new Map<string, number>();
+  for (const id of entityIds) degree.set(id, 0);
   for (const r of relations) {
-    adj.get(r.from_entity_id)?.push(r.to_entity_id);
-    adj.get(r.to_entity_id)?.push(r.from_entity_id);
+    if (degree.has(r.from_entity_id)) degree.set(r.from_entity_id, degree.get(r.from_entity_id)! + 1);
+    if (degree.has(r.to_entity_id)) degree.set(r.to_entity_id, degree.get(r.to_entity_id)! + 1);
   }
-  const depth = new Map<string, number>();
-  const queue: string[] = [];
-  for (const id of entityIds) {
-    if (rootIds.has(id)) {
-      depth.set(id, 0);
-      queue.push(id);
-    }
-  }
-  while (queue.length) {
-    const cur = queue.shift()!;
-    const d = depth.get(cur)!;
-    for (const nb of adj.get(cur) ?? []) {
-      if (!depth.has(nb)) {
-        depth.set(nb, d + 1);
-        queue.push(nb);
-      }
-    }
-  }
-  const maxDepth = Math.max(0, ...Array.from(depth.values()));
-  for (const id of entityIds) if (!depth.has(id)) depth.set(id, maxDepth + 1);
-  return depth;
+  return degree;
 }
