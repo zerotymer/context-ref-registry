@@ -1,10 +1,16 @@
 "use client";
 
 import { useState, useEffect, useTransition, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { fetchContextBundle } from "@/lib/actions/bundle";
 import { JsonViewer } from "@/components/shared/JsonViewer";
-import { BundleGraph } from "./BundleGraph";
+
+// G6 is a heavy canvas lib and browser-only — load it only when the graph tab opens.
+const BundleGraph = dynamic(() => import("./BundleGraph").then((m) => m.BundleGraph), {
+  ssr: false,
+  loading: () => <div className="text-xs text-gray-400 text-center py-8">그래프 로딩 중…</div>,
+});
 import { ENTITY_TYPES, CONTEXT_TYPE_COLORS, ENTITY_TYPE_COLORS } from "@/lib/constants";
 import type { ContextBundleResponse, EntityType } from "@/types/api";
 
