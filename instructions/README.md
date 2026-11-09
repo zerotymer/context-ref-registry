@@ -100,7 +100,7 @@ Phase 3-1 — pgvector semantic search                 ⏸ 백로그 (main 미�
 |------|------|-----------|
 | pgvector semantic search (3-1) | `feat/ext-pgvector`에만 존재. main의 `009_extend_project_id_to_50`과 migration 번호 충돌, postgres 이미지도 `16-alpine`(vector 미포함) | 필요 시 지침화 → migration `013`으로 재번호 후 리베이스 |
 | Bundle Graph 탭 지침 누락 | PR #15·#16이 지침 파일 없이 머지됨 | 사후 기록만 (README 로드맵 반영 완료) |
-| 오래된 로컬/원격 브랜치 정리 | 로컬 ~25개, 원격 미머지 3개 (내용은 main에 반영됨, pgvector 제외) | 확인 후 삭제 |
+| ~~오래된 로컬/원격 브랜치 정리~~ | 2026-11-09 완료 — 로컬 23개 삭제(내용 main 반영 확인), 원격은 이미 `main`만 존재. `feat/ext-pgvector`는 **로컬에만** 보존 | 완료 |
 | code symbol analyzer / source permission sync | `docs/08` '추후 확장' 항목, 미착수 | 수요 생기면 지침화 |
 
 > ~~c5e60dba — UI_AREA 목업 HTML 자동 생성~~ → **completed (2026-06-23)**, `.completed/`로 이동.
