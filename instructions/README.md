@@ -37,6 +37,10 @@ Phase 3.4 — Entity 배치 저장 & 참조 패턴               ✅ 완료 (202
 Phase 3.5 — Entity 프로젝트 필터 + 번들 그래프 뷰      ✅ 완료 (2026-06-02)
 Phase 3.6 — 컨테이너 startup DB 스키마 자동 적용       ✅ 완료 (2026-06-03)
 Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (2026-06-03)
+Phase 3.8 — MCP HTTP transport (단계 A+C)            ✅ 완료 (2026-06-06)
+Phase 3.9 — 목업 HTML·Ingest 식별자·짧은 식별자      ✅ 완료 (2026-06-23)
+Phase 4.0 — Bundle 탐색기 Graph 탭 (AntV G6)         ✅ 완료 (2026-07-22, 지침 없이 PR #15·#16)
+Phase 3-1 — pgvector semantic search                 ⏸ 백로그 (main 미머지)
 ```
 
 ---
@@ -47,14 +51,13 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | 완료일 | UUID | 제목 |
 |--------|------|------|
-| 2026-06-06 | 216b0864-6b7f-4057-8b06-b2865dc9bc53 | MCP HTTP transport 전환 (단계 A 백엔드 `/mcp` + 단계 C Next BFF 프록시) |
 | 2026-06-23 | c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | UI_AREA `metadata.mockup` → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
 | 2026-06-23 | 71f9e0d0-7257-408b-b412-eef4e1e8e521 | `/ingest/batch` 응답 `entities[]`에 entity id·operation·alias 매핑 반환 |
 | 2026-06-23 | ad25787d-4392-4d35-9751-ba050ae7cf9e | 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
 
 ---
 
-## Phase 3 — 확장 기능 ✅ 완료 (2026-05-30)
+## Phase 3 — 확장 기능 ✅ 완료 (2026-05-30, pgvector 제외)
 
 **목표**: 검색 고도화, 이력 추적, 외부 연동
 
@@ -65,7 +68,7 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 ### 완료 범위
 
 ```
-3-1   pgvector semantic search    ✅ context_embedding + HNSW 인덱스 + MCP 연동
+3-1   pgvector semantic search    ⏸ 미머지 — feat/ext-pgvector 브랜치에만 존재 (지침 체크박스도 미완)
 3-2   entity_revision             ✅ entity_history 테이블 + 비교 API
 3-3   Review UI                   ✅ alias 비활성화 + deprecated 처리 모달
 3-4   AGENTS.md export            ✅ GET /export/agents-md — 에이전트용 컨텍스트 내보내기
@@ -95,7 +98,10 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 
 | 항목 | 설명 | 처리 방향 |
 |------|------|-----------|
-| _(없음)_ | 지침화된 백로그 3건 모두 완료 | — |
+| pgvector semantic search (3-1) | `feat/ext-pgvector`에만 존재. main의 `009_extend_project_id_to_50`과 migration 번호 충돌, postgres 이미지도 `16-alpine`(vector 미포함) | 필요 시 지침화 → migration `013`으로 재번호 후 리베이스 |
+| Bundle Graph 탭 지침 누락 | PR #15·#16이 지침 파일 없이 머지됨 | 사후 기록만 (README 로드맵 반영 완료) |
+| 오래된 로컬/원격 브랜치 정리 | 로컬 ~25개, 원격 미머지 3개 (내용은 main에 반영됨, pgvector 제외) | 확인 후 삭제 |
+| code symbol analyzer / source permission sync | `docs/08` '추후 확장' 항목, 미착수 | 수요 생기면 지침화 |
 
 > ~~c5e60dba — UI_AREA 목업 HTML 자동 생성~~ → **completed (2026-06-23)**, `.completed/`로 이동.
 > ~~71f9e0d0 — Ingest 식별자 반환~~ → **completed (2026-06-23)**, `.completed/`로 이동.

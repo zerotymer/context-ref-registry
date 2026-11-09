@@ -16,7 +16,8 @@
 | 운영 준비 (API Key 인증, Audit Log, Backup, Observability) | ✅ 완료 |
 | 관리자 콘솔 UI (로그인·사용자·프로젝트·멤버 화면) | ✅ 완료 |
 | 인증 고급 (관리자·프로젝트 관리자 기능) | ✅ 완료 |
-| 확장 기능 (pgvector, Revision, Export, PR 검증, OpenAPI 내보내기) | ✅ 완료 |
+| 확장 기능 (Revision, Review UI, Export, PR 검증, OpenAPI 내보내기) | ✅ 완료 |
+| 확장 기능 — pgvector semantic search (`feat/ext-pgvector`, main 미머지) | ⏸ 백로그 |
 | API Key 관리 UI (사용자 셀프서비스 + 관리자 화면) | ✅ 완료 |
 | API Key 프로젝트 접근 제어 (project_id 기반 발급·레거시 키 제한) | ✅ 완료 |
 | Project ID 특수문자 제한 (`[A-Za-z0-9_]`만 허용) | ✅ 완료 |
@@ -25,8 +26,11 @@
 | 에이전트 API 게이트웨이 (Next BFF `/api/v1/*` → 백엔드 프록시, API Key passthrough) | ✅ 완료 |
 | MCP HTTP transport 단계 A (stdio 폐기 → `api` 앱 `/mcp` streamable-http, API Key 인증, 프로젝트 범위 필터) | ✅ 완료 |
 | MCP HTTP transport 단계 C (Next BFF 스트리밍 프록시 `/api/v1/mcp` → 백엔드 `/mcp/`, SSE pipe·세션 헤더 passthrough) | ✅ 완료 |
+| UI_AREA 목업 HTML (`GET /entities/{id}/mockup`) | ✅ 완료 |
+| Ingest 식별자 반환 (`POST /ingest/batch` 응답 `entities[]`) | ✅ 완료 |
+| Bundle Graph 탭 (`/bundle` AntV G6 d3-force 관계도) | ✅ 완료 |
 
-테스트: 백엔드 **339 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **27 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **354 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
 에이전트 MCP 진입점: `http://<host>:3000/api/v1/mcp` (streamable-http, `Authorization: Bearer <api-key>` 또는 `X-API-Key`).
 
