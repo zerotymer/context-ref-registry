@@ -63,7 +63,7 @@ curl -H "X-API-Key: $REGISTRY_API_KEY" \
 | 레이어 | 스택 |
 |--------|------|
 | Backend | FastAPI (Python 3.12) + SQLAlchemy 2.x (async) + Alembic |
-| DB | PostgreSQL 16 + pgvector + JSONB metadata |
+| DB | PostgreSQL 16 + JSONB metadata (pgvector는 백로그) |
 | Frontend | Next.js 14 + Tailwind CSS (관리자 콘솔, BFF 패턴) |
 | Auth | JWT (Bearer) + API Key 병행, 프로젝트 기반 권한 |
 | MCP | Python MCP SDK — read-only |
@@ -216,8 +216,8 @@ pnpm dev
 
 ### 검색
 
-- alias exact match → canonical_name ILIKE → full-text (tsvector) → vector 유사도 (pgvector)
-- `GET /search?q=` — 키워드 + 시맨틱 통합 검색
+- alias exact match → canonical_name ILIKE → full-text (tsvector) (vector 유사도는 pgvector 백로그)
+- `GET /search?q=` — 키워드 검색 (시맨틱 검색은 pgvector 머지 후)
 
 ### Context Bundle
 
@@ -294,9 +294,13 @@ instructions/     # 구현 지침 파일
 | 인증 시스템 | JWT + API Key, 프로젝트·멤버십·접근 정책, 관리자 기능 | ✅ 완료 |
 | 운영 준비 | Audit Log, Backup, Observability | ✅ 완료 |
 | 관리자 콘솔 | 로그인·사용자·프로젝트·멤버 관리 화면 | ✅ 완료 |
-| 확장 기능 | pgvector, Revision, Review UI, Export, PR 검증, OpenAPI | ✅ 완료 |
+| 확장 기능 | Revision, Review UI, Export, PR 검증, OpenAPI | ✅ 완료 |
+| 확장 기능 — pgvector | semantic search (`feat/ext-pgvector`, main 미머지) | ⏸ 백로그 |
 | 배포 운영 | 컨테이너 startup 시 DB 스키마 자동 적용 (`alembic upgrade head`, 멱등) | ✅ 완료 |
 | 에이전트 게이트웨이 | Next BFF `/api/v1/*` → 백엔드 프록시 (API Key passthrough) | ✅ 완료 |
+| MCP HTTP transport | `/mcp` streamable-http + BFF 스트리밍 프록시 `/api/v1/mcp` | ✅ 완료 |
+| 참조·Ingest 확장 | 짧은 식별자 `PROJECT_ID-TYPE-N`, ingest 식별자 반환, UI_AREA 목업 HTML | ✅ 완료 |
+| Bundle Graph 탭 | `/bundle` AntV G6 d3-force 관계도 | ✅ 완료 |
 
 ---
 

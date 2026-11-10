@@ -16,7 +16,8 @@ LLM Reference Registry — 코딩 에이전트(Codex, Claude Code, Cursor 등)�
 | 관리자 콘솔 | 로그인·사용자·프로젝트·멤버 관리 화면 | 완료 |
 | 인증 고급 | 관리자·프로젝트 관리자 기능 | 완료 |
 | 운영 준비 | 보안 & 모니터링 (API Key·Audit Log·Backup·Observability) | 완료 |
-| 확장 기능 | pgvector, Revision, Export, AGENTS.md/OpenAPI 내보내기, PR 검증 | 완료 |
+| 확장 기능 | Revision, Review UI, AGENTS.md/OpenAPI 내보내기, PR 검증 | 완료 |
+| 확장 기능 — pgvector | `feat/ext-pgvector` 브랜치에만 존재, **main 미머지** (migration 009 번호 충돌) | 백로그 |
 | API Key 관리 UI | 사용자 셀프서비스(/settings/api-keys) + 관리자(/admin/api-keys) 화면 | 완료 |
 | API Key 프로젝트 접근 제어 | project_id 기반 발급 제한·접근 범위 강화, 레거시 키 제한 | 완료 |
 | Project ID 특수문자 제한 | 허용 문자를 `[A-Za-z0-9_]`로 축소, 프론트·테스트 동기화 | 완료 |
@@ -28,8 +29,9 @@ LLM Reference Registry — 코딩 에이전트(Codex, Claude Code, Cursor 등)�
 | MCP HTTP transport (단계 C) | Next BFF 스트리밍 프록시 `/api/v1/mcp` → 백엔드 `/mcp/` (SSE/청크 pipe, 세션·프로토콜 헤더 passthrough, 쿠키 차단). 에이전트 MCP 진입점 단일화 | 완료 |
 | UI_AREA 목업 HTML | `GET /entities/{id}/mockup` — UI_AREA `metadata.mockup` → 서버사이드 정적 HTML 렌더 (미저장, XSS 이스케이프, BFF passthrough) | 완료 |
 | Ingest 식별자 반환 | `POST /ingest/batch` 응답 `entities[]` — 입력 index ↔ 저장 entity_id 매핑 (operation·활성 alias 동봉, 재조회 불필요) | 완료 |
+| Bundle Graph 탭 | `/bundle` 탐색기 Graph 탭 — AntV G6 d3-force 관계도 (degree 비례 노드, `next/dynamic` 지연 로딩) | 완료 |
 
-테스트: 백엔드 **354 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **27 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **354 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
 ## 기술 스택
 
