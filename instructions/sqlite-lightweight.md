@@ -1,130 +1,207 @@
 ---
 uuid: 8607659b-324e-4cea-8bea-be2a9c51aa34
-title: "PostgreSQL → SQLite 전환 및 배포 경량화"
+title: "PostgreSQL → SQLite 전환, 배포 경량화, 단일 관리자 인증 개편"
 status: in-progress
 created: 2026-11-11
+updated: 2026-11-11
 completed:
 branch: feat/sqlite-lightweight
 ref_docs:
-  - docs/ (DB·배포 관련 설계 문서)
+  - docs/ (DB·배포·인증 관련 설계 문서)
   - instructions/deploy-build.md
 prerequisite: none
 ---
 
-# PostgreSQL → SQLite 전환 및 배포 경량화
+# PostgreSQL → SQLite 전환, 배포 경량화, 단일 관리자 인증 개편
 
 ## 목적
 
 1. DB를 PostgreSQL 16에서 SQLite(WAL)로 바꿔 컨테이너를 4개(postgres·api·frontend·backup)에서 2개(api·frontend)로 줄인다.
 2. 검토 때 나온 경량화 방안(compose dev 분리, API 이미지 축소, 미사용 의존성 제거)을 반영한다.
+3. 인증을 **관리자 1명 + 프로젝트 API 키** 구조로 단순화한다. 이 서비스의 주 사용자는 LLM 에이전트이기 때문이다.
 
 ## 결정 사항 (사용자 확정 2026-11-11)
 
 | 항목 | 결정 |
 |------|------|
-| 데이터 마이그레이션 | **하지 않음.** 기존 PG 데이터는 이관하지 않고 새 SQLite DB로 시작한다 |
+| 데이터 마이그레이션 | **하지 않음.** 새 SQLite DB로 시작한다 |
 | 백업 | **기능 제거.** DB 파일(`registry.db`, `-wal`, `-shm`)을 복사하는 것으로 대신한다. `backup/` 컨테이너 삭제 |
 | 경량화 방안 | 검토안 1~4 모두 수용 |
-| 인증 체계 | **이 지시서 범위 밖.** 별도 지시서에서 다룬다. 여기서는 타입 교체(`scopes` ARRAY→JSON)만 하고 인증 로직은 건드리지 않는다 |
-| pgvector 백로그 | `feat/ext-pgvector`는 폐기 대상이다. 벡터 검색이 다시 필요해지면 sqlite-vec 기준으로 새로 설계한다 |
+| JWT 서명 키 | **현행 유지.** `entrypoint.sh`가 기동할 때마다 `JWT_SECRET`을 새로 만든다. 재기동하면 관리자 세션이 끊기지만 소규모 운영이라 감수한다. `JWT_SECRET` 환경변수로 고정하는 옵션도 유지 |
+| 사람 사용자 | **단일 관리자(대안 A).** 계정은 환경변수로 정한다. 사용자 테이블·멤버십·역할 체계는 삭제 |
+| 에이전트 인증 | 프로젝트 소속 API 키만 사용 |
+| API 키 헤더 | **`Authorization: Bearer`로 단일화.** `X-API-Key` 폐기 |
+| pgvector 백로그 | `feat/ext-pgvector` 폐기. 필요해지면 sqlite-vec 기준으로 새로 설계 |
+
+## 목표 인증 모델
+
+### 관리자 (웹)
+- 계정: `ADMIN_LOGIN_ID`(기본 `admin`), `ADMIN_PASSWORD`(**필수**, `backend/.env`로 주입, 커밋 금지)
+- `ADMIN_PASSWORD`가 없으면 로그인을 막고(503) 시작할 때 경고 로그를 남긴다. 기본 비밀번호 `admin/admin`과 `must_change_password` 흐름은 삭제
+- 비교는 `hmac.compare_digest`로 한다. DB에 저장하지 않으므로 argon2가 필요 없다
+- 세션: 기존 JWT 쿠키(`access_token`)를 유지하고 `sub="admin"`. 서명 키는 위 결정대로 재기동 시 초기화
+- 관리자는 모든 프로젝트와 공개 엔티티(`project_id=None`)를 읽고 쓸 수 있다
+
+### API 키 (LLM 에이전트)
+| 필드 | 내용 |
+|------|------|
+| 형식 | `crr_` + `secrets.token_urlsafe(32)`. 발급할 때 한 번만 보여 줌. 저장은 기존처럼 해시 |
+| `project_id` | **NOT NULL.** 키 하나는 프로젝트 하나에만 접근. 전역 키와 레거시 키는 폐지 |
+| `scope` | `read` 또는 `write` (문자열 컬럼 1개, 기존 `scopes` 배열 대체). **실제로 검사함** |
+| `expires_at` | 선택. 지나면 401 |
+| `last_used_at` | 인증될 때 갱신. 기존 값보다 60초 이상 지났을 때만 쓴다 (쓰기 락 경합 방지) |
+| `revoked_at` | 기존 유지 |
+| `created_by` | 삭제 (사용자 테이블 없음) |
+
+### 권한 규칙 (`policy.py` 단순화)
+| 호출자 | 조회 | 변경 |
+|--------|------|------|
+| 관리자 | 전체 | 전체 |
+| `read` 키 | 자기 프로젝트 + 공개 엔티티 | 403 |
+| `write` 키 | 자기 프로젝트 + 공개 엔티티 | 자기 프로젝트 엔티티만. 공개 엔티티는 403 |
+| 인증 없음 | 공개 엔티티만 (현행 유지: `get_optional_actor` + `check_can_view_entity`가 `project_id=None`이면 통과). 프로젝트 엔티티는 401 | 401 |
+
+- MCP(read-only)는 `read`와 `write` 키 모두 허용
+- 감사 로그 actor: `admin` 또는 `api_key:{name}` (`audit_service.actor_identifier`를 그대로 단순화)
 
 ## PG 전용 기능 → SQLite 대체 목록
 
 | # | 현재 | 위치 | 대체 |
 |---|------|------|------|
-| 1 | `pg_advisory_xact_lock(hashtext(..))` | `entity_repository.py:63` | 삭제. 쓰기 트랜잭션 직렬화(Step 3)와 `uq_entity_short_seq` 제약으로 순번 중복 방지 |
+| 1 | `pg_advisory_xact_lock(hashtext(..))` | `entity_repository.py:63` | 삭제. 쓰기 트랜잭션 직렬화(Step 4)와 `uq_entity_short_seq` 제약으로 순번 중복 방지 |
 | 2 | `JSONB` ×5 | `models.py` | `sa.JSON` |
-| 3 | `ARRAY(String(50))` (`api_key.scopes`) | `models.py:242` | `sa.JSON` (list) |
+| 3 | `ARRAY(String(50))` (`api_key.scopes`) | `models.py:242` | 삭제 → `scope` 문자열 컬럼 (인증 개편) |
 | 4 | `postgresql.UUID(as_uuid=True)` | `models.py` | `sa.Uuid` |
 | 5 | `pg_insert(..).on_conflict_do_nothing(constraint="uq_entity_tag")` | `ingest_service.py:266` | `sqlite.insert(..).on_conflict_do_nothing(index_elements=["entity_id", "tag"])` |
 | 6 | GIN 인덱스 `idx_entity_metadata_gin` | 마이그레이션 001 | 삭제 (사용하는 쿼리 없음) |
 | 7 | `DateTime(timezone=True)` | 모든 timestamp | SQLite는 tz를 버림 → UTC aware 값을 돌려주는 `TypeDecorator` 필요 |
-| 8 | `ilike` | user/project/api_key/entity repository | 변경 없음 (SQLAlchemy가 `lower() LIKE lower()`로 컴파일) |
+| 8 | `ilike` | repository 여러 곳 | 변경 없음 (SQLAlchemy가 `lower() LIKE lower()`로 컴파일) |
 
-## 변경 파일 목록
+## 삭제 대상 (인증 개편)
+
+| 구분 | 대상 |
+|------|------|
+| 모델/테이블 | `UserAccount`(`user_account`), `ProjectMember`(`project_member`), `ApiKey.created_by`, `ApiKey.scopes` |
+| 백엔드 | `app/api/admin_users.py`, `app/repository/user_repository.py`, `app/repository/project_member_repository.py`, `app/api/projects.py`의 멤버 엔드포인트 4개와 `_get_project_roles`, `app/api/admin_projects.py`의 멤버 엔드포인트 4개, `app/api/auth.py`의 `/users`·`/change-password`·셀프서비스 `/api-keys`(3개), `auth_service`의 사용자·bootstrap 로직, `config.py`의 `BOOTSTRAP_ADMIN_*` |
+| 의존성 | `argon2-cffi` (다른 사용처가 없는지 확인 후 제거) |
+| 프론트 | `app/(app)/admin/users/`, `app/(app)/admin/projects/[id]/members/`, `app/(app)/settings/api-keys/`, `app/change-password/`, `lib/actions/api-keys.ts`의 셀프서비스 부분, `Sidebar`의 해당 메뉴, `LoginForm`의 `must_change_password` 이동, `project_admin` 분기 |
+| 헤더 | 백엔드 `auth/dependencies.py`·`mcp/http_auth.py`, 프론트 `lib/api/gateway.ts`·`lib/api/mcp-gateway.ts`의 `x-api-key` 처리와 관련 테스트 |
+| 테스트 | `test_admin_users_api.py`, `test_bootstrap_admin.py`, 다른 테스트 안의 멤버십·`project_admin_client`·사용자 생성 케이스 |
+
+## 변경 파일 목록 (DB·경량화)
 
 | 파일 | 변경 내용 |
 |------|-----------|
-| `backend/pyproject.toml`, `uv.lock` | `asyncpg` 제거, `aiosqlite` 추가 |
-| `backend/app/config.py` | 기본 `database_url` → `sqlite+aiosqlite:////data/registry.db` |
+| `backend/pyproject.toml`, `uv.lock` | `asyncpg`·`argon2-cffi` 제거, `aiosqlite` 추가 |
+| `backend/app/config.py` | 기본 `database_url` → `sqlite+aiosqlite:////data/registry.db`, `ADMIN_LOGIN_ID`·`ADMIN_PASSWORD` |
 | `backend/app/db/session.py` | SQLite PRAGMA(WAL·foreign_keys·busy_timeout) + 쓰기 직렬화 |
-| `backend/app/domain/models.py` | 타입 교체, `UtcDateTime` TypeDecorator |
+| `backend/app/domain/models.py` | 타입 교체, `UtcDateTime`, 인증 모델 변경 |
 | `backend/app/repository/entity_repository.py` | advisory lock 삭제 |
 | `backend/app/service/ingest_service.py` | sqlite insert로 교체 |
 | `backend/app/db/migrations/env.py` | `render_as_batch=True` |
 | `backend/app/db/migrations/versions/*` | 001~012 삭제 → `001_baseline.py` 1개 |
-| `backend/tests/conftest.py` | SQLite 임시 파일 DB |
+| `backend/tests/conftest.py` | SQLite 임시 파일 DB, 관리자·키 fixture 재구성 |
 | `backend/tests/test_migrations.py` | asyncpg 제거, 임시 SQLite 파일로 재작성 |
-| `backend/tests/test_sqlite_specific.py` (신규) | UTC 반환, short_seq 동시 발급, FK cascade |
 | `backend/Dockerfile` | `uv sync --frozen --no-dev` 멀티스테이지 |
-| `docker-compose.yml` | postgres·backup 제거, `registry_data:/data` 볼륨 |
-| `docker-compose.override.yml` (신규) | `--reload` + `./backend:/app` 바인드 (dev 전용) |
+| `docker-compose.yml` / `docker-compose.override.yml`(신규) | postgres·backup 제거, `registry_data:/data`, dev 설정 분리 |
 | `backup/` | 디렉토리 삭제 |
 | `frontend/package.json`, `pnpm-lock.yaml` | `@tanstack/react-query-devtools` 제거 |
-| `CLAUDE.md`, `AGENTS.md`, `instructions/README.md`, `backend/CLAUDE.md`, 관련 `docs/` | 기술 스택·구조 동기화 |
+| `CLAUDE.md`, `AGENTS.md`, `README.md`, `instructions/README.md`, `backend/CLAUDE.md`, 관련 `docs/` | 기술 스택·인증·구조 동기화 |
 
 ## Step-by-Step 구현 지침
 
 > 패키지 설치는 **개인 Nexus 인덱스로만** 한다(`~/.config/uv/uv.toml`의 `internal` 기본 인덱스, pnpm은 기존 registry 설정). 공개 PyPI/npm 직접 설치 금지.
 > SQLAlchemy·aiosqlite·Alembic API는 구현 전에 `ctx7`로 최신 문서를 확인한다.
+> 순서가 중요하다: 인증 모델을 바꾼 **뒤에** 마이그레이션을 스쿼시해야 baseline이 한 번에 맞는다.
 
 ### Step 1 — 의존성 교체
-- [ ] `cd backend && uv remove asyncpg && uv add aiosqlite`
+- [ ] `cd backend && uv remove asyncpg && uv add aiosqlite` (`argon2-cffi`는 Step 3이 끝난 뒤 제거)
 - [ ] `cd frontend && pnpm remove @tanstack/react-query-devtools` (src에서 import하는 곳 없음 확인 완료)
 - [ ] `cd backend && uv sync` — 로컬 `.venv`에 남은 미선언 패키지(openai, numpy 등) 정리
 
-### Step 2 — 모델 타입 교체
+### Step 2 — 모델 타입 교체 (DB 범용화)
 - [ ] `from sqlalchemy.dialects.postgresql import ...` 제거
-- [ ] `UUID(as_uuid=True)` → `sa.Uuid`, `JSONB` → `sa.JSON`, `ARRAY(String(50))` → `sa.JSON`
+- [ ] `UUID(as_uuid=True)` → `sa.Uuid`, `JSONB` → `sa.JSON`
 - [ ] `UtcDateTime(TypeDecorator)` 추가: 저장할 때 UTC로 바꾸고, 읽을 때 `tzinfo=UTC`를 붙인다. 모든 `DateTime(timezone=True)`를 교체한다
 - [ ] `server_default=func.now()`는 유지 (SQLite `CURRENT_TIMESTAMP` = UTC)
 
-### Step 3 — 엔진 설정 & 쓰기 직렬화 (`session.py`)
+### Step 3 — 인증 개편 (단일 관리자 + 프로젝트 키)
+- [ ] 모델: `UserAccount`·`ProjectMember` 삭제. `ApiKey`는 `project_id` NOT NULL, `scope`(`read`/`write`, 기본 `read`), `expires_at`, `last_used_at` 추가, `scopes`·`created_by` 삭제. 다른 테이블의 `user_account` FK도 정리 (`grep -n "user_account" app/domain/models.py`)
+- [ ] `config.py`: `ADMIN_LOGIN_ID`, `ADMIN_PASSWORD` 설정 추가, `BOOTSTRAP_ADMIN_*` 삭제. `main.py` lifespan의 `bootstrap_admin` 호출 삭제
+- [ ] `auth_service.py`: `login(login_id, password)` → 환경변수와 `hmac.compare_digest`로 비교한 뒤 JWT 발급(`sub="admin"`). `ADMIN_PASSWORD`가 없으면 503. `get_admin_by_token(token)`, `get_api_key(raw_key)`(revoked·expires 검사, `last_used_at` 60초 단위 갱신), `create_api_key(name, project_id, scope, expires_at)` → `crr_` 접두사
+- [ ] `auth/dependencies.py`: 쿠키(관리자) 또는 `Authorization: Bearer`(키)만 받는다. `x_api_key` 파라미터 삭제. 반환 타입은 `Actor`(관리자 여부, `api_key | None`)로 단순화. 의존성 이름은 `get_actor` / `get_optional_actor` / `require_admin` / `require_write` 정도로 줄인다
+- [ ] `auth/policy.py`: 위 "권한 규칙" 표대로 다시 작성. 멤버십 조회 삭제
+- [ ] `mcp/http_auth.py`: Bearer만 받는다. 공용 `get_api_key`를 사용
+- [ ] API 라우트 정리: "삭제 대상" 표의 엔드포인트 삭제. `/admin/api-keys`(발급·목록·폐기)는 관리자 전용으로 유지하고 요청 바디에 `project_id`(필수)·`scope`·`expires_at`을 받는다. `/auth/login`·`/auth/logout`·`/auth/me`는 유지
+- [ ] 쓰기 엔드포인트(ingest, entity·alias·relation·context·tag 변경, batch)는 `require_write`(관리자 또는 `write` 키)를 거친다
+- [ ] `audit_service.actor_identifier` → `"admin"` 또는 `f"api_key:{name}"`
+- [ ] `argon2-cffi` 사용처가 0건이면 `uv remove argon2-cffi`
+- [ ] 프론트: "삭제 대상" 표의 화면·액션 삭제, Sidebar 메뉴 정리, `/admin/api-keys` 발급 폼에 프로젝트(필수)·scope·만료일 추가, 발급 결과에 키 1회 표시, 목록에 `last_used_at`·`expires_at` 표시
+- [ ] 프론트 게이트웨이: `gateway.ts`·`mcp-gateway.ts` 허용 헤더에서 `x-api-key` 삭제, 관련 테스트를 "X-API-Key는 전달하지 않음"으로 바꾼다
+
+### Step 4 — 엔진 설정 & 쓰기 직렬화 (`session.py`)
 - [ ] `connect` 이벤트에서 `PRAGMA journal_mode=WAL`, `PRAGMA foreign_keys=ON`(**필수**: 이게 없으면 `ondelete` CASCADE/SET NULL이 동작하지 않음), `PRAGMA busy_timeout=5000`
 - [ ] 트랜잭션을 `BEGIN IMMEDIATE`로 시작한다 (SQLAlchemy 문서의 pysqlite/aiosqlite "serializable isolation / savepoints" 레시피: `isolation_level=None` + `begin` 이벤트에서 직접 BEGIN을 실행)
   - 이유: WAL에서 기본 deferred 트랜잭션은 "읽은 뒤 쓰기"가 다른 writer와 겹치면 `SQLITE_BUSY_SNAPSHOT`으로 즉시 실패하고 busy_timeout도 적용되지 않는다
   - `# ponytail: global write lock per transaction — split read/write sessions if read latency under ingest load matters`
 - [ ] `entity_repository.next_short_seq`의 advisory lock 호출 삭제 (docstring 갱신)
 
-### Step 4 — ingest upsert 교체
+### Step 5 — ingest upsert 교체
 - [ ] `ingest_service.py`: `from sqlalchemy.dialects.sqlite import insert as sqlite_insert` → `.on_conflict_do_nothing(index_elements=["entity_id", "tag"])`
 
-### Step 5 — 마이그레이션 스쿼시
+### Step 6 — 마이그레이션 스쿼시
 - [ ] `versions/001~012` 삭제
 - [ ] `env.py` 두 `context.configure(...)`에 `render_as_batch=True`
-- [ ] 빈 SQLite 파일 대상 `alembic revision --autogenerate -m baseline` → `001_baseline.py`로 정리 (revision="001", GIN 인덱스 없음, 모든 UniqueConstraint 이름 유지: `uq_entity_tag`, `uq_entity_short_seq`, `uq_entity_metadata_type` 등)
-- [ ] autogenerate 결과와 `Base.metadata`가 일치하는지 `alembic check`로 확인
+- [ ] 빈 SQLite 파일을 대상으로 `alembic revision --autogenerate -m baseline` 실행 → `001_baseline.py`로 정리 (revision="001", GIN 인덱스 없음, `user_account`·`project_member` 없음, UniqueConstraint 이름 유지: `uq_entity_tag`, `uq_entity_short_seq`, `uq_entity_metadata_type` 등)
+- [ ] `alembic check`로 baseline과 `Base.metadata`가 일치하는지 확인
 
-### Step 6 — 테스트
-- [ ] `conftest.py`: 기본 URL을 `sqlite+aiosqlite:///{tmp}/test.db`로 변경 (`TEST_DATABASE_URL` override는 유지). `:memory:`는 커넥션마다 DB가 분리되므로 쓰지 않는다
-- [ ] `test_migrations.py`: asyncpg 의존 제거 → 임시 디렉토리의 새 DB 파일에 `alembic upgrade head` 2회 실행(멱등) 후 `EXPECTED_TABLES` 확인
-- [ ] 신규 `test_sqlite_specific.py` (최소 3건)
+### Step 7 — 테스트
+- [ ] `conftest.py`
+  - 기본 URL을 `sqlite+aiosqlite:///{tmp}/test.db`로 변경 (`TEST_DATABASE_URL` override 유지). `:memory:`는 커넥션마다 DB가 분리되므로 쓰지 않는다
+  - `ADMIN_PASSWORD`를 테스트용 값으로 설정. `admin_client`는 이 값으로 로그인
+  - 사용자·멤버 fixture 삭제 → `read_key(project)`, `write_key(project)` fixture로 대체
+- [ ] 기존 테스트에서 사용자·멤버십 기반 케이스는 키 기반으로 바꾸거나 삭제한다. 테스트 수가 354보다 줄어드는 것은 정상이며, 줄어든 수와 이유를 완료 보고에 남긴다
+- [ ] `test_migrations.py`: asyncpg 의존 제거 → 임시 디렉토리의 새 DB 파일에 `alembic upgrade head`를 2회 실행(멱등)하고 `EXPECTED_TABLES`(`project`, `entity`, `api_key`, `alembic_version`) 확인
+- [ ] 신규 `test_sqlite_specific.py`
   - API 응답의 `created_at`에 tz(`+00:00` 또는 `Z`)가 붙는지
   - 같은 `(project_id, type)`로 엔티티 N개를 `asyncio.gather`로 동시 생성 → `short_seq`가 1..N이고 중복 없음
   - 프로젝트/엔티티 삭제 시 FK cascade 동작 (`foreign_keys=ON` 회귀 방지)
-- [ ] `cd backend && .venv/bin/pytest tests/` 전부 통과 (기준 354 + 신규), `cd frontend && pnpm test` 30 통과
+- [ ] 신규 `test_auth_single_admin.py`
+  - 관리자 로그인 성공 / 비밀번호 틀림 401 / `ADMIN_PASSWORD` 미설정 503
+  - 발급된 키가 `crr_`로 시작하고 목록 응답에 평문 키가 없음
+  - `read` 키로 `POST /ingest/batch` → 403, `write` 키 → 성공
+  - `write` 키로 다른 프로젝트 엔티티 수정 → 403, 공개 엔티티 수정 → 403
+  - 다른 프로젝트 엔티티 조회 → 403, 공개 엔티티 조회 → 200
+  - 만료된 키 401, 폐기된 키 401
+  - `X-API-Key` 헤더만 보낸 요청 → 401 (REST와 MCP `/mcp` 둘 다)
+- [ ] `cd backend && .venv/bin/pytest tests/` 전부 통과, `cd frontend && pnpm test` 전부 통과
 
-### Step 7 — Docker / Compose
-- [ ] `docker-compose.yml`: `postgres`·`backup` 서비스와 `postgres_data`·`backup_data` 볼륨 삭제, api에서 `depends_on: postgres` 삭제, `DATABASE_URL=sqlite+aiosqlite:////data/registry.db`, `registry_data:/data` 볼륨 추가
+### Step 8 — Docker / Compose
+- [ ] `docker-compose.yml`: `postgres`·`backup` 서비스와 `postgres_data`·`backup_data` 볼륨 삭제, api에서 `depends_on: postgres` 삭제, `DATABASE_URL=sqlite+aiosqlite:////data/registry.db`, `registry_data:/data` 볼륨 추가. `ADMIN_PASSWORD`는 기존 `env_file: ./backend/.env`로 주입
+- [ ] `backend/.env.example`(없으면 신규)에 `ADMIN_LOGIN_ID`, `ADMIN_PASSWORD=` (값 비움), `JWT_SECRET=` (선택) 기재
 - [ ] `docker-compose.override.yml` 신규: api의 `command: uvicorn ... --reload`와 `./backend:/app` 바인드만 옮긴다 (운영은 `docker compose -f docker-compose.yml up`)
-- [ ] `backup/` 디렉토리 삭제. 백업은 "api 정지 후 볼륨 내 `registry.db*` 복사"로 문서화
+- [ ] `backup/` 디렉토리 삭제. 백업 방법은 "api 정지 후 볼륨 안의 `registry.db*` 복사"로 문서화
 - [ ] `backend/Dockerfile`: builder 스테이지에서 `uv sync --frozen --no-dev --no-editable`, runtime 스테이지는 `python:3.12-slim`에 `.venv`만 복사. Nexus 인덱스 인증은 BuildKit secret(`--mount=type=secret`)으로 넘기고 이미지 레이어에 남기지 않는다. `/data` 디렉토리 생성·권한 처리
-- [ ] 목표: API 이미지 383MB → 측정 후 결과 기록
-- [ ] `docker compose up -d` → 빈 볼륨에서 `entrypoint.sh`의 `alembic upgrade head`로 스키마가 자동 생성되는지, `/health` 200, 프론트 로그인 확인
+- [ ] `entrypoint.sh`의 `JWT_SECRET` 생성 로직은 유지
+- [ ] API 이미지 크기(기존 383MB)를 다시 측정해 결과를 기록
+- [ ] `docker compose up -d` → 빈 볼륨에서 스키마 자동 생성, `/health` 200, 관리자 로그인, 키 발급, 그 키로 `/api/v1/mcp` 호출까지 확인
 
-### Step 8 — 문서 동기화
-- [ ] `CLAUDE.md`: 기술 스택(DB), Docker Compose 서비스, 구현 현황(pgvector 행 → 폐기/재설계), 프로젝트 구조(`backup/` 제거)
-- [ ] `AGENTS.md`, `instructions/README.md`, `backend/CLAUDE.md`, `docs/` 중 PostgreSQL을 언급하는 문서
-- [ ] `instructions/deploy-build.md`: 이미지 빌드 시 secret 전달 방법 반영
+### Step 9 — 문서 동기화
+- [ ] `CLAUDE.md`: 기술 스택(DB), Docker Compose 서비스, 구현 현황(인증 행 갱신, pgvector 행 → 폐기/재설계), 프로젝트 구조(`backup/` 제거)
+- [ ] `README.md`, `AGENTS.md`: `X-API-Key` 예시를 `Authorization: Bearer`로 바꾸고 키 scope(`read`/`write`) 설명 추가
+- [ ] `instructions/README.md`, `backend/CLAUDE.md`, `docs/` 중 PostgreSQL·사용자/멤버십을 언급하는 문서
+- [ ] `instructions/deploy-build.md`: 이미지 빌드 시 secret 전달 방법, `ADMIN_PASSWORD` 필수 반영
 
 ## 범위 밖
 
-- 인증 체계 개편 (별도 지시서)
 - 기존 PG 데이터 이관
-- 읽기/쓰기 세션 분리 (부하 문제가 실제로 생기면 그때 진행)
+- 읽기/쓰기 세션 분리 (부하 문제가 실제로 생기면 진행)
+- 관리자 다중 계정, 비밀번호 변경 UI (비밀번호는 `.env`를 고치고 재기동해서 바꾼다)
+- 재기동 후에도 유지되는 세션 (필요하면 `JWT_SECRET`을 환경변수로 고정)
 
 ## 완료 기준
 
 - 백엔드·프론트 테스트 전부 통과
 - `docker compose up -d`로 컨테이너 2개 기동, 빈 볼륨에서 스키마 자동 생성
-- 코드(`backend/app`)에 `postgresql`/`asyncpg` 참조 0건: `grep -rn "postgresql\|asyncpg" backend/app` 결과 없음
+- `grep -rn "postgresql\|asyncpg" backend/app` 결과 없음
+- `grep -rni "x-api-key\|UserAccount\|ProjectMember\|project_admin" backend/app frontend/src` 결과 없음
