@@ -74,3 +74,4 @@ c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | 화면설계(UI_AREA) 엔티티 목업 HT
 c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | 화면설계(UI_AREA) 엔티티 목업 HTML 자동 생성 서비스 | 2026-06-23T00:00:00+09:00 | completed
 71f9e0d0-7257-408b-b412-eef4e1e8e521 | Ingest 배치 응답에 엔티티 식별자 즉시 반환 (id·alias 매핑) | 2026-06-23T00:00:00+09:00 | completed
 ad25787d-4392-4d35-9751-ba050ae7cf9e | 짧은 식별자 (PROJECT_ID-TYPE-N) 생성 및 4번째 참조 패턴 등록 | 2026-06-23T00:00:00+09:00 | completed
+8607659b-324e-4cea-8bea-be2a9c51aa34 | PostgreSQL → SQLite 전환 및 배포 경량화 | 2026-11-11T08:44:19+09:00 | created
