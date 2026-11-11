@@ -30,7 +30,7 @@ updated: 2026-11-10
 
 ```bash
 docker login                  # Docker Hub (최초 1회)
-make release                  # VERSION=2.0.0 (기본값)
+make release                  # VERSION=2.1.0 (기본값)
 make release VERSION=2.1.0    # 버전 지정
 make -n release VERSION=2.1.0 # 실행 없이 명령만 확인
 ```

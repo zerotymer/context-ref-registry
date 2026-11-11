@@ -36,7 +36,9 @@ async def login(body: LoginRequest, response: Response) -> OkResponse[AdminRead]
         httponly=True,
         samesite="lax",
         max_age=_COOKIE_MAX_AGE,
-        secure=False,  # set True behind HTTPS in production
+        # Consumed only by the frontend BFF over the internal network; the browser
+        # cookie (with Secure behind HTTPS) is set by the BFF itself.
+        secure=False,
     )
     return OkResponse(data=_admin())
 

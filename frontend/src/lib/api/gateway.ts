@@ -70,11 +70,11 @@ export async function proxyToBackend(
     return notFound(pathParts.join("/"));
   }
 
-  // Reconstruct the backend path from the original (still URL-encoded) pathname
-  // to avoid re-encoding artifacts (refs may contain `@`, e.g. PROJECT_ID@TAG).
+  // Backend serves the same `/api/v1/*` paths, so forward the original (still
+  // URL-encoded) pathname as-is — avoids re-encoding artifacts (refs may contain
+  // `@`, e.g. PROJECT_ID@TAG).
   const url = new URL(request.url);
-  const backendPath = url.pathname.replace(/^\/api\/v1/, "");
-  const targetUrl = `${BACKEND}${backendPath}${url.search}`;
+  const targetUrl = `${BACKEND}${url.pathname}${url.search}`;
 
   // Forward only whitelisted headers. No cookies, no hop-by-hop headers.
   const headers = new Headers();

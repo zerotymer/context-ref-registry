@@ -86,7 +86,7 @@ describe("proxyToBackend — request passthrough", () => {
       ["search"],
     );
     expect(lastCall!.url).toBe(
-      `${BACKEND}/search?q=hello&types=FEATURE&limit=5`,
+      `${BACKEND}/api/v1/search?q=hello&types=FEATURE&limit=5`,
     );
   });
 

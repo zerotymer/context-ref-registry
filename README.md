@@ -25,7 +25,7 @@ CI/CD → POST /validate-references → 레지스트리 참조 검증
 | 용도 | URL | 비고 |
 |------|-----|------|
 | **에이전트 API (권장)** | `https://llm-reg.zerotymer.net/api/v1/*` | Next BFF 게이트웨이 → 백엔드 프록시. API Key passthrough, 응답 봉투 미해제 |
-| **백엔드 직접 API (대체)** | `https://llm-api.zerotymer.net/*` | 게이트웨이 우회. `/api/v1` 프리픽스 없음 |
+| **백엔드 직접 API (대체)** | `https://llm-api.zerotymer.net/api/v1/*` | 게이트웨이 우회. 경로 동일 (v2.1.0부터 `/api/v1` 프리픽스) |
 
 > 에이전트는 **게이트웨이(`llm-reg`)를 우선** 사용하고, 닿지 않을 때만 백엔드 직접
 > (`llm-api`)으로 폴백한다. 게이트웨이는 `entities` · `relations` · `search` · `resolve` ·
@@ -89,7 +89,7 @@ services:
   api:
     image: zerotymer/llm-registry-api:latest
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"   # 루프백만 — 리버스 프록시 경로 분리용 (docs/12-reverse-proxy.md)
     environment:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}   # 필수 — 커밋 금지
       MCP_ALLOWED_HOSTS: "api:*"                              # 게이트웨이(/api/v1/mcp) → api:8000
@@ -121,10 +121,12 @@ ADMIN_PASSWORD='<강한 비밀번호>' docker compose up -d
 
 | 서비스 | 주소 |
 |--------|------|
-| Backend API | http://localhost:8000 |
-| API 문서 | http://localhost:8000/docs |
+| Backend API | http://localhost:8000/api/v1/* |
+| API 문서 | http://localhost:8000/api/v1/docs |
 | Frontend | http://localhost:3000 |
 | 에이전트 API 게이트웨이 | http://localhost:3000/api/v1/* (백엔드 동일 경로 프록시, API Key passthrough) |
+
+> 같은 서버·같은 포트의 리버스 프록시 뒤에서 운영하려면 [docs/12-reverse-proxy.md](docs/12-reverse-proxy.md) 참고 (프록시는 미포함, 안내만 제공).
 
 ---
 
@@ -141,7 +143,7 @@ ADMIN_PASSWORD='<강한 비밀번호>' docker compose up -d
 | `ADMIN_LOGIN_ID` | | `admin` | 관리자 아이디 |
 | `DATABASE_URL` | | `sqlite+aiosqlite:////data/registry.db` | SQLite 파일 경로 |
 | `JWT_SECRET` | | 기동 시 자동 생성 | 고정하면 재기동 후에도 관리자 세션 유지 |
-| `MCP_ALLOWED_HOSTS` | | — | `/mcp`가 추가로 받을 Host 헤더 (쉼표 구분, `api:*`·`mcp.example.com` 형식). `localhost`는 항상 허용, 그 외는 421. compose는 게이트웨이용 `api:*`를 설정 |
+| `MCP_ALLOWED_HOSTS` | | — | `/api/v1/mcp`가 추가로 받을 Host 헤더 (쉼표 구분, `api:*`·`mcp.example.com` 형식). `localhost`는 항상 허용, 그 외는 421. compose는 게이트웨이용 `api:*`를 설정 |
 
 > `JWT_SECRET`을 지정하지 않으면 `entrypoint.sh`가 기동할 때마다 새로 만들어 모든 워커가 공유한다.
 > 재기동하면 관리자 세션이 끊긴다(API Key에는 영향 없음). 알고리즘(`HS256`)과 만료(7일)는 코드에 고정.
@@ -203,6 +205,8 @@ pnpm dev
 
 ## 주요 기능
 
+> 아래 경로는 공통 prefix를 생략했다. 실제 경로는 모두 `/api/v1` 아래다 (예: `GET /api/v1/search?q=`).
+
 ### Entity 관리
 
 - `UI_AREA`, `FEATURE`, `INFRA_UNIT`, `API`, `CODE_SYMBOL` 타입 지원
@@ -242,8 +246,8 @@ python ci/validate-pr-refs.py \
 
 ### MCP Server (read-only)
 
-streamable-http transport로 `api` 앱의 `/mcp`에 마운트된다(stdio 폐기). MCP 클라이언트는
-`http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 헤더가 필요하다
+streamable-http transport로 `api` 앱의 `/api/v1/mcp`에 마운트된다(stdio 폐기). MCP 클라이언트는
+`http://<host>:3000/api/v1/mcp`(프론트 게이트웨이) 또는 `http://<host>:8000/api/v1/mcp`로 접속하며 `Authorization: Bearer <api-key>` 헤더가 필요하다
 (`read`·`write` 키 모두 허용). 모든 도구는 API Key의 프로젝트 범위로 결과를 필터링한다.
 
 read-only 도구 7종 제공: `resolve_alias`, `get_entity`, `search_entities`,

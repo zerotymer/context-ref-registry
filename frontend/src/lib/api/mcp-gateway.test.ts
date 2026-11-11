@@ -46,11 +46,11 @@ afterEach(() => {
 });
 
 describe("proxyMcpToBackend — target path", () => {
-  it("maps /api/v1/mcp to the backend /mcp/ endpoint (trailing slash)", async () => {
+  it("maps /api/v1/mcp to the backend /api/v1/mcp/ endpoint (trailing slash)", async () => {
     mockBackend();
     await proxyMcpToBackend(makeRequest("mcp", { method: "POST", body: "{}" }));
     // Trailing slash avoids the /mcp -> /mcp/ 307 the stream body can't survive.
-    expect(lastCall!.url).toBe(`${BACKEND}/mcp/`);
+    expect(lastCall!.url).toBe(`${BACKEND}/api/v1/mcp/`);
   });
 
   it("does not follow redirects (manual)", async () => {

@@ -1,7 +1,7 @@
 """API key authentication for the mounted MCP streamable-http app.
 
 The MCP app is a sub-ASGI app, so FastAPI ``Depends`` cannot gate it. This pure
-ASGI middleware authenticates every HTTP request to ``/mcp`` using the same API
+ASGI middleware authenticates every HTTP request to ``/api/v1/mcp`` using the same API
 key logic as the REST layer (``AuthService.get_api_key``), resolves the
 caller's project visibility (``policy.visible_project_ids``), and stows
 the result on the ASGI ``scope`` so tools can read it back (see ``scope.py``).

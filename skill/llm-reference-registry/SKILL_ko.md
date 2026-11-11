@@ -28,19 +28,19 @@ UI 화면, 기능, 인프라 단위, API, 코드 심볼, 이슈를 등록하고,
 
 | 방법 | 엔드포인트 | 사용 시점 |
 |------|------------|-----------|
-| **MCP** | streamable-http `https://llm-api.zerotymer.net/mcp` (API key 헤더) | 에이전트 플랫폼에 MCP 서버가 설정된 경우. 읽기 전용, 프로젝트 범위 적용. |
+| **MCP** | streamable-http `https://llm-reg.zerotymer.net/api/v1/mcp` (API key 헤더) | 에이전트 플랫폼에 MCP 서버가 설정된 경우. 읽기 전용, 프로젝트 범위 적용. |
 | **HTTP API (게이트웨이)** | `https://llm-reg.zerotymer.net/api/v1/*` | **권장 HTTP 경로.** Next BFF Route Handler → 백엔드 프록시. |
-| **HTTP API (직접)** | `https://llm-api.zerotymer.net/*` | 대체: 백엔드 API 직접 호출 (`/api/v1` 프리픽스 없음). |
+| **HTTP API (직접)** | `https://llm-api.zerotymer.net/api/v1/*` | 대체: 백엔드 API 직접 호출 (경로 동일 `/api/v1`). |
 
 ### 어떤 HTTP 엔드포인트를 쓸까
 
 1. **기본은 게이트웨이** — `https://llm-reg.zerotymer.net/api/v1/...`.
    백엔드로 프록시하는 Next.js Route Handler이며 API Key를 그대로 전달(passthrough)한다.
-   경로 이름은 동일하되 **`/api/v1` 프리픽스가 붙는다.**
-2. **백엔드 직접 호출은 대체 수단** — `https://llm-api.zerotymer.net/...`
-   (`/api/v1` 프리픽스 없음). 게이트웨이가 닿지 않을 때만 사용한다.
+   모든 경로는 **`/api/v1`로 시작한다.**
+2. **백엔드 직접 호출은 대체 수단** — `https://llm-api.zerotymer.net/api/v1/...`.
+   게이트웨이가 닿지 않을 때만 사용한다. 경로는 같고 호스트만 다르다.
 3. **로컬 개발**에서는 게이트웨이가 `http://localhost:3000/api/v1/*`,
-   백엔드가 `http://localhost:8000/*`이다.
+   백엔드가 `http://localhost:8000/api/v1/*`이다.
 
 > 게이트웨이는 응답 봉투를 **풀지 않고(unwrap 안 함)** 백엔드의 상태 코드·content-type·본문을
 > 그대로 전달한다 — 따라서 게이트웨이 호출과 백엔드 직접 호출의 응답 모양이 같다. 쿠키는
@@ -56,7 +56,7 @@ context-bundle  ingest  export  validate-references  projects
 ```
 
 `auth/*`, `admin/*`(사람/쿠키 세션 표면)은 게이트웨이에서 **항상 차단**되며 `404`를 반환한다.
-필요하면 백엔드 직접 경로를 사용한다.
+에이전트 대상 표면이 아니다.
 
 ---
 
@@ -90,7 +90,7 @@ curl -H "Authorization: Bearer $REGISTRY_API_KEY" \
 
 ```bash
 curl -H "Authorization: Bearer $REGISTRY_API_KEY" \
-  "https://llm-api.zerotymer.net/resolve?alias=사용자%20검색&locale=ko"
+  "https://llm-api.zerotymer.net/api/v1/resolve?alias=사용자%20검색&locale=ko"
 ```
 
 MCP 도구 호출은 API Key를 전달하지 않는다(서버가 자체 DB 세션으로 동작). 인증은 HTTP
@@ -223,9 +223,8 @@ UUID나 alias 목록의 유효성을 검증한다. `valid`, `resolved`, `ambiguo
 
 ## HTTP API 레퍼런스 (게이트웨이 / 직접)
 
-MCP를 사용할 수 없거나 데이터를 써야 할 때 HTTP API를 사용한다. 아래 경로는 **백엔드 경로**다.
-게이트웨이를 통하면 모든 경로 앞에 `/api/v1`을 붙인다(예: `GET /api/v1/resolve?...`).
-백엔드 직접 호출은 경로를 그대로 사용한다. 모든 요청에 API Key 헤더가 필요하다(인증 절 참고).
+MCP를 사용할 수 없거나 데이터를 써야 할 때 HTTP API를 사용한다. 아래 경로는 공통 프리픽스를
+생략해 표기했다 — 게이트웨이·백엔드 직접 모두 **항상 앞에 `/api/v1`을 붙인다**(예: `GET /api/v1/resolve?...`). 모든 요청에 API Key 헤더가 필요하다(인증 절 참고).
 
 ### 읽기 엔드포인트
 
@@ -271,8 +270,7 @@ MCP를 사용할 수 없거나 데이터를 써야 할 때 HTTP API를 사용한
 
 ## Batch Ingest 워크플로우 (파서용)
 
-문서(화면설계서, API 문서 등)를 파싱한 후 결과를 저장하려면 `POST /ingest/batch`를 사용한다
-(게이트웨이: `POST /api/v1/ingest/batch`).
+문서(화면설계서, API 문서 등)를 파싱한 후 결과를 저장하려면 `POST /api/v1/ingest/batch`를 사용한다.
 
 ### 등록 단위 분해 원칙
 
@@ -448,7 +446,7 @@ candidate ──▶ active ──▶ deprecated ──▶ archived
 
 ```
 1. 문서 파싱 → 엔티티/컨텍스트/관계 목록 구성
-2. POST /ingest/batch (게이트웨이: /api/v1/ingest/batch) 로 결과 전송
+2. POST /api/v1/ingest/batch 로 결과 전송
 3. 응답에서 경고와 카운트 확인
 ```
 

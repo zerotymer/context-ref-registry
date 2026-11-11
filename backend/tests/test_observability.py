@@ -25,7 +25,7 @@ async def test_health_returns_request_id_header(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_middleware_adds_request_id_to_all_responses(client: AsyncClient):
-    for path in ["/health", "/entities", "/search?q=test"]:
+    for path in ["/health", "/api/v1/entities", "/api/v1/search?q=test"]:
         res = await client.get(path)
         assert "x-request-id" in res.headers, f"Missing X-Request-ID on {path}"
 

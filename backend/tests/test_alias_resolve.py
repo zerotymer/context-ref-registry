@@ -5,7 +5,7 @@ from httpx import AsyncClient
 @pytest.fixture
 async def entity_a(admin_client: AsyncClient) -> str:
     resp = await admin_client.post(
-        "/entities",
+        "/api/v1/entities",
         json={"type": "FEATURE", "canonical_name": "관리자 사용자 검색"},
     )
     assert resp.status_code == 201
@@ -15,7 +15,7 @@ async def entity_a(admin_client: AsyncClient) -> str:
 @pytest.fixture
 async def entity_b(admin_client: AsyncClient) -> str:
     resp = await admin_client.post(
-        "/entities",
+        "/api/v1/entities",
         json={"type": "FEATURE", "canonical_name": "고객 사용자 검색"},
     )
     assert resp.status_code == 201
@@ -24,7 +24,7 @@ async def entity_b(admin_client: AsyncClient) -> str:
 
 async def _add_alias(admin_client: AsyncClient, entity_id: str, alias: str, locale: str = "ko") -> None:
     resp = await admin_client.post(
-        f"/entities/{entity_id}/aliases",
+        f"/api/v1/entities/{entity_id}/aliases",
         json={"locale": locale, "alias": alias},
     )
     assert resp.status_code == 201
@@ -32,7 +32,7 @@ async def _add_alias(admin_client: AsyncClient, entity_id: str, alias: str, loca
 
 class TestResolveAlias:
     async def test_not_found(self, client: AsyncClient):
-        resp = await client.get("/resolve", params={"alias": "없는alias"})
+        resp = await client.get("/api/v1/resolve", params={"alias": "없는alias"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["result"] == "not_found"
@@ -42,7 +42,7 @@ class TestResolveAlias:
     async def test_resolved_single_match(self, admin_client: AsyncClient, entity_a: str):
         await _add_alias(admin_client, entity_a, "사용자 검색 기능")
 
-        resp = await admin_client.get("/resolve", params={"alias": "사용자 검색 기능"})
+        resp = await admin_client.get("/api/v1/resolve", params={"alias": "사용자 검색 기능"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["result"] == "resolved"
@@ -53,7 +53,7 @@ class TestResolveAlias:
         await _add_alias(admin_client, entity_a, "사용자 검색")
         await _add_alias(admin_client, entity_b, "사용자 검색")
 
-        resp = await admin_client.get("/resolve", params={"alias": "사용자 검색"})
+        resp = await admin_client.get("/api/v1/resolve", params={"alias": "사용자 검색"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["result"] == "ambiguous"
@@ -65,7 +65,7 @@ class TestResolveAlias:
         await _add_alias(admin_client, entity_a, "user search", locale="en")
         await _add_alias(admin_client, entity_b, "user search", locale="ko")
 
-        resp = await admin_client.get("/resolve", params={"alias": "user search", "locale": "en"})
+        resp = await admin_client.get("/api/v1/resolve", params={"alias": "user search", "locale": "en"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["result"] == "resolved"
@@ -73,14 +73,14 @@ class TestResolveAlias:
 
     async def test_resolve_filtered_by_type(self, admin_client: AsyncClient, entity_a: str):
         ui_resp = await admin_client.post(
-            "/entities",
+            "/api/v1/entities",
             json={"type": "UI_AREA", "canonical_name": "검색 영역"},
         )
         ui_id = ui_resp.json()["data"]["id"]
         await _add_alias(admin_client, entity_a, "공통alias")
         await _add_alias(admin_client, ui_id, "공통alias")
 
-        resp = await admin_client.get("/resolve", params={"alias": "공통alias", "type": "FEATURE"})
+        resp = await admin_client.get("/api/v1/resolve", params={"alias": "공통alias", "type": "FEATURE"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["result"] == "resolved"
@@ -90,7 +90,7 @@ class TestResolveAlias:
 class TestAliasEndpoints:
     async def test_add_alias(self, admin_client: AsyncClient, entity_a: str):
         resp = await admin_client.post(
-            f"/entities/{entity_a}/aliases",
+            f"/api/v1/entities/{entity_a}/aliases",
             json={"locale": "ko", "alias": "테스트alias", "is_primary": True},
         )
         assert resp.status_code == 201
@@ -102,7 +102,7 @@ class TestAliasEndpoints:
     async def test_add_alias_entity_not_found(self, admin_client: AsyncClient):
         fake_id = "00000000-0000-0000-0000-000000000000"
         resp = await admin_client.post(
-            f"/entities/{fake_id}/aliases",
+            f"/api/v1/entities/{fake_id}/aliases",
             json={"locale": "ko", "alias": "어딘가"},
         )
         assert resp.status_code == 404
@@ -112,7 +112,7 @@ class TestAliasEndpoints:
         await _add_alias(admin_client, entity_a, "첫번째alias")
         await _add_alias(admin_client, entity_a, "두번째alias")
 
-        resp = await admin_client.get(f"/entities/{entity_a}/aliases")
+        resp = await admin_client.get(f"/api/v1/entities/{entity_a}/aliases")
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert len(data) == 2
@@ -121,5 +121,5 @@ class TestAliasEndpoints:
 
     async def test_list_aliases_entity_not_found(self, client: AsyncClient):
         fake_id = "00000000-0000-0000-0000-000000000000"
-        resp = await client.get(f"/entities/{fake_id}/aliases")
+        resp = await client.get(f"/api/v1/entities/{fake_id}/aliases")
         assert resp.status_code == 404

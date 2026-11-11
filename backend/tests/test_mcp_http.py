@@ -53,7 +53,7 @@ async def mcp_url():
             await asyncio.sleep(0.05)
         else:  # pragma: no cover
             raise RuntimeError("uvicorn server did not start")
-        yield f"http://127.0.0.1:{port}/mcp"
+        yield f"http://127.0.0.1:{port}/api/v1/mcp"
     finally:
         server.should_exit = True
         await task

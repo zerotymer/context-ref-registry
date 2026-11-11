@@ -13,7 +13,7 @@ from httpx import AsyncClient
 # ---------------------------------------------------------------------------
 
 async def _ensure_project(client: AsyncClient, project_id: str) -> None:
-    resp = await client.post("/projects", json={"id": project_id, "alias": project_id})
+    resp = await client.post("/api/v1/projects", json={"id": project_id, "alias": project_id})
     # 201 = created, 409 = already exists in this test session
     assert resp.status_code in (201, 409), resp.text
 
@@ -29,11 +29,11 @@ async def _create_entity_data(client: AsyncClient, **kwargs) -> dict:
     }
     if project_id:
         payload["project_id"] = project_id
-    resp = await client.post("/entities", json=payload)
+    resp = await client.post("/api/v1/entities", json=payload)
     assert resp.status_code == 201, resp.text
     eid = resp.json()["data"]["id"]
     # POST returns only {id}; GET yields the full EntityRead (incl. short_id).
-    got = await client.get(f"/entities/{eid}")
+    got = await client.get(f"/api/v1/entities/{eid}")
     assert got.status_code == 200, got.text
     return got.json()["data"]
 
@@ -43,7 +43,7 @@ async def _create_entity(client: AsyncClient, **kwargs) -> str:
 
 
 async def _add_tag(client: AsyncClient, entity_id: str, tag: str) -> None:
-    resp = await client.post(f"/entities/{entity_id}/tags", json={"tag": tag})
+    resp = await client.post(f"/api/v1/entities/{entity_id}/tags", json={"tag": tag})
     assert resp.status_code == 201, resp.text
 
 
@@ -55,7 +55,7 @@ async def _add_tag(client: AsyncClient, entity_id: str, tag: str) -> None:
 @pytest.mark.anyio
 async def test_get_entity_by_uuid(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="uuid test")
-    resp = await admin_client.get(f"/entities/{eid}")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}")
     assert resp.status_code == 200
     assert resp.json()["data"]["id"] == eid
 
@@ -69,7 +69,7 @@ async def test_get_entity_by_uuid(admin_client: AsyncClient):
 async def test_get_entity_scoped_uuid_match(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="scoped uuid", project_id="proj_a")
     ref = f"proj_a@{eid}"
-    resp = await admin_client.get(f"/entities/{ref}")
+    resp = await admin_client.get(f"/api/v1/entities/{ref}")
     assert resp.status_code == 200
     assert resp.json()["data"]["id"] == eid
 
@@ -78,7 +78,7 @@ async def test_get_entity_scoped_uuid_match(admin_client: AsyncClient):
 async def test_get_entity_scoped_uuid_project_mismatch(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="mismatch test", project_id="proj_a")
     ref = f"proj_b@{eid}"
-    resp = await admin_client.get(f"/entities/{ref}")
+    resp = await admin_client.get(f"/api/v1/entities/{ref}")
     assert resp.status_code == 404
     assert resp.json()["error"]["code"] == "PROJECT_SCOPE_MISMATCH"
 
@@ -93,7 +93,7 @@ async def test_get_entity_scoped_tag_single_match(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="tag test", project_id="proj_t")
     await _add_tag(admin_client, eid, "auth")
     ref = "proj_t@auth"
-    resp = await admin_client.get(f"/entities/{ref}")
+    resp = await admin_client.get(f"/api/v1/entities/{ref}")
     assert resp.status_code == 200
     assert resp.json()["data"]["id"] == eid
 
@@ -105,7 +105,7 @@ async def test_get_entity_scoped_tag_ambiguous(admin_client: AsyncClient):
     await _add_tag(admin_client, eid1, "shared_tag")
     await _add_tag(admin_client, eid2, "shared_tag")
     ref = "proj_amb@shared_tag"
-    resp = await admin_client.get(f"/entities/{ref}")
+    resp = await admin_client.get(f"/api/v1/entities/{ref}")
     assert resp.status_code == 422
     assert resp.json()["error"]["code"] == "AMBIGUOUS_TAG_REF"
     assert "matched_ids" in resp.json()["error"]["details"]
@@ -114,7 +114,7 @@ async def test_get_entity_scoped_tag_ambiguous(admin_client: AsyncClient):
 @pytest.mark.anyio
 async def test_get_entity_scoped_tag_missing(admin_client: AsyncClient):
     ref = "proj_none@nonexistent_tag"
-    resp = await admin_client.get(f"/entities/{ref}")
+    resp = await admin_client.get(f"/api/v1/entities/{ref}")
     assert resp.status_code == 404
     assert resp.json()["error"]["code"] == "ENTITY_NOT_FOUND"
 
@@ -148,7 +148,7 @@ async def test_get_entity_by_short_id(admin_client: AsyncClient):
     d = await _create_entity_data(admin_client, project_id="proj_sg", type="API")
     short_id = d["short_id"]
     assert short_id == "proj_sg-API-1"
-    resp = await admin_client.get(f"/entities/{short_id}")
+    resp = await admin_client.get(f"/api/v1/entities/{short_id}")
     assert resp.status_code == 200
     assert resp.json()["data"]["id"] == d["id"]
 
@@ -156,7 +156,7 @@ async def test_get_entity_by_short_id(admin_client: AsyncClient):
 @pytest.mark.anyio
 async def test_get_entity_by_short_id_not_found(admin_client: AsyncClient):
     await _ensure_project(admin_client, "proj_snf")
-    resp = await admin_client.get("/entities/proj_snf-FEATURE-999")
+    resp = await admin_client.get("/api/v1/entities/proj_snf-FEATURE-999")
     assert resp.status_code == 404
     assert resp.json()["error"]["code"] == "ENTITY_NOT_FOUND"
 
@@ -184,14 +184,14 @@ async def test_short_id_unique_under_concurrent_create(admin_client: AsyncClient
 
 @pytest.mark.anyio
 async def test_get_entity_invalid_format(admin_client: AsyncClient):
-    resp = await admin_client.get("/entities/@@invalid@@")
+    resp = await admin_client.get("/api/v1/entities/@@invalid@@")
     assert resp.status_code == 422
     assert resp.json()["error"]["code"] == "INVALID_REF_FORMAT"
 
 
 @pytest.mark.anyio
 async def test_get_entity_plain_string_invalid(admin_client: AsyncClient):
-    resp = await admin_client.get("/entities/not-a-uuid-at-all")
+    resp = await admin_client.get("/api/v1/entities/not-a-uuid-at-all")
     assert resp.status_code == 422
     assert resp.json()["error"]["code"] == "INVALID_REF_FORMAT"
 
@@ -207,7 +207,7 @@ async def test_context_bundle_mixed_refs(admin_client: AsyncClient):
     eid2 = await _create_entity(admin_client, canonical_name="bundle 2", project_id="proj_b")
     await _add_tag(admin_client, eid2, "bundle_tag")
 
-    resp = await admin_client.post("/context-bundle", json={
+    resp = await admin_client.post("/api/v1/context-bundle", json={
         "root_ids": [eid1, f"proj_b@{eid2}", "proj_b@bundle_tag"],
         "max_depth": 0,
     })
@@ -228,7 +228,7 @@ async def test_validate_references_mixed_patterns(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="validate test", project_id="proj_v")
     await _add_tag(admin_client, eid, "vtag")
 
-    resp = await admin_client.post("/validate-references", json={
+    resp = await admin_client.post("/api/v1/validate-references", json={
         "references": [
             eid,                         # Pattern 1: UUID
             f"proj_v@{eid}",             # Pattern 2: PROJECT_ID@UUID

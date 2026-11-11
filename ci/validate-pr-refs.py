@@ -7,7 +7,7 @@ Usage:
     git diff main...HEAD | python ci/validate-pr-refs.py -  # from stdin
 
 Environment variables:
-    REGISTRY_URL       Base URL of the registry API (default: http://localhost:8000)
+    REGISTRY_URL       Registry host root, backend or frontend gateway (default: http://localhost:8000)
     REGISTRY_API_KEY   API key for authentication (optional)
     GITHUB_TOKEN       GitHub token for posting PR comments
     PR_NUMBER          Pull request number
@@ -53,7 +53,7 @@ def call_validate_api(references: list[str]) -> dict:
         headers["Authorization"] = f"Bearer {REGISTRY_API_KEY}"
 
     req = Request(
-        f"{REGISTRY_URL.rstrip('/')}/validate-references",
+        f"{REGISTRY_URL.rstrip('/')}/api/v1/validate-references",
         data=payload,
         headers=headers,
         method="POST",

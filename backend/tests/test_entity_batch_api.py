@@ -22,7 +22,7 @@ def _entity_payload(canonical_name: str, project_id: str | None = None, entity_i
 
 @pytest.mark.anyio
 async def test_batch_create_all_success(admin_client: AsyncClient):
-    resp = await admin_client.post("/entities/batch", json={
+    resp = await admin_client.post("/api/v1/entities/batch", json={
         "entities": [
             _entity_payload("batch entity 1"),
             _entity_payload("batch entity 2"),
@@ -42,14 +42,14 @@ async def test_batch_create_all_success(admin_client: AsyncClient):
 async def test_batch_create_partial_failure(admin_client: AsyncClient):
     fixed_id = str(uuid.uuid4())
     # Create once to reserve the ID
-    resp1 = await admin_client.post("/entities/batch", json={
+    resp1 = await admin_client.post("/api/v1/entities/batch", json={
         "entities": [_entity_payload("first", entity_id=fixed_id)]
     })
     assert resp1.status_code == 207
     assert resp1.json()["data"]["created"] == 1
 
     # Second batch: same ID (duplicate) + a new valid one
-    resp2 = await admin_client.post("/entities/batch", json={
+    resp2 = await admin_client.post("/api/v1/entities/batch", json={
         "entities": [
             _entity_payload("duplicate", entity_id=fixed_id),
             _entity_payload("valid new entity"),
@@ -69,19 +69,19 @@ async def test_batch_create_partial_failure(admin_client: AsyncClient):
 @pytest.mark.anyio
 async def test_batch_create_over_limit(admin_client: AsyncClient):
     entities = [_entity_payload(f"entity {i}") for i in range(101)]
-    resp = await admin_client.post("/entities/batch", json={"entities": entities})
+    resp = await admin_client.post("/api/v1/entities/batch", json={"entities": entities})
     assert resp.status_code == 422
 
 
 @pytest.mark.anyio
 async def test_batch_create_empty_list(admin_client: AsyncClient):
-    resp = await admin_client.post("/entities/batch", json={"entities": []})
+    resp = await admin_client.post("/api/v1/entities/batch", json={"entities": []})
     assert resp.status_code == 422
 
 
 @pytest.mark.anyio
 async def test_batch_create_returns_ids(admin_client: AsyncClient):
-    resp = await admin_client.post("/entities/batch", json={
+    resp = await admin_client.post("/api/v1/entities/batch", json={
         "entities": [_entity_payload("check id entity")]
     })
     assert resp.status_code == 207
@@ -89,14 +89,14 @@ async def test_batch_create_returns_ids(admin_client: AsyncClient):
     assert item["ok"] is True
     # Verify the returned ID is a valid UUID and the entity actually exists
     eid = item["id"]
-    get_resp = await admin_client.get(f"/entities/{eid}")
+    get_resp = await admin_client.get(f"/api/v1/entities/{eid}")
     assert get_resp.status_code == 200
     assert get_resp.json()["data"]["id"] == eid
 
 
 @pytest.mark.anyio
 async def test_batch_create_index_matches_order(admin_client: AsyncClient):
-    resp = await admin_client.post("/entities/batch", json={
+    resp = await admin_client.post("/api/v1/entities/batch", json={
         "entities": [
             _entity_payload("first item"),
             _entity_payload("second item"),

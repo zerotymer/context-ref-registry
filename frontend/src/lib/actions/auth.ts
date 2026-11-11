@@ -1,9 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-const BACKEND = process.env.BACKEND_API_URL ?? "http://localhost:8000";
+const BACKEND = `${process.env.BACKEND_API_URL ?? "http://localhost:8000"}/api/v1`;
 const COOKIE_NAME = "access_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -56,6 +56,9 @@ export async function loginAction(loginId: string, password: string): Promise<Us
         sameSite: "lax",
         maxAge: COOKIE_MAX_AGE,
         path: "/",
+        // Secure when the reverse proxy terminated HTTPS (X-Forwarded-Proto);
+        // plain-HTTP access (local dev, direct :3000) keeps working.
+        secure: headers().get("x-forwarded-proto")?.startsWith("https") ?? false,
       });
     }
   }

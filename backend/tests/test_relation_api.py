@@ -5,7 +5,7 @@ from httpx import AsyncClient
 
 
 async def _create_entity(admin_client: AsyncClient, name: str = "테스트 엔티티", entity_type: str = "FEATURE") -> str:
-    resp = await admin_client.post("/entities", json={"type": entity_type, "canonical_name": name})
+    resp = await admin_client.post("/api/v1/entities", json={"type": entity_type, "canonical_name": name})
     assert resp.status_code == 201
     return resp.json()["data"]["id"]
 
@@ -17,7 +17,7 @@ async def _create_relation(
     relation_type: str = "RELATED_TO",
 ) -> dict:
     resp = await admin_client.post(
-        "/relations",
+        "/api/v1/relations",
         json={"from_entity_id": from_id, "to_entity_id": to_id, "relation_type": relation_type},
     )
     assert resp.status_code == 201
@@ -32,7 +32,7 @@ async def _create_relation(
 async def test_create_relation_returns_201(admin_client: AsyncClient):
     from_id = await _create_entity(admin_client, "엔티티 A")
     to_id = await _create_entity(admin_client, "엔티티 B")
-    resp = await admin_client.post("/relations", json={
+    resp = await admin_client.post("/api/v1/relations", json={
         "from_entity_id": from_id,
         "to_entity_id": to_id,
         "relation_type": "RELATED_TO",
@@ -50,7 +50,7 @@ async def test_create_relation_returns_201(admin_client: AsyncClient):
 async def test_create_relation_unauthenticated_returns_401(client: AsyncClient, admin_client: AsyncClient):
     from_id = await _create_entity(admin_client, "엔티티 A")
     to_id = await _create_entity(admin_client, "엔티티 B")
-    resp = await client.post("/relations", json={
+    resp = await client.post("/api/v1/relations", json={
         "from_entity_id": from_id,
         "to_entity_id": to_id,
         "relation_type": "RELATED_TO",
@@ -60,7 +60,7 @@ async def test_create_relation_unauthenticated_returns_401(client: AsyncClient, 
 
 async def test_create_relation_from_entity_not_found(admin_client: AsyncClient):
     to_id = await _create_entity(admin_client)
-    resp = await admin_client.post("/relations", json={
+    resp = await admin_client.post("/api/v1/relations", json={
         "from_entity_id": str(uuid.uuid4()),
         "to_entity_id": to_id,
         "relation_type": "RELATED_TO",
@@ -73,7 +73,7 @@ async def test_create_relation_from_entity_not_found(admin_client: AsyncClient):
 
 async def test_create_relation_to_entity_not_found(admin_client: AsyncClient):
     from_id = await _create_entity(admin_client)
-    resp = await admin_client.post("/relations", json={
+    resp = await admin_client.post("/api/v1/relations", json={
         "from_entity_id": from_id,
         "to_entity_id": str(uuid.uuid4()),
         "relation_type": "RELATED_TO",
@@ -96,7 +96,7 @@ async def test_list_relations_direction_out(admin_client: AsyncClient):
     await _create_relation(admin_client, a_id, b_id)   # A→B (outgoing from A)
     await _create_relation(admin_client, c_id, a_id)   # C→A (incoming to A)
 
-    resp = await admin_client.get(f"/entities/{a_id}/relations?direction=out")
+    resp = await admin_client.get(f"/api/v1/entities/{a_id}/relations?direction=out")
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data) == 1
@@ -111,7 +111,7 @@ async def test_list_relations_direction_in(admin_client: AsyncClient):
     await _create_relation(admin_client, a_id, b_id)   # A→B
     await _create_relation(admin_client, c_id, a_id)   # C→A (incoming to A)
 
-    resp = await admin_client.get(f"/entities/{a_id}/relations?direction=in")
+    resp = await admin_client.get(f"/api/v1/entities/{a_id}/relations?direction=in")
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data) == 1
@@ -126,7 +126,7 @@ async def test_list_relations_direction_both(admin_client: AsyncClient):
     await _create_relation(admin_client, a_id, b_id)
     await _create_relation(admin_client, c_id, a_id)
 
-    resp = await admin_client.get(f"/entities/{a_id}/relations?direction=both")
+    resp = await admin_client.get(f"/api/v1/entities/{a_id}/relations?direction=both")
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data) == 2
@@ -134,7 +134,7 @@ async def test_list_relations_direction_both(admin_client: AsyncClient):
 
 async def test_list_relations_invalid_direction(admin_client: AsyncClient):
     a_id = await _create_entity(admin_client, "A")
-    resp = await admin_client.get(f"/entities/{a_id}/relations?direction=invalid")
+    resp = await admin_client.get(f"/api/v1/entities/{a_id}/relations?direction=invalid")
     assert resp.status_code == 400
     body = resp.json()
     assert body["ok"] is False
@@ -153,7 +153,7 @@ async def test_list_relations_filter_by_type(admin_client: AsyncClient):
     await _create_relation(admin_client, a_id, b_id, "CONTAINS")
     await _create_relation(admin_client, a_id, c_id, "USES")
 
-    resp = await admin_client.get(f"/entities/{a_id}/relations?relation_type=CONTAINS")
+    resp = await admin_client.get(f"/api/v1/entities/{a_id}/relations?relation_type=CONTAINS")
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data) == 1
@@ -166,7 +166,7 @@ async def test_list_relations_filter_by_type(admin_client: AsyncClient):
 
 
 async def test_list_relations_entity_not_found(client: AsyncClient):
-    resp = await client.get(f"/entities/{uuid.uuid4()}/relations")
+    resp = await client.get(f"/api/v1/entities/{uuid.uuid4()}/relations")
     assert resp.status_code == 404
     body = resp.json()
     assert body["ok"] is False
@@ -186,7 +186,7 @@ async def test_list_relations_max_depth_1_only_direct(admin_client: AsyncClient)
     await _create_relation(admin_client, a_id, b_id, "CONTAINS")
     await _create_relation(admin_client, b_id, c_id, "CONTAINS")
 
-    resp = await admin_client.get(f"/entities/{a_id}/relations?direction=out&max_depth=1")
+    resp = await admin_client.get(f"/api/v1/entities/{a_id}/relations?direction=out&max_depth=1")
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data) == 1
@@ -202,7 +202,7 @@ async def test_list_relations_max_depth_2_includes_chain(admin_client: AsyncClie
     await _create_relation(admin_client, a_id, b_id, "CONTAINS")
     await _create_relation(admin_client, b_id, c_id, "CONTAINS")
 
-    resp = await admin_client.get(f"/entities/{a_id}/relations?direction=out&max_depth=2")
+    resp = await admin_client.get(f"/api/v1/entities/{a_id}/relations?direction=out&max_depth=2")
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data) == 2
@@ -213,6 +213,6 @@ async def test_list_relations_max_depth_2_includes_chain(admin_client: AsyncClie
 
 async def test_list_relations_empty(admin_client: AsyncClient):
     a_id = await _create_entity(admin_client, "A")
-    resp = await admin_client.get(f"/entities/{a_id}/relations")
+    resp = await admin_client.get(f"/api/v1/entities/{a_id}/relations")
     assert resp.status_code == 200
     assert resp.json()["data"] == []

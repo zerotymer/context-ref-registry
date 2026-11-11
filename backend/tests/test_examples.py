@@ -16,7 +16,7 @@ class TestDocsExamplesIntegration:
         entity_user_search_feature: dict,
     ):
         """DoD 1: entity 생성 후 UUID로 조회된다."""
-        resp = await client.get(f"/entities/{entity_user_search_feature['id']}")
+        resp = await client.get(f"/api/v1/entities/{entity_user_search_feature['id']}")
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["id"] == entity_user_search_feature["id"]
@@ -33,12 +33,12 @@ class TestDocsExamplesIntegration:
         shared_alias = "공통검색alias"
         for eid in [entity_user_search_area["id"], entity_user_search_feature["id"]]:
             r = await admin_client.post(
-                f"/entities/{eid}/aliases",
+                f"/api/v1/entities/{eid}/aliases",
                 json={"locale": "ko", "alias": shared_alias},
             )
             assert r.status_code == 201
 
-        resp = await admin_client.get("/resolve", params={"alias": shared_alias, "locale": "ko"})
+        resp = await admin_client.get("/api/v1/resolve", params={"alias": shared_alias, "locale": "ko"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["result"] == "ambiguous"
@@ -52,7 +52,7 @@ class TestDocsExamplesIntegration:
         entity_user_db: dict,
     ):
         """DoD 3: alias가 하나만 매칭되면 resolved를 반환한다."""
-        resp = await client.get("/resolve", params={"alias": "사용자 DB", "locale": "ko"})
+        resp = await client.get("/api/v1/resolve", params={"alias": "사용자 DB", "locale": "ko"})
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["result"] == "resolved"
@@ -60,7 +60,7 @@ class TestDocsExamplesIntegration:
 
     async def test_alias_not_found(self, client: AsyncClient):
         """DoD 4: 존재하지 않는 alias는 not_found를 반환한다."""
-        resp = await client.get("/resolve", params={"alias": "존재하지않는alias_xyz"})
+        resp = await client.get("/api/v1/resolve", params={"alias": "존재하지않는alias_xyz"})
         assert resp.status_code == 200
         assert resp.json()["data"]["result"] == "not_found"
 
@@ -72,7 +72,7 @@ class TestDocsExamplesIntegration:
         relation_feature_to_db: dict,
     ):
         """DoD 5: context bundle은 root entity와 직접 relation entity를 포함한다."""
-        resp = await client.post("/context-bundle", json={
+        resp = await client.post("/api/v1/context-bundle", json={
             "root_ids": [entity_user_search_feature["id"]],
             "include_relations": ["RELATED_TO", "READS_FROM"],
             "include_types": ["UI_AREA", "FEATURE", "INFRA_UNIT"],
@@ -95,7 +95,7 @@ class TestDocsExamplesIntegration:
         relation_feature_to_db: dict,
     ):
         """DoD 6: max_depth가 relation 탐색에 적용된다."""
-        resp = await client.post("/context-bundle", json={
+        resp = await client.post("/api/v1/context-bundle", json={
             "root_ids": [entity_user_search_area["id"]],
             "max_depth": 1,
             "token_budget": 4000,
@@ -109,14 +109,14 @@ class TestDocsExamplesIntegration:
 
     async def test_context_bundle_deprecated_warning(self, admin_client: AsyncClient):
         """DoD 7: deprecated entity가 bundle에 포함되면 warning이 반환된다."""
-        old = (await admin_client.post("/entities", json={"type": "FEATURE", "canonical_name": "구 기능"})).json()["data"]
-        new = (await admin_client.post("/entities", json={"type": "FEATURE", "canonical_name": "신 기능"})).json()["data"]
-        await admin_client.patch(f"/entities/{old['id']}", json={
+        old = (await admin_client.post("/api/v1/entities", json={"type": "FEATURE", "canonical_name": "구 기능"})).json()["data"]
+        new = (await admin_client.post("/api/v1/entities", json={"type": "FEATURE", "canonical_name": "신 기능"})).json()["data"]
+        await admin_client.patch(f"/api/v1/entities/{old['id']}", json={
             "status": "deprecated",
             "replacement_entity_id": new["id"],
         })
 
-        resp = await admin_client.post("/context-bundle", json={
+        resp = await admin_client.post("/api/v1/context-bundle", json={
             "root_ids": [old["id"]],
             "max_depth": 0,
             "token_budget": 4000,
@@ -164,7 +164,7 @@ class TestDocsExamplesIntegration:
                 "relation_type": "RELATED_TO",
             }],
         }
-        resp = await admin_client.post("/ingest/batch", json=payload)
+        resp = await admin_client.post("/api/v1/ingest/batch", json=payload)
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["created"]["entities"] == 2

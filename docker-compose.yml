@@ -4,7 +4,9 @@ services:
   api:
     build: ./backend
     ports:
-      - "8000:8000"
+      # Loopback only: a host reverse proxy can route /api/v1/* here (path-split
+      # mode) without exposing the API publicly. See docs/12-reverse-proxy.md.
+      - "127.0.0.1:8000:8000"
     env_file:
       - ./backend/.env  # ADMIN_PASSWORD (required), optional ADMIN_LOGIN_ID / JWT_SECRET
     environment:
@@ -20,11 +22,10 @@ services:
       retries: 3
       start_period: 15s
 
-  # MCP is served by the `api` service as a streamable-http endpoint at
-  # :8000/mcp (read-only, API key auth). No separate stdio service.
-  # Recommended external entry point is the frontend BFF proxy
-  # (`:3000/api/v1/mcp`); the direct `:8000` publish is kept for local dev
-  # (/docs, REST). Recovering it to internal-only is deferred to deployment.
+  # REST + MCP are served under /api/v1 (MCP: /api/v1/mcp, read-only, API key
+  # auth); only /health stays at root. The frontend exposes the same /api/v1
+  # paths, so a reverse proxy may send everything to :3000, or split /api/v1/*
+  # to :8000 — see docs/12-reverse-proxy.md.
 
   frontend:
     build:

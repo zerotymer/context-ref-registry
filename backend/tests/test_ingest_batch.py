@@ -30,7 +30,7 @@ def _make_entity(eid: str, etype: str = "UI_AREA", **kwargs) -> dict:
 @pytest.mark.asyncio
 async def test_batch_ingest_unauthenticated_returns_401(client: AsyncClient):
     payload = {"source": SAMPLE_SOURCE, "entities": [], "relations": []}
-    res = await client.post("/ingest/batch", json=payload)
+    res = await client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 401
 
 
@@ -66,7 +66,7 @@ async def test_batch_ingest_ok(admin_client: AsyncClient):
         ],
     }
 
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 200
     body = res.json()
     assert body["ok"] is True
@@ -92,7 +92,7 @@ async def test_batch_ingest_alias_count(admin_client: AsyncClient):
         ],
         "relations": [],
     }
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 200
     data = res.json()["data"]
     assert data["created"]["aliases"] == 3
@@ -109,12 +109,12 @@ async def test_batch_ingest_alias_dedup(admin_client: AsyncClient):
         "relations": [],
     }
     # First ingest
-    res1 = await admin_client.post("/ingest/batch", json=payload)
+    res1 = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res1.status_code == 200
     assert res1.json()["data"]["created"]["aliases"] == 1
 
     # Second ingest — same alias should be skipped
-    res2 = await admin_client.post("/ingest/batch", json=payload)
+    res2 = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res2.status_code == 200
     assert res2.json()["data"]["created"]["aliases"] == 0
 
@@ -127,7 +127,7 @@ async def test_batch_ingest_entity_upsert(admin_client: AsyncClient):
         "entities": [_make_entity(ENTITY_A_ID, "UI_AREA", canonical_name="원래 이름")],
         "relations": [],
     }
-    res1 = await admin_client.post("/ingest/batch", json=payload1)
+    res1 = await admin_client.post("/api/v1/ingest/batch", json=payload1)
     assert res1.json()["data"]["created"]["entities"] == 1
 
     payload2 = {
@@ -135,7 +135,7 @@ async def test_batch_ingest_entity_upsert(admin_client: AsyncClient):
         "entities": [_make_entity(ENTITY_A_ID, "UI_AREA", canonical_name="새 이름")],
         "relations": [],
     }
-    res2 = await admin_client.post("/ingest/batch", json=payload2)
+    res2 = await admin_client.post("/api/v1/ingest/batch", json=payload2)
     assert res2.status_code == 200
     data2 = res2.json()["data"]
     assert data2["created"]["entities"] == 0
@@ -150,14 +150,14 @@ async def test_batch_ingest_type_change_forbidden(admin_client: AsyncClient):
         "entities": [_make_entity(ENTITY_A_ID, "UI_AREA")],
         "relations": [],
     }
-    await admin_client.post("/ingest/batch", json=payload1)
+    await admin_client.post("/api/v1/ingest/batch", json=payload1)
 
     payload2 = {
         "source": SAMPLE_SOURCE,
         "entities": [_make_entity(ENTITY_A_ID, "FEATURE")],
         "relations": [],
     }
-    res = await admin_client.post("/ingest/batch", json=payload2)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload2)
     assert res.status_code == 400
     body = res.json()
     assert body["ok"] is False
@@ -179,7 +179,7 @@ async def test_batch_ingest_relation_missing_target(admin_client: AsyncClient):
             }
         ],
     }
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 400
     body = res.json()
     assert body["ok"] is False
@@ -203,7 +203,7 @@ async def test_batch_ingest_relation_within_batch(admin_client: AsyncClient):
             }
         ],
     }
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 200
     data = res.json()["data"]
     assert data["created"]["entities"] == 2
@@ -215,7 +215,7 @@ async def test_batch_ingest_relation_to_existing_db_entity(admin_client: AsyncCl
     """Relation target can be an entity that already exists in the DB."""
     # Pre-create entity B via regular API
     res_b = await admin_client.post(
-        "/entities",
+        "/api/v1/entities",
         json={
             "id": ENTITY_B_ID,
             "type": "FEATURE",
@@ -235,7 +235,7 @@ async def test_batch_ingest_relation_to_existing_db_entity(admin_client: AsyncCl
             }
         ],
     }
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 200
     data = res.json()["data"]
     assert data["created"]["relations"] == 1
@@ -245,7 +245,7 @@ async def test_batch_ingest_relation_to_existing_db_entity(admin_client: AsyncCl
 async def test_batch_ingest_no_entities(admin_client: AsyncClient):
     """Empty entity list should succeed."""
     payload = {"source": SAMPLE_SOURCE, "entities": [], "relations": []}
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 200
     data = res.json()["data"]
     assert data["created"]["entities"] == 0
@@ -259,8 +259,8 @@ async def test_batch_ingest_source_ref_dedup(admin_client: AsyncClient):
         "entities": [_make_entity(ENTITY_A_ID, "UI_AREA")],
         "relations": [],
     }
-    res1 = await admin_client.post("/ingest/batch", json=payload)
-    res2 = await admin_client.post("/ingest/batch", json=payload)
+    res1 = await admin_client.post("/api/v1/ingest/batch", json=payload)
+    res2 = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res1.json()["data"]["source_ref_id"] == res2.json()["data"]["source_ref_id"]
 
 
@@ -283,7 +283,7 @@ async def test_batch_ingest_returns_entity_refs(admin_client: AsyncClient):
         ],
         "relations": [],
     }
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 200
     refs = res.json()["data"]["entities"]
     assert len(refs) == 2
@@ -313,14 +313,14 @@ async def test_batch_ingest_server_assigned_id_is_resolvable(admin_client: Async
         ],
         "relations": [],
     }
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 200
     refs = res.json()["data"]["entities"]
     assert len(refs) == 1
     entity_id = refs[0]["entity_id"]
 
     # Re-fetch using the returned id — no re-search needed
-    got = await admin_client.get(f"/entities/{entity_id}")
+    got = await admin_client.get(f"/api/v1/entities/{entity_id}")
     assert got.status_code == 200
     assert got.json()["data"]["canonical_name"] == "신규 영역"
 
@@ -333,10 +333,10 @@ async def test_batch_ingest_ref_operation_updated(admin_client: AsyncClient):
         "entities": [_make_entity(ENTITY_A_ID, "UI_AREA")],
         "relations": [],
     }
-    res1 = await admin_client.post("/ingest/batch", json=payload)
+    res1 = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res1.json()["data"]["entities"][0]["operation"] == "created"
 
-    res2 = await admin_client.post("/ingest/batch", json=payload)
+    res2 = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res2.json()["data"]["entities"][0]["operation"] == "updated"
 
 
@@ -355,7 +355,7 @@ async def test_batch_ingest_issue_type(admin_client: AsyncClient):
         ],
         "relations": [],
     }
-    res = await admin_client.post("/ingest/batch", json=payload)
+    res = await admin_client.post("/api/v1/ingest/batch", json=payload)
     assert res.status_code == 200
     body = res.json()
     assert body["ok"] is True

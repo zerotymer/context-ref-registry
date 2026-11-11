@@ -4,6 +4,8 @@
 
 MVP에서는 REST API가 write/read를 모두 담당하고, MCP는 read-only로 둔다.
 
+> **URL 규격**: 아래 문서의 모든 경로(`/entities` 등)는 실제로 `/api/v1` 아래에 있다 (예: `POST /api/v1/ingest/batch`, MCP `/api/v1/mcp/`). 백엔드(:8000)와 프론트 게이트웨이(:3000)가 같은 경로를 노출한다. 리버스 프록시 연동은 [12-reverse-proxy.md](12-reverse-proxy.md) 참고.
+
 ## 공통 응답 형식
 
 성공:

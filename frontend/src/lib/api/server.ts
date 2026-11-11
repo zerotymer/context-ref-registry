@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { ApiError } from "./client";
 
-const BACKEND = process.env.BACKEND_API_URL ?? "http://localhost:8000";
+// Backend REST lives under /api/v1 (same contract as the public gateway).
+const BACKEND = `${process.env.BACKEND_API_URL ?? "http://localhost:8000"}/api/v1`;
 
 export async function backendFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const cookieStore = cookies();

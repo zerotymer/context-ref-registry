@@ -85,6 +85,7 @@ Phase 3-1 — pgvector semantic search                 ✖ 폐기 (sqlite-vec �
 
 | UUID | 파일 | 분류 | 상태 |
 |------|------|------|------|
+| fc088f89 | .completed/ | URL 규격·리버스 프록시 | `completed` 2026-11-11 — 백엔드 `/api/v1` prefix, 프론트 단일·경로 분리 동시 호환, `docs/12-reverse-proxy.md` (v2.1.0) |
 | 8607659b | .completed/ | SQLite·경량화·인증 | `completed` 2026-11-11 — PostgreSQL → SQLite, 컨테이너 2개, 단일 관리자 + 프로젝트 키 (v2.0.0) |
 | c5e60dba | .completed/ | UI_AREA 목업 | `completed` 2026-06-23 — `GET /entities/{id}/mockup` |
 | 71f9e0d0 | .completed/ | Ingest 식별자 | `completed` 2026-06-23 — `/ingest/batch` 응답 `entities[]` 매핑 |

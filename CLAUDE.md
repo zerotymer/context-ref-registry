@@ -30,8 +30,9 @@ LLM Reference Registry — 코딩 에이전트(Codex, Claude Code, Cursor 등)�
 | Ingest 식별자 반환 | `POST /ingest/batch` 응답 `entities[]` — 입력 index ↔ 저장 entity_id 매핑 (operation·활성 alias 동봉, 재조회 불필요) | 완료 |
 | Bundle Graph 탭 | `/bundle` 탐색기 Graph 탭 — AntV G6 d3-force 관계도 (degree 비례 노드, `next/dynamic` 지연 로딩) | 완료 |
 | SQLite 전환·경량화 | PostgreSQL 16 → SQLite(WAL, `BEGIN IMMEDIATE` 쓰기 직렬화), 컨테이너 4→2개, 마이그레이션 baseline 1개, API 이미지 멀티스테이지(383→222MB), v2.0.0 | 완료 |
+| `/api/v1` URL 규격·리버스 프록시 안내 | 백엔드 REST·MCP·docs 전부 `/api/v1` 아래(`/health`만 루트) → 프론트 단일 업스트림·경로 분리(DT 방식) 동시 호환. 프록시는 미포함, `docs/12-reverse-proxy.md` 안내. 관리자 쿠키 `X-Forwarded-Proto` 기반 Secure, api 포트 루프백 바인딩, v2.1.0 | 완료 |
 
-테스트: 백엔드 **300 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **303 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
 ## 기술 스택
 
@@ -47,11 +48,11 @@ LLM Reference Registry — 코딩 에이전트(Codex, Claude Code, Cursor 등)�
 외부 Parser/Agent → POST /ingest/batch → Registry (SQLite)
                                               ↓
 Coding Agent ← Next BFF /api/v1/mcp (스트리밍 프록시) ← MCP read-only
-              (front:3000)                             (api:8000/mcp, streamable-http) ← REST read API
+              (front:3000)                             (api:8000/api/v1/mcp, streamable-http) ← REST read API
 ```
 
 REST API는 write/read 모두 담당하고, MCP server는 **read-only**로만 제공한다.
-MCP는 `api` 앱에 `/mcp` streamable-http 엔드포인트로 마운트되며 API Key 인증 +
+MCP는 `api` 앱에 `/api/v1/mcp` streamable-http 엔드포인트로 마운트되며 API Key 인증 +
 프로젝트 범위 필터를 적용한다 (stdio 폐기). 에이전트의 **외부 진입점은 프론트
 BFF `/api/v1/mcp`** (단계 C) — 요청/응답 바디를 스트림 그대로 pipe하고 세션·프로토콜
 헤더를 passthrough하며 쿠키는 차단한다.
@@ -59,7 +60,7 @@ BFF `/api/v1/mcp`** (단계 C) — 요청/응답 바디를 스트림 그대로 p
 ## 프로젝트 구조 (top-level)
 
 ```
-docker-compose.yml      # api(8000, MCP /mcp 포함, registry_data:/data), frontend(3000)
+docker-compose.yml      # api(127.0.0.1:8000, REST·MCP 모두 /api/v1, registry_data:/data), frontend(3000)
 docker-compose.override.yml  # dev 전용 (--reload + app 소스 바인드)
 backend/                # FastAPI 앱 — 상세 구조는 backend/CLAUDE.md 참조
 frontend/               # Next.js 관리자 콘솔 — BFF 패턴 (Server Actions)
@@ -67,7 +68,7 @@ frontend/               # Next.js 관리자 콘솔 — BFF 패턴 (Server Action
                         #   + MCP 스트리밍 프록시 (src/app/api/v1/mcp/[[...path]] → 백엔드 /mcp/)
 ci/                     # PR 참조 검증 스크립트 (validate-pr-refs.py)
 .github/workflows/      # ci.yml(테스트) · release.yml(v* 태그 → GHCR·Docker Hub) · pr-validate-refs.yml
-docs/                   # 설계 문서 00~11
+docs/                   # 설계 문서 00~12 (12: 리버스 프록시 안내)
 instructions/           # 구현 지침 파일
   deploy-build.md       #   배포 빌드 명령어 (영구 참조)
 .output/                # 생성된 산출물 (목업 HTML, 보고서 등) — gitignore, 커밋된 딜리버러블만 추적 유지
@@ -99,7 +100,7 @@ Docker Hub에 `버전`·`latest` 푸시 (`.github/workflows/release.yml`, 환경
 태그: `latest` + 버전 태그 → 2×2 = **4개**
 
 ```bash
-make release              # VERSION=2.0.0 (기본값)
+make release              # VERSION=2.1.0 (기본값)
 make release VERSION=2.1.0  # 버전 지정
 ```
 
@@ -111,7 +112,7 @@ docker login
 
 ## 설계 문서
 
-`docs/` 폴더에 00~11 번호 순으로 모든 설계가 있다. 구현 중 판단이 필요하면 해당 문서를 우선 참고한다.
+`docs/` 폴더에 00~12 번호 순으로 모든 설계가 있다. 구현 중 판단이 필요하면 해당 문서를 우선 참고한다.
 
 ## Instructions 워크플로우
 
@@ -150,9 +151,9 @@ docker login
 
 | UUID | 파일 | 상태 |
 |------|------|------|
+| fc088f89-19b8-4201-a310-96a843397ef3 | .completed/ | completed (2026-11-11) — 백엔드 `/api/v1` prefix 규격화, 리버스 프록시 2방식 동시 호환 안내 (v2.1.0) |
 | 8607659b-324e-4cea-8bea-be2a9c51aa34 | .completed/ | completed (2026-11-11) — PostgreSQL → SQLite 전환, 배포 경량화(컨테이너 2개), 단일 관리자 + 프로젝트 키 인증 (v2.0.0) |
 | c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | .completed/ | completed (2026-06-23) — UI_AREA `metadata.mockup` → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
-| 71f9e0d0-7257-408b-b412-eef4e1e8e521 | .completed/ | completed (2026-06-23) — `/ingest/batch` 응답 `entities[]`에 entity id·operation·alias 매핑 반환 |
 | 19e52237-68d4-4952-8c30-dd0eb9285ff0 | `deploy-build.md` | **reference** (영구) — 배포 빌드 명령어 (Docker Hub, 4개 태그) |
 
 ## Git Branch 전략

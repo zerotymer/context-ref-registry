@@ -15,13 +15,13 @@ async def _create_entity(admin_client: AsyncClient, **kwargs) -> str:
         "canonical_name": kwargs.get("canonical_name", "테스트 기능"),
         **{k: v for k, v in kwargs.items() if k != "canonical_name"},
     }
-    resp = await admin_client.post("/entities", json=payload)
+    resp = await admin_client.post("/api/v1/entities", json=payload)
     assert resp.status_code == 201, resp.text
     return resp.json()["data"]["id"]
 
 
 async def _get_history(admin_client: AsyncClient, entity_id: str) -> list[dict]:
-    resp = await admin_client.get(f"/entities/{entity_id}/history")
+    resp = await admin_client.get(f"/api/v1/entities/{entity_id}/history")
     assert resp.status_code == 200
     return resp.json()["data"]["items"]
 
@@ -43,7 +43,7 @@ async def test_create_entity_generates_revision_1(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_update_increments_revision_no(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="업데이트 기능")
-    await admin_client.patch(f"/entities/{eid}", json={"canonical_name": "업데이트된 기능"})
+    await admin_client.patch(f"/api/v1/entities/{eid}", json={"canonical_name": "업데이트된 기능"})
     history = await _get_history(admin_client, eid)
     assert len(history) == 2
     rev_nos = sorted(h["revision_no"] for h in history)
@@ -53,7 +53,7 @@ async def test_update_increments_revision_no(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_update_snapshot_is_before_image(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="원래 이름")
-    await admin_client.patch(f"/entities/{eid}", json={"canonical_name": "바뀐 이름"})
+    await admin_client.patch(f"/api/v1/entities/{eid}", json={"canonical_name": "바뀐 이름"})
 
     history = await _get_history(admin_client, eid)
     update_entry = next(h for h in history if h["revision_no"] == 2)
@@ -66,7 +66,7 @@ async def test_update_snapshot_is_before_image(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_status_change_type(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, status="candidate")
-    await admin_client.patch(f"/entities/{eid}", json={"status": "active"})
+    await admin_client.patch(f"/api/v1/entities/{eid}", json={"status": "active"})
     history = await _get_history(admin_client, eid)
     update_entry = next(h for h in history if h["revision_no"] == 2)
     assert update_entry["change_type"] == "status_change"
@@ -75,7 +75,7 @@ async def test_status_change_type(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_deprecate_change_type(admin_client: AsyncClient):
     eid = await _create_entity(admin_client)
-    await admin_client.patch(f"/entities/{eid}", json={"status": "deprecated", "deprecation_reason": "obsolete"})
+    await admin_client.patch(f"/api/v1/entities/{eid}", json={"status": "deprecated", "deprecation_reason": "obsolete"})
     history = await _get_history(admin_client, eid)
     update_entry = next(h for h in history if h["revision_no"] == 2)
     assert update_entry["change_type"] == "deprecate"
@@ -84,8 +84,8 @@ async def test_deprecate_change_type(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_history_list_descending_order(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="정렬 테스트")
-    await admin_client.patch(f"/entities/{eid}", json={"canonical_name": "수정 1"})
-    await admin_client.patch(f"/entities/{eid}", json={"canonical_name": "수정 2"})
+    await admin_client.patch(f"/api/v1/entities/{eid}", json={"canonical_name": "수정 1"})
+    await admin_client.patch(f"/api/v1/entities/{eid}", json={"canonical_name": "수정 2"})
 
     history = await _get_history(admin_client, eid)
     assert len(history) == 3
@@ -96,9 +96,9 @@ async def test_history_list_descending_order(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_get_specific_revision(admin_client: AsyncClient):
     eid = await _create_entity(admin_client, canonical_name="리비전 조회")
-    await admin_client.patch(f"/entities/{eid}", json={"canonical_name": "변경됨"})
+    await admin_client.patch(f"/api/v1/entities/{eid}", json={"canonical_name": "변경됨"})
 
-    resp = await admin_client.get(f"/entities/{eid}/history/1")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/history/1")
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert data["revision_no"] == 1
@@ -108,14 +108,14 @@ async def test_get_specific_revision(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_get_nonexistent_revision_returns_404(admin_client: AsyncClient):
     eid = await _create_entity(admin_client)
-    resp = await admin_client.get(f"/entities/{eid}/history/99")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/history/99")
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_changed_by_header_saved(admin_client: AsyncClient):
     resp = await admin_client.post(
-        "/entities",
+        "/api/v1/entities",
         json={"type": "FEATURE", "canonical_name": "에이전트 기록"},
         headers={"X-Changed-By": "agent-codex-v1"},
     )
@@ -129,7 +129,7 @@ async def test_changed_by_header_saved(admin_client: AsyncClient):
 async def test_change_reason_saved(admin_client: AsyncClient):
     eid = await _create_entity(admin_client)
     await admin_client.patch(
-        f"/entities/{eid}",
+        f"/api/v1/entities/{eid}",
         json={"status": "active", "change_reason": "QA 완료 후 승인"},
     )
     history = await _get_history(admin_client, eid)
@@ -139,14 +139,14 @@ async def test_change_reason_saved(admin_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_batch_ingest_creates_history(admin_client: AsyncClient):
-    resp = await admin_client.post("/ingest/batch", json={
+    resp = await admin_client.post("/api/v1/ingest/batch", json={
         "source": {"type": "test", "uri": "file://hist-ingest", "name": "hist-source"},
         "entities": [{"type": "FEATURE", "canonical_name": "인제스트 히스토리"}],
         "relations": [],
     })
     assert resp.status_code == 200
 
-    search_resp = await admin_client.get("/search", params={"q": "인제스트 히스토리"})
+    search_resp = await admin_client.get("/api/v1/search", params={"q": "인제스트 히스토리"})
     eid = search_resp.json()["data"][0]["id"]
     history = await _get_history(admin_client, eid)
     assert len(history) == 1
@@ -161,8 +161,8 @@ async def test_batch_ingest_update_creates_new_revision(admin_client: AsyncClien
         "entities": [{"type": "FEATURE", "canonical_name": "재인제스트 기능"}],
         "relations": [],
     }
-    await admin_client.post("/ingest/batch", json=payload_base)
-    search_resp = await admin_client.get("/search", params={"q": "재인제스트 기능"})
+    await admin_client.post("/api/v1/ingest/batch", json=payload_base)
+    search_resp = await admin_client.get("/api/v1/search", params={"q": "재인제스트 기능"})
     eid = search_resp.json()["data"][0]["id"]
 
     payload_update = {
@@ -170,7 +170,7 @@ async def test_batch_ingest_update_creates_new_revision(admin_client: AsyncClien
         "entities": [{"id": eid, "type": "FEATURE", "canonical_name": "재인제스트 기능 v2"}],
         "relations": [],
     }
-    await admin_client.post("/ingest/batch", json=payload_update)
+    await admin_client.post("/api/v1/ingest/batch", json=payload_update)
 
     history = await _get_history(admin_client, eid)
     assert len(history) == 2
@@ -181,9 +181,9 @@ async def test_batch_ingest_update_creates_new_revision(admin_client: AsyncClien
 async def test_history_total_count(admin_client: AsyncClient):
     eid = await _create_entity(admin_client)
     for i in range(3):
-        await admin_client.patch(f"/entities/{eid}", json={"canonical_name": f"변경 {i}"})
+        await admin_client.patch(f"/api/v1/entities/{eid}", json={"canonical_name": f"변경 {i}"})
 
-    resp = await admin_client.get(f"/entities/{eid}/history")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/history")
     assert resp.json()["data"]["total"] == 4  # create + 3 updates
 
 
@@ -191,9 +191,9 @@ async def test_history_total_count(admin_client: AsyncClient):
 async def test_history_pagination(admin_client: AsyncClient):
     eid = await _create_entity(admin_client)
     for i in range(4):
-        await admin_client.patch(f"/entities/{eid}", json={"canonical_name": f"페이징 {i}"})
+        await admin_client.patch(f"/api/v1/entities/{eid}", json={"canonical_name": f"페이징 {i}"})
 
-    resp = await admin_client.get(f"/entities/{eid}/history", params={"limit": 2, "offset": 0})
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/history", params={"limit": 2, "offset": 0})
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data["items"]) == 2
@@ -203,5 +203,5 @@ async def test_history_pagination(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_history_for_nonexistent_entity_returns_404(client: AsyncClient):
     fake_id = "00000000-0000-0000-0000-000000000001"
-    resp = await client.get(f"/entities/{fake_id}/history")
+    resp = await client.get(f"/api/v1/entities/{fake_id}/history")
     assert resp.status_code == 404

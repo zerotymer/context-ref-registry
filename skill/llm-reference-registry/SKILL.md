@@ -29,19 +29,19 @@ the MCP server configured; otherwise use the **HTTP API**.
 
 | Method | Endpoint | When to Use |
 |--------|----------|-------------|
-| **MCP** | streamable-http `https://llm-api.zerotymer.net/mcp` (API key header) | Agent platform has the MCP server configured. Read-only, project-scoped. |
+| **MCP** | streamable-http `https://llm-reg.zerotymer.net/api/v1/mcp` (API key header) | Agent platform has the MCP server configured. Read-only, project-scoped. |
 | **HTTP API (gateway)** | `https://llm-reg.zerotymer.net/api/v1/*` | **Preferred HTTP path.** Next BFF Route Handler → backend proxy. |
-| **HTTP API (direct)** | `https://llm-api.zerotymer.net/*` | Fallback: backend API directly (no `/api/v1` prefix). |
+| **HTTP API (direct)** | `https://llm-api.zerotymer.net/api/v1/*` | Fallback: backend API directly (same `/api/v1` paths). |
 
 ### Which HTTP endpoint to use
 
 1. **Default to the gateway** — `https://llm-reg.zerotymer.net/api/v1/...`.
    It is the Next.js Route Handler that proxies to the backend with API Key
-   passthrough. Paths keep their normal names but are **prefixed with `/api/v1`**.
-2. **Fall back to the direct backend** — `https://llm-api.zerotymer.net/...`
-   (no `/api/v1` prefix) only if the gateway is unreachable.
+   passthrough. Every path starts with **`/api/v1`**.
+2. **Fall back to the direct backend** — `https://llm-api.zerotymer.net/api/v1/...`
+   only if the gateway is unreachable. Paths are identical; only the host differs.
 3. For **local development** the gateway is `http://localhost:3000/api/v1/*`
-   and the backend is `http://localhost:8000/*`.
+   and the backend is `http://localhost:8000/api/v1/*`.
 
 > The gateway **does not unwrap** the response envelope and preserves the
 > backend status code, content-type, and body verbatim — so a gateway call and
@@ -58,7 +58,7 @@ context-bundle  ingest  export  validate-references  projects
 ```
 
 `auth/*` and `admin/*` (human/cookie-session surfaces) are **always blocked**
-at the gateway and return `404`. Use the direct backend for those if ever needed.
+at the gateway and return `404`. They are not part of the agent surface.
 
 ---
 
@@ -93,7 +93,7 @@ curl -H "Authorization: Bearer $REGISTRY_API_KEY" \
 
 ```bash
 curl -H "Authorization: Bearer $REGISTRY_API_KEY" \
-  "https://llm-api.zerotymer.net/resolve?alias=User%20Search&locale=en"
+  "https://llm-api.zerotymer.net/api/v1/resolve?alias=User%20Search&locale=en"
 ```
 
 MCP tool calls do not pass an API Key (the server runs with its own DB session);
@@ -227,8 +227,8 @@ specific entities.
 ## HTTP API Reference (Gateway / Direct)
 
 Use the HTTP API when MCP is unavailable or you need to write data. Paths below
-are **backend paths**. Through the gateway, prefix every path with `/api/v1`
-(e.g. `GET /api/v1/resolve?...`). Direct-backend calls use the path as-is.
+are shown without the common prefix — **always prepend `/api/v1`**
+(e.g. `GET /api/v1/resolve?...`), on both the gateway and the direct backend.
 All requests require an API Key header (see Authentication).
 
 ### Read Endpoints
@@ -276,7 +276,7 @@ All requests require an API Key header (see Authentication).
 ## Batch Ingest Workflow (For Parsers)
 
 When you parse a document (screen spec, API doc, etc.) and want to store
-the result, use `POST /ingest/batch` (gateway: `POST /api/v1/ingest/batch`).
+the result, use `POST /api/v1/ingest/batch`.
 The request format:
 
 ### Decompose Registration Units
@@ -457,7 +457,7 @@ When you encounter a **deprecated** entity:
 
 ```
 1. Parse document → build entity list with contexts/relations
-2. POST /ingest/batch (gateway: /api/v1/ingest/batch) with the result
+2. POST /api/v1/ingest/batch with the result
 3. Check response for warnings and counts
 ```
 
