@@ -29,7 +29,7 @@ LLM Reference Registry — 코딩 에이전트(Codex, Claude Code, Cursor 등)�
 | UI_AREA 목업 HTML | `GET /entities/{id}/mockup` — UI_AREA `metadata.mockup` → 서버사이드 정적 HTML 렌더 (미저장, XSS 이스케이프, BFF passthrough) | 완료 |
 | Ingest 식별자 반환 | `POST /ingest/batch` 응답 `entities[]` — 입력 index ↔ 저장 entity_id 매핑 (operation·활성 alias 동봉, 재조회 불필요) | 완료 |
 | Bundle Graph 탭 | `/bundle` 탐색기 Graph 탭 — AntV G6 d3-force 관계도 (degree 비례 노드, `next/dynamic` 지연 로딩) | 완료 |
-| SQLite 전환·경량화 | PostgreSQL 16 → SQLite(WAL, `BEGIN IMMEDIATE` 쓰기 직렬화), 컨테이너 4→2개, 마이그레이션 baseline 1개, API 이미지 멀티스테이지 | 진행 중 |
+| SQLite 전환·경량화 | PostgreSQL 16 → SQLite(WAL, `BEGIN IMMEDIATE` 쓰기 직렬화), 컨테이너 4→2개, 마이그레이션 baseline 1개, API 이미지 멀티스테이지(383→222MB), v2.0.0 | 완료 |
 
 테스트: 백엔드 **300 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
@@ -146,10 +146,9 @@ docker login                          # Docker Hub
 
 | UUID | 파일 | 상태 |
 |------|------|------|
-| 8607659b-324e-4cea-8bea-be2a9c51aa34 | `sqlite-lightweight.md` | **in-progress** — PostgreSQL → SQLite 전환, 배포 경량화, 단일 관리자 인증 개편 |
+| 8607659b-324e-4cea-8bea-be2a9c51aa34 | .completed/ | completed (2026-11-11) — PostgreSQL → SQLite 전환, 배포 경량화(컨테이너 2개), 단일 관리자 + 프로젝트 키 인증 (v2.0.0) |
 | c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | .completed/ | completed (2026-06-23) — UI_AREA `metadata.mockup` → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
 | 71f9e0d0-7257-408b-b412-eef4e1e8e521 | .completed/ | completed (2026-06-23) — `/ingest/batch` 응답 `entities[]`에 entity id·operation·alias 매핑 반환 |
-| ad25787d-4392-4d35-9751-ba050ae7cf9e | .completed/ | completed (2026-06-23) — 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
 | 19e52237-68d4-4952-8c30-dd0eb9285ff0 | `deploy-build.md` | **reference** (영구) — 배포 빌드 명령어 (Docker Hub, 4개 태그) |
 
 ## Git Branch 전략

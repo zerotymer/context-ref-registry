@@ -28,7 +28,7 @@
 | UI_AREA 목업 HTML (`GET /entities/{id}/mockup`) | ✅ 완료 |
 | Ingest 식별자 반환 (`POST /ingest/batch` 응답 `entities[]`) | ✅ 완료 |
 | Bundle Graph 탭 (`/bundle` AntV G6 d3-force 관계도) | ✅ 완료 |
-| PostgreSQL → SQLite(WAL) 전환·경량화 (컨테이너 4→2개, 마이그레이션 baseline 1개) | 🚧 진행 중 (lock 갱신·이미지 검증 남음) |
+| PostgreSQL → SQLite(WAL) 전환·경량화 (컨테이너 4→2개, 마이그레이션 baseline 1개) | ✅ 완료 (v2.0.0) |
 
 테스트: 백엔드 **300 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
