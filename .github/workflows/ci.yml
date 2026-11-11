@@ -1,0 +1,83 @@
+name: CI
+
+# Package sources come only from repository secrets (never the public index):
+#   UV_TOML — uv.toml whose default [[index]] is reachable from the runner (with credentials)
+#   NPMRC   — .npmrc with registry + auth reachable from the runner
+# Dependencies are installed from hash-pinned lock files, so tampered artifacts fail.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+    secrets:
+      UV_TOML:
+        required: true
+      NPMRC:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Configure package index from UV_TOML
+        env:
+          UV_TOML: ${{ secrets.UV_TOML }}
+        run: |
+          if [ -z "$UV_TOML" ]; then
+            echo "::error::UV_TOML secret is not set — refusing to fall back to the public index"; exit 1
+          fi
+          url="$(python -c 'import os, tomllib; idx = tomllib.loads(os.environ["UV_TOML"])["index"]; print(next((i for i in idx if i.get("default")), idx[0])["url"])')"
+          echo "::add-mask::$url"
+          echo "PIP_INDEX_URL=$url" >> "$GITHUB_ENV"
+
+      - name: Install (hash-pinned)
+        run: python -m pip install --no-cache-dir --require-hashes -r requirements-dev.lock
+
+      - name: Test
+        run: python -m pytest tests/ -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+
+      - name: Configure npm registry from NPMRC
+        env:
+          NPMRC: ${{ secrets.NPMRC }}
+        run: |
+          if [ -z "$NPMRC" ]; then
+            echo "::error::NPMRC secret is not set — refusing to fall back to the public registry"; exit 1
+          fi
+          printf '%s\n' "$NPMRC" > ~/.npmrc
+
+      # npm (not corepack) so pnpm itself also comes from the configured registry.
+      - name: Install
+        run: |
+          npm install -g --no-fund --no-audit pnpm@10.33.0
+          pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test
+
+      - name: Type check
+        run: pnpm exec tsc --noEmit

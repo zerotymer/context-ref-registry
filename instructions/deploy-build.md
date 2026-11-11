@@ -118,6 +118,27 @@ make release VERSION=2.1.0  # 버전 지정
 
 ---
 
+## GitHub Actions 릴리스 (태그 push)
+
+`v*.*.*` 태그를 push하면 `.github/workflows/release.yml`이 CI(`ci.yml`)를 통과시킨 뒤
+api·front 이미지를 빌드해 `버전`·`latest` 태그로 Docker Hub에 푸시한다(4개).
+
+```bash
+git tag v2.1.0 && git push origin v2.1.0
+```
+
+필요한 Repository secrets:
+
+| 이름 | 내용 |
+|------|------|
+| `UV_TOML` | `uv.toml` 전체. **기본(`default = true`) 인덱스는 GitHub 러너에서 접근 가능한 주소**여야 한다 (내부망 전용 주소 불가) |
+| `NPMRC` | `.npmrc` 전체 (registry + 인증). 마찬가지로 러너에서 접근 가능한 registry |
+| `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` | Docker Hub 푸시 계정 / 액세스 토큰 |
+
+- `UV_TOML`·`NPMRC`가 비어 있으면 공개 저장소로 넘어가지 않고 실패한다.
+- 의존성은 해시 고정 lock(`backend/requirements*.lock`, `frontend/pnpm-lock.yaml`)으로만 설치한다.
+- 포크에서 온 PR에는 secrets가 전달되지 않아 CI가 실패한다.
+
 ## 주의 사항
 
 - **DB 마이그레이션은 컨테이너 startup에 자동 적용** — `backend/entrypoint.sh`가 앱 실행 전

@@ -66,7 +66,7 @@ frontend/               # Next.js 관리자 콘솔 — BFF 패턴 (Server Action
                         #   + 에이전트 API 게이트웨이 (src/app/api/v1/[...path] → 백엔드 프록시)
                         #   + MCP 스트리밍 프록시 (src/app/api/v1/mcp/[[...path]] → 백엔드 /mcp/)
 ci/                     # PR 참조 검증 스크립트 (validate-pr-refs.py)
-.github/workflows/      # GitHub Actions CI (pr-validate-refs.yml)
+.github/workflows/      # ci.yml(테스트) · release.yml(v* 태그 → Docker Hub) · pr-validate-refs.yml
 docs/                   # 설계 문서 00~11
 instructions/           # 구현 지침 파일
   deploy-build.md       #   배포 빌드 명령어 (영구 참조)
