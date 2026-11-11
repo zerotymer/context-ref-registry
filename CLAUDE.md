@@ -91,8 +91,8 @@ docker compose up -d                         # dev (override 병합: --reload + 
 > 상세 절차는 **[`instructions/deploy-build.md`](instructions/deploy-build.md)** 참고.
 
 이미지: `llm-registry-api` (backend) + `llm-registry-front` (frontend)  
-레지스트리: Docker Hub (`zerotymer/`) + Nexus OSS (`nexus.zerotymer.net/docker/`)  
-태그: `latest` + 버전 태그 → 2×2×2 = **8개**
+레지스트리: Docker Hub (`zerotymer/`) — Nexus는 패키지 설치 프록시(공급망 방어) 전용, 업로드 금지  
+태그: `latest` + 버전 태그 → 2×2 = **4개**
 
 ```bash
 make release              # VERSION=1.0.0 (기본값)
@@ -103,7 +103,6 @@ make release VERSION=1.1.0  # 버전 지정
 
 ```bash
 docker login                          # Docker Hub
-docker login nexus.zerotymer.net      # Nexus OSS
 ```
 
 ## 설계 문서
@@ -151,7 +150,7 @@ docker login nexus.zerotymer.net      # Nexus OSS
 | c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | .completed/ | completed (2026-06-23) — UI_AREA `metadata.mockup` → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
 | 71f9e0d0-7257-408b-b412-eef4e1e8e521 | .completed/ | completed (2026-06-23) — `/ingest/batch` 응답 `entities[]`에 entity id·operation·alias 매핑 반환 |
 | ad25787d-4392-4d35-9751-ba050ae7cf9e | .completed/ | completed (2026-06-23) — 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
-| 19e52237-68d4-4952-8c30-dd0eb9285ff0 | `deploy-build.md` | **reference** (영구) — 배포 빌드 명령어 (Docker Hub + Nexus OSS, 8개 태그) |
+| 19e52237-68d4-4952-8c30-dd0eb9285ff0 | `deploy-build.md` | **reference** (영구) — 배포 빌드 명령어 (Docker Hub, 4개 태그) |
 
 ## Git Branch 전략
 
