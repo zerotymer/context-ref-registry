@@ -3,7 +3,8 @@ name: Release
 # Push a tag like v2.1.0 → run CI → build linux/amd64 images and push to:
 #   ghcr.io/<owner>/llm-registry-{api,front}:{2.1.0,latest}
 #   docker.io/<DOCKERHUB_USERNAME>/llm-registry-{api,front}:{2.1.0,latest}
-# Secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (GHCR uses the built-in GITHUB_TOKEN).
+# Secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN in the DOCKER_HUB environment
+# (GHCR uses the built-in GITHUB_TOKEN).
 
 on:
   push:
@@ -19,6 +20,7 @@ jobs:
   publish:
     needs: ci
     runs-on: ubuntu-latest
+    environment: DOCKER_HUB
     permissions:
       contents: read
       packages: write

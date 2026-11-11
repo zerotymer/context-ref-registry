@@ -66,7 +66,7 @@ frontend/               # Next.js 관리자 콘솔 — BFF 패턴 (Server Action
                         #   + 에이전트 API 게이트웨이 (src/app/api/v1/[...path] → 백엔드 프록시)
                         #   + MCP 스트리밍 프록시 (src/app/api/v1/mcp/[[...path]] → 백엔드 /mcp/)
 ci/                     # PR 참조 검증 스크립트 (validate-pr-refs.py)
-.github/workflows/      # ci.yml(테스트) · release.yml(v* 태그 → Docker Hub) · pr-validate-refs.yml
+.github/workflows/      # ci.yml(테스트) · release.yml(v* 태그 → GHCR·Docker Hub) · pr-validate-refs.yml
 docs/                   # 설계 문서 00~11
 instructions/           # 구현 지침 파일
   deploy-build.md       #   배포 빌드 명령어 (영구 참조)
@@ -91,7 +91,7 @@ docker compose up -d                         # dev (override 병합: --reload + 
 > 상세 절차는 **[`instructions/deploy-build.md`](instructions/deploy-build.md)** 참고.
 
 **권장: GitHub Actions** — `git tag vX.Y.Z && git push origin vX.Y.Z` → CI 통과 후 GHCR(`ghcr.io/zerotymer/…`)과
-Docker Hub에 `버전`·`latest` 푸시 (`.github/workflows/release.yml`, secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`).
+Docker Hub에 `버전`·`latest` 푸시 (`.github/workflows/release.yml`, 환경 `DOCKER_HUB`의 secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`).
 아래 `make release`는 로컬에서 Docker Hub로만 올리는 수동 경로.
 
 이미지: `llm-registry-api` (backend) + `llm-registry-front` (frontend)  

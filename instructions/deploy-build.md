@@ -126,7 +126,7 @@ git tag v2.1.0 && git push origin v2.1.0
 | GHCR | `ghcr.io/zerotymer/llm-registry-api`, `ghcr.io/zerotymer/llm-registry-front` |
 | Docker Hub | `zerotymer/llm-registry-api`, `zerotymer/llm-registry-front` |
 
-필요한 Repository secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`(Docker Hub 액세스 토큰, Read & Write).
+필요한 secrets (GitHub Environment `DOCKER_HUB`): `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`(Docker Hub 액세스 토큰, Read & Write).
 GHCR은 워크플로의 `GITHUB_TOKEN`으로 푸시한다. 새 GHCR 패키지는 비공개로 생성되므로 **첫 릴리스 후
 GitHub → Packages → 패키지 설정에서 한 번 Public으로 변경**한다.
 
