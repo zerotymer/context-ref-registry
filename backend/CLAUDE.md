@@ -98,6 +98,9 @@ backend/
 ```bash
 # 의존성 설치 (backend/ 에서)
 uv pip install -e ".[dev]"
+# 의존성을 바꾼 뒤 (pyproject.toml 수정 후)
+make lock   # uv.lock(로컬 전용, gitignore) 갱신 + requirements.lock(커밋 대상) 재생성
+# (uv.lock은 로컬 저장소 주소가 기록돼 gitignore. 이미지는 requirements.lock을 --require-hashes로 설치)
 
 # 개발 서버 (hot-reload)
 uvicorn app.main:app --reload --port 8000

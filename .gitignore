@@ -63,3 +63,6 @@ graphify-out/
 *.db
 *.db-wal
 *.db-shm
+
+# uv.lock records the local package index URL — kept local. Commit requirements.lock instead.
+backend/uv.lock

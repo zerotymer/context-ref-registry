@@ -118,6 +118,9 @@ prerequisite: none
 
 > **진행 메모 (2026-11-11)**: 패키지 저장소 장애로 lock 갱신이 지연됐다가 복구 후 완료.
 > `uv.lock`: asyncpg 제거·aiosqlite 추가(기존 lock에서 누락된 structlog 반영, 그 외 버전 변경 없음).
+> **변경(공개 저장소 대응)**: `uv.lock`은 패키지 저장소 주소가 기록돼 gitignore(로컬 전용)로 전환. 대신
+> `backend/requirements.lock`(버전 + sha256 해시, 주소 없음)을 커밋하고 이미지는 `pip --require-hashes`로 설치.
+> 갱신은 `cd backend && make lock`.
 > ctx7은 당시 저장소 장애로 사용 불가 → `BEGIN IMMEDIATE` 레시피는 동시성 테스트로 검증.
 
 ### Step 2 — 모델 타입 교체 (DB 범용화)
@@ -182,7 +185,7 @@ prerequisite: none
 - [x] `backend/.env.example`(없으면 신규)에 `ADMIN_LOGIN_ID`, `ADMIN_PASSWORD=` (값 비움), `JWT_SECRET=` (선택) 기재
 - [x] `docker-compose.override.yml` 신규: api의 `command: uvicorn ... --reload`와 `./backend:/app` 바인드만 옮긴다 (운영은 `docker compose -f docker-compose.yml up`)
 - [x] `backup/` 디렉토리 삭제. 백업 방법은 "api 정지 후 볼륨 안의 `registry.db*` 복사"로 문서화
-- [x] `backend/Dockerfile`: builder 스테이지에서 `uv sync --frozen --no-dev --no-editable`, runtime 스테이지는 `python:3.12-slim`에 `.venv`만 복사. 패키지 저장소 설정(사용자 `uv.toml`)은 BuildKit secret(`--mount=type=secret`)으로 넘기고 이미지 레이어에 남기지 않는다. `/data` 디렉토리 생성·권한 처리
+- [x] `backend/Dockerfile`: builder 스테이지에서 ~~`uv sync --frozen --no-dev --no-editable`~~ → `requirements.lock`을 `pip --require-hashes`로 설치, runtime 스테이지는 `python:3.12-slim`에 `.venv`만 복사. 패키지 저장소 설정(사용자 `uv.toml`)은 BuildKit secret(`--mount=type=secret`)으로 넘기고 이미지 레이어에 남기지 않는다. `/data` 디렉토리 생성·권한 처리
 - [x] `entrypoint.sh`의 `JWT_SECRET` 생성 로직은 유지
 - [x] API 이미지 크기(기존 383MB)를 다시 측정해 결과를 기록 → **211MB** (2026-11-11, 레이어·히스토리에 저장소 인증 정보 없음 확인)
 - [x] `docker compose up -d` → 빈 볼륨에서 스키마 자동 생성, `/health` 200, 관리자 로그인, 키 발급, 그 키로 `/api/v1/mcp` 호출까지 확인 → 2026-11-11 전체 스택(api·frontend) 확인 완료. 게이트웨이 경유 MCP는 SDK Host 검사(421) 때문에 `MCP_ALLOWED_HOSTS=api:*` 추가 후 200
