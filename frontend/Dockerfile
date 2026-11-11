@@ -1,24 +1,16 @@
-# syntax=docker/dockerfile:1
-#
-# Package sources come from the builder's own npm config (registry + auth),
-# mounted as a BuildKit secret so it never lands in an image layer:
-#   docker build --secret id=npmrc,src=$HOME/.npmrc ./frontend
-
 FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml* ./
-# pnpm is installed with npm (not corepack) so it also honors the mounted .npmrc.
-RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
-    npm install -g --no-fund --no-audit pnpm@10.33.0 \
-    && pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN pnpm build
 
 FROM base AS runner
 WORKDIR /app

@@ -188,8 +188,8 @@ uvicorn app.main:app --reload --port 8000
 make lock   # uv.lock(로컬 전용, gitignore) 갱신 + requirements.lock(커밋 대상) 재생성
 ```
 
-> `uv.lock`은 로컬 패키지 저장소 주소가 기록되므로 커밋하지 않는다. Docker 이미지는 버전과 sha256 해시만 담긴
-> `backend/requirements.lock`을 `pip --require-hashes`로 설치하며, 저장소 주소는 빌드하는 사람의 `uv.toml`에서 온다.
+> `uv.lock`은 로컬 패키지 저장소 주소가 기록되므로 커밋하지 않는다. Docker 이미지와 CI는 버전과 sha256 해시만 담긴
+> `backend/requirements.lock` / `requirements-dev.lock`을 `pip --require-hashes`로 설치한다.
 
 ### Frontend
 

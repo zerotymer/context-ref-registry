@@ -39,15 +39,9 @@ docker login
 
 ### Step 1 — 빌드 (로컬 임시 태그)
 
-패키지는 **빌드하는 사람의 사용자 설정**(`~/.config/uv/uv.toml`, `~/.npmrc`)에 적힌 저장소에서 받는다.
-두 파일을 BuildKit secret으로 마운트하므로 저장소 주소·인증 정보가 이미지 레이어·히스토리에 남지 않고,
-프로젝트 소스에도 특정 저장소를 적지 않는다.
-
 ```bash
-docker build --platform linux/amd64 --secret id=uv_config,src=$HOME/.config/uv/uv.toml \
-  -t llm-registry-api:build ./backend
-docker build --platform linux/amd64 --secret id=npmrc,src=$HOME/.npmrc \
-  -t llm-registry-front:build ./frontend
+docker build --platform linux/amd64 -t llm-registry-api:build ./backend
+docker build --platform linux/amd64 -t llm-registry-front:build ./frontend
 ```
 
 > `--platform linux/amd64`: 배포 서버가 amd64인 경우 명시. arm Mac에서 빌드 시 필수.
@@ -118,26 +112,25 @@ make release VERSION=2.1.0  # 버전 지정
 
 ---
 
-## GitHub Actions 릴리스 (태그 push)
+## GitHub Actions 릴리스 (태그 push) — 권장
 
 `v*.*.*` 태그를 push하면 `.github/workflows/release.yml`이 CI(`ci.yml`)를 통과시킨 뒤
-api·front 이미지를 빌드해 `버전`·`latest` 태그로 Docker Hub에 푸시한다(4개).
+api·front 이미지(linux/amd64)를 빌드해 **GHCR과 Docker Hub**에 `버전`·`latest`로 푸시한다(8개).
 
 ```bash
 git tag v2.1.0 && git push origin v2.1.0
 ```
 
-필요한 Repository secrets:
+| 레지스트리 | 이미지 |
+|-----------|--------|
+| GHCR | `ghcr.io/zerotymer/llm-registry-api`, `ghcr.io/zerotymer/llm-registry-front` |
+| Docker Hub | `zerotymer/llm-registry-api`, `zerotymer/llm-registry-front` |
 
-| 이름 | 내용 |
-|------|------|
-| `UV_TOML` | `uv.toml` 전체. **기본(`default = true`) 인덱스는 GitHub 러너에서 접근 가능한 주소**여야 한다 (내부망 전용 주소 불가) |
-| `NPMRC` | `.npmrc` 전체 (registry + 인증). 마찬가지로 러너에서 접근 가능한 registry |
-| `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` | Docker Hub 푸시 계정 / 액세스 토큰 |
+필요한 Repository secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`(Docker Hub 액세스 토큰, Read & Write).
+GHCR은 워크플로의 `GITHUB_TOKEN`으로 푸시한다. 새 GHCR 패키지는 비공개로 생성되므로 **첫 릴리스 후
+GitHub → Packages → 패키지 설정에서 한 번 Public으로 변경**한다.
 
-- `UV_TOML`·`NPMRC`가 비어 있으면 공개 저장소로 넘어가지 않고 실패한다.
-- 의존성은 해시 고정 lock(`backend/requirements*.lock`, `frontend/pnpm-lock.yaml`)으로만 설치한다.
-- 포크에서 온 PR에는 secrets가 전달되지 않아 CI가 실패한다.
+`make release`(아래)는 로컬에서 Docker Hub로만 푸시하는 수동 경로다.
 
 ## 주의 사항
 

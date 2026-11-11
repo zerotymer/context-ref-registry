@@ -7,13 +7,10 @@ FRONT_LOCAL = llm-registry-front:build
 
 .PHONY: build tag push release clean
 
-UV_CONFIG ?= $(HOME)/.config/uv/uv.toml
-NPMRC     ?= $(HOME)/.npmrc
-
-## Build local images — package sources come from the builder's uv / npm configs (BuildKit secrets)
+## Build local images
 build:
-	docker build --platform $(PLATFORM) --secret id=uv_config,src=$(UV_CONFIG) -t $(API_LOCAL)   ./backend
-	docker build --platform $(PLATFORM) --secret id=npmrc,src=$(NPMRC)        -t $(FRONT_LOCAL) ./frontend
+	docker build --platform $(PLATFORM) -t $(API_LOCAL)   ./backend
+	docker build --platform $(PLATFORM) -t $(FRONT_LOCAL) ./frontend
 
 ## Tag local images → 4 Docker Hub tags
 tag:

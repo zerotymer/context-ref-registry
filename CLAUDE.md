@@ -90,6 +90,10 @@ docker compose up -d                         # dev (override 병합: --reload + 
 
 > 상세 절차는 **[`instructions/deploy-build.md`](instructions/deploy-build.md)** 참고.
 
+**권장: GitHub Actions** — `git tag vX.Y.Z && git push origin vX.Y.Z` → CI 통과 후 GHCR(`ghcr.io/zerotymer/…`)과
+Docker Hub에 `버전`·`latest` 푸시 (`.github/workflows/release.yml`, secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`).
+아래 `make release`는 로컬에서 Docker Hub로만 올리는 수동 경로.
+
 이미지: `llm-registry-api` (backend) + `llm-registry-front` (frontend)  
 레지스트리: Docker Hub (`zerotymer/`)  
 태그: `latest` + 버전 태그 → 2×2 = **4개**
