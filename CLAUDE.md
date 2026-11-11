@@ -103,10 +103,10 @@ make release              # VERSION=2.0.0 (기본값)
 make release VERSION=2.1.0  # 버전 지정
 ```
 
-빌드 전 레지스트리 로그인 필요:
+빌드 전 Docker Hub 로그인 필요:
 
 ```bash
-docker login                          # Docker Hub
+docker login
 ```
 
 ## 설계 문서
