@@ -84,9 +84,11 @@ deprecated entity는 삭제하지 않는다.
 
 ## 권한 모델
 
-MVP에서는 단순 API key로 시작 가능하다.
+> **현재 구현**: 웹 관리자 1명(환경변수 `ADMIN_LOGIN_ID`/`ADMIN_PASSWORD`, JWT 쿠키) +
+> 프로젝트당 API Key(`Authorization: Bearer crr_...`, scope `read`/`write`, 선택 만료일).
+> 관리자는 전체, 키는 자기 프로젝트 + 공개 엔티티를 읽고, `write` 키만 자기 프로젝트 엔티티를 바꾼다.
 
-운영 단계 권장:
+초기 설계 시 운영 단계 권장안:
 
 ```text
 - project 단위 권한
@@ -125,22 +127,15 @@ created_at
 
 ## Backup
 
-PostgreSQL 백업은 필수다.
-
-MVP:
+DB는 SQLite 단일 파일이므로 백업은 파일 복사로 한다.
 
 ```text
-- daily pg_dump
-- docker volume backup
+- api 컨테이너 정지
+- 볼륨 안의 registry.db, registry.db-wal, registry.db-shm 세 파일을 함께 복사
+- api 재시작
 ```
 
-운영:
-
-```text
-- PITR
-- WAL archiving
-- object storage backup
-```
+무중단 백업이 필요해지면 `sqlite3 registry.db ".backup ..."` 또는 Litestream 도입을 검토한다.
 
 ## Observability
 

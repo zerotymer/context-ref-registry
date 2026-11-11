@@ -15,7 +15,7 @@ export default async function LoginPage() {
             <br />
             Registry
           </div>
-          <div className="text-xs text-gray-400 mt-1">v0.1.0</div>
+          <div className="text-xs text-gray-400 mt-1">v2.0.0</div>
         </div>
         <LoginForm />
       </div>

@@ -8,8 +8,6 @@ updated: 2026-11-10
 
 # 배포 빌드 명령어 정리
 
-> 2026-11-10: Nexus OSS(`nexus.zerotymer.net/docker`)는 더 이상 공유 대상이 아니므로 배포에서 제외. Docker Hub 단독.
-
 ## 이미지 구성
 
 | 이미지 | 소스 경로 |
@@ -32,9 +30,9 @@ updated: 2026-11-10
 
 ```bash
 docker login                  # Docker Hub (최초 1회)
-make release                  # VERSION=1.0.0 (기본값)
-make release VERSION=1.1.0    # 버전 지정
-make -n release VERSION=1.1.0 # 실행 없이 명령만 확인
+make release                  # VERSION=2.0.0 (기본값)
+make release VERSION=2.1.0    # 버전 지정
+make -n release VERSION=2.1.0 # 실행 없이 명령만 확인
 ```
 
 `make release` = `build` → `tag` → `push`. 정의는 루트 `Makefile` 참고.
@@ -42,6 +40,26 @@ make -n release VERSION=1.1.0 # 실행 없이 명령만 확인
 > `--platform linux/amd64`: 배포 서버가 amd64 기준. arm Mac에서 빌드 시 필수 (Makefile `PLATFORM`).
 
 ---
+
+## GitHub Actions 릴리스 (태그 push) — 권장
+
+`v*.*.*` 태그를 push하면 `.github/workflows/release.yml`이 CI(`ci.yml`)를 통과시킨 뒤
+api·front 이미지(linux/amd64)를 빌드해 **GHCR과 Docker Hub**에 `버전`·`latest`로 푸시한다(8개).
+
+```bash
+git tag v2.1.0 && git push origin v2.1.0
+```
+
+| 레지스트리 | 이미지 |
+|-----------|--------|
+| GHCR | `ghcr.io/zerotymer/llm-registry-api`, `ghcr.io/zerotymer/llm-registry-front` |
+| Docker Hub | `zerotymer/llm-registry-api`, `zerotymer/llm-registry-front` |
+
+필요한 secrets (GitHub Environment `DOCKER_HUB`): `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`(Docker Hub 액세스 토큰, Read & Write).
+GHCR은 워크플로의 `GITHUB_TOKEN`으로 푸시한다. 새 GHCR 패키지는 비공개로 생성되므로 **첫 릴리스 후
+GitHub → Packages → 패키지 설정에서 한 번 Public으로 변경**한다.
+
+`make release`(아래)는 로컬에서 Docker Hub로만 푸시하는 수동 경로다.
 
 ## 주의 사항
 
@@ -51,4 +69,9 @@ make -n release VERSION=1.1.0 # 실행 없이 명령만 확인
 - **MCP 서버는 `api` 이미지에 포함** — streamable-http로 `api` 앱의 `/mcp`에 마운트되므로
   별도 이미지·태그 추가 없이 기존 `llm-registry-api` 이미지로 함께 배포된다(태그 영향 없음).
   stdio 단독 `mcp` 서비스는 폐기. 외부 노출 표면 단일화(BFF `/api/v1/mcp`)는 단계 C에서 처리.
-- **backup 서비스도 배포 이미지에서 제외** — 운영 환경에서 별도 스케줄러(cron 등)로 대체.
+- **backup 서비스 폐기** — DB가 SQLite 단일 파일이므로 `api` 정지 후 볼륨의
+  `registry.db`, `registry.db-wal`, `registry.db-shm`을 함께 복사한다.
+- **`ADMIN_PASSWORD` 필수** — 없으면 관리자 로그인이 503으로 막힌다. 배포 환경의 `.env`나
+  secret으로만 주입하고 커밋하지 않는다. `JWT_SECRET`은 선택(없으면 기동마다 새로 생성).
+- **데이터 볼륨** — 컨테이너는 non-root(`app`, uid 10001)로 실행되며 `/data`에 DB를 쓴다.
+  named volume을 `/data`에 마운트한다(`registry_data:/data`).

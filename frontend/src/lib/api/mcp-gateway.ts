@@ -6,7 +6,7 @@
 // so this proxy MUST pipe request and response bodies as streams rather than
 // buffering them with `request.text()` / `backendRes.text()`.
 //
-// Like the REST gateway, it forwards API Key headers and never forwards
+// Like the REST gateway, it forwards `Authorization: Bearer` and never forwards
 // cookies — authentication is delegated entirely to the backend's
 // `McpApiKeyAuthMiddleware`.
 
@@ -18,7 +18,6 @@ const BACKEND = process.env.BACKEND_API_URL ?? "http://localhost:8000";
 // are intentionally dropped.
 const FORWARD_REQUEST_HEADERS = [
   "authorization",
-  "x-api-key",
   "content-type",
   "accept",
   "mcp-session-id",

@@ -12,39 +12,39 @@ LLM Reference Registry — 코딩 에이전트(Codex, Claude Code, Cursor 등)�
 |------|------|------|
 | MVP Core | DB Schema → REST API → MCP → 테스트 (Steps 0–10) | 완료 |
 | 관리자 UI | Next.js + Tailwind, BFF 패턴, Entity·Tag 관리 | 완료 |
-| 인증 시스템 | JWT + API Key 인증, 프로젝트·멤버십·접근 정책 | 완료 |
-| 관리자 콘솔 | 로그인·사용자·프로젝트·멤버 관리 화면 | 완료 |
-| 인증 고급 | 관리자·프로젝트 관리자 기능 | 완료 |
-| 운영 준비 | 보안 & 모니터링 (API Key·Audit Log·Backup·Observability) | 완료 |
+| 인증 시스템 | 단일 관리자(`ADMIN_LOGIN_ID`/`ADMIN_PASSWORD`, JWT 쿠키) + 프로젝트 API Key(`read`/`write`, 만료일) — 사용자·멤버십 폐지 | 완료 |
+| 관리자 콘솔 | 로그인·프로젝트·API Key 관리 화면 | 완료 |
+| 운영 준비 | 보안 & 모니터링 (API Key·Audit Log·Observability). 백업은 `registry.db*` 파일 복사 | 완료 |
 | 확장 기능 | Revision, Review UI, AGENTS.md/OpenAPI 내보내기, PR 검증 | 완료 |
-| 확장 기능 — pgvector | `feat/ext-pgvector` 브랜치에만 존재, **main 미머지** (migration 009 번호 충돌) | 백로그 |
-| API Key 관리 UI | 사용자 셀프서비스(/settings/api-keys) + 관리자(/admin/api-keys) 화면 | 완료 |
-| API Key 프로젝트 접근 제어 | project_id 기반 발급 제한·접근 범위 강화, 레거시 키 제한 | 완료 |
+| 확장 기능 — pgvector | **폐기**. 필요해지면 sqlite-vec 기준으로 새로 설계 | 폐기 |
+| API Key 관리 UI | 관리자(/admin/api-keys) 화면 — 프로젝트(필수)·scope·만료일, `last_used_at` 표시 | 완료 |
+| API Key 프로젝트 접근 제어 | 키당 프로젝트 1개(NOT NULL), 전역·레거시 키 폐지, `Authorization: Bearer`만 허용 | 완료 |
 | Project ID 특수문자 제한 | 허용 문자를 `[A-Za-z0-9_]`로 축소, 프론트·테스트 동기화 | 완료 |
 | 배치 저장 & 참조 패턴 | `POST /entities/batch`, UUID/PROJECT_ID@UUID/PROJECT_ID@TAG 3가지 참조 패턴 | 완료 |
 | 짧은 식별자 (4번째 참조 패턴) | `PROJECT_ID-TYPE-N` (예: `WEB-FEATURE-12`) — `(project_id,type)` 순번 영구 발급(불변), resolve/MCP get_entity 수용, `EntityRead.short_id` 노출 | 완료 |
-| 스키마 자동 적용 | 컨테이너 startup `entrypoint.sh` → `alembic upgrade head` (빈 DB 자동 생성, 멱등) | 완료 |
+| 스키마 자동 적용 | 컨테이너 startup `entrypoint.sh` → `alembic upgrade head` (빈 볼륨에 SQLite DB 자동 생성, 멱등) | 완료 |
 | 에이전트 API 게이트웨이 | Next BFF Route Handler `/api/v1/*` → 백엔드 프록시(API Key passthrough, OkResponse 봉투 미해제) | 완료 |
 | MCP HTTP transport (단계 A) | stdio 폐기 → `api` 앱 `/mcp` streamable-http 마운트, API Key 인증 ASGI 미들웨어, 7개 tool에 프로젝트 범위 필터 | 완료 |
 | MCP HTTP transport (단계 C) | Next BFF 스트리밍 프록시 `/api/v1/mcp` → 백엔드 `/mcp/` (SSE/청크 pipe, 세션·프로토콜 헤더 passthrough, 쿠키 차단). 에이전트 MCP 진입점 단일화 | 완료 |
 | UI_AREA 목업 HTML | `GET /entities/{id}/mockup` — UI_AREA `metadata.mockup` → 서버사이드 정적 HTML 렌더 (미저장, XSS 이스케이프, BFF passthrough) | 완료 |
 | Ingest 식별자 반환 | `POST /ingest/batch` 응답 `entities[]` — 입력 index ↔ 저장 entity_id 매핑 (operation·활성 alias 동봉, 재조회 불필요) | 완료 |
 | Bundle Graph 탭 | `/bundle` 탐색기 Graph 탭 — AntV G6 d3-force 관계도 (degree 비례 노드, `next/dynamic` 지연 로딩) | 완료 |
+| SQLite 전환·경량화 | PostgreSQL 16 → SQLite(WAL, `BEGIN IMMEDIATE` 쓰기 직렬화), 컨테이너 4→2개, 마이그레이션 baseline 1개, API 이미지 멀티스테이지(383→222MB), v2.0.0 | 완료 |
 
-테스트: 백엔드 **354 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **300 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
 ## 기술 스택
 
 - **Backend**: FastAPI (Python 3.12) + SQLAlchemy 2.x (async) + Alembic
-- **DB**: PostgreSQL 16 + JSONB metadata
-- **MCP**: Python MCP SDK — read-only, streamable-http (`api` 앱 `/mcp` 마운트, API Key 인증)
+- **DB**: SQLite (WAL, 단일 파일 `/data/registry.db`) + JSON metadata
+- **MCP**: Python MCP SDK — read-only, streamable-http (`api` 앱 `/mcp` 마운트, `Authorization: Bearer` API Key 인증)
 - **Deployment**: Docker Compose
 - **Package Manager**: uv
 
 ## 아키텍처 흐름
 
 ```
-외부 Parser/Agent → POST /ingest/batch → Registry (PostgreSQL)
+외부 Parser/Agent → POST /ingest/batch → Registry (SQLite)
                                               ↓
 Coding Agent ← Next BFF /api/v1/mcp (스트리밍 프록시) ← MCP read-only
               (front:3000)                             (api:8000/mcp, streamable-http) ← REST read API
@@ -59,13 +59,14 @@ BFF `/api/v1/mcp`** (단계 C) — 요청/응답 바디를 스트림 그대로 p
 ## 프로젝트 구조 (top-level)
 
 ```
-docker-compose.yml      # postgres(5432), api(8000, MCP /mcp 포함), frontend(3000)
+docker-compose.yml      # api(8000, MCP /mcp 포함, registry_data:/data), frontend(3000)
+docker-compose.override.yml  # dev 전용 (--reload + app 소스 바인드)
 backend/                # FastAPI 앱 — 상세 구조는 backend/CLAUDE.md 참조
 frontend/               # Next.js 관리자 콘솔 — BFF 패턴 (Server Actions)
                         #   + 에이전트 API 게이트웨이 (src/app/api/v1/[...path] → 백엔드 프록시)
                         #   + MCP 스트리밍 프록시 (src/app/api/v1/mcp/[[...path]] → 백엔드 /mcp/)
 ci/                     # PR 참조 검증 스크립트 (validate-pr-refs.py)
-.github/workflows/      # GitHub Actions CI (pr-validate-refs.yml)
+.github/workflows/      # ci.yml(테스트) · release.yml(v* 태그 → GHCR·Docker Hub) · pr-validate-refs.yml
 docs/                   # 설계 문서 00~11
 instructions/           # 구현 지침 파일
   deploy-build.md       #   배포 빌드 명령어 (영구 참조)
@@ -78,21 +79,28 @@ instructions/           # 구현 지침 파일
 ## Docker Compose
 
 ```bash
-# 루트에서 실행
-docker compose up -d
+# 루트에서 실행 — backend/.env에 ADMIN_PASSWORD 필수 (backend/.env.example 참고)
+docker compose -f docker-compose.yml up -d   # 운영
+docker compose up -d                         # dev (override 병합: --reload + 소스 바인드)
 ```
+
+백업: `api` 정지 후 볼륨의 `registry.db`, `registry.db-wal`, `registry.db-shm`을 함께 복사.
 
 ## 배포 빌드
 
 > 상세 절차는 **[`instructions/deploy-build.md`](instructions/deploy-build.md)** 참고.
 
+**권장: GitHub Actions** — `git tag vX.Y.Z && git push origin vX.Y.Z` → CI 통과 후 GHCR(`ghcr.io/zerotymer/…`)과
+Docker Hub에 `버전`·`latest` 푸시 (`.github/workflows/release.yml`, 환경 `DOCKER_HUB`의 secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`).
+아래 `make release`는 로컬에서 Docker Hub로만 올리는 수동 경로.
+
 이미지: `llm-registry-api` (backend) + `llm-registry-front` (frontend)  
-레지스트리: Docker Hub (`zerotymer/`) 단독 (Nexus OSS는 2026-11-10부로 배포 대상 제외)  
+레지스트리: Docker Hub (`zerotymer/`)  
 태그: `latest` + 버전 태그 → 2×2 = **4개**
 
 ```bash
-make release              # VERSION=1.0.0 (기본값)
-make release VERSION=1.1.0  # 버전 지정
+make release              # VERSION=2.0.0 (기본값)
+make release VERSION=2.1.0  # 버전 지정
 ```
 
 빌드 전 Docker Hub 로그인 필요:
@@ -142,9 +150,9 @@ docker login
 
 | UUID | 파일 | 상태 |
 |------|------|------|
+| 8607659b-324e-4cea-8bea-be2a9c51aa34 | .completed/ | completed (2026-11-11) — PostgreSQL → SQLite 전환, 배포 경량화(컨테이너 2개), 단일 관리자 + 프로젝트 키 인증 (v2.0.0) |
 | c5e60dba-cfc6-4dac-9db3-d0e9f4657001 | .completed/ | completed (2026-06-23) — UI_AREA `metadata.mockup` → 목업 HTML 자동 생성 `GET /entities/{id}/mockup` |
 | 71f9e0d0-7257-408b-b412-eef4e1e8e521 | .completed/ | completed (2026-06-23) — `/ingest/batch` 응답 `entities[]`에 entity id·operation·alias 매핑 반환 |
-| ad25787d-4392-4d35-9751-ba050ae7cf9e | .completed/ | completed (2026-06-23) — 짧은 식별자 `PROJECT_ID-TYPE-N` 생성 + 4번째 참조 패턴 등록 |
 | 19e52237-68d4-4952-8c30-dd0eb9285ff0 | `deploy-build.md` | **reference** (영구) — 배포 빌드 명령어 (Docker Hub, 4개 태그) |
 
 ## Git Branch 전략

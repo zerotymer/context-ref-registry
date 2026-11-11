@@ -55,9 +55,8 @@ Backend:
 - FastAPI 또는 Spring Boot
 
 Storage:
-- PostgreSQL
-- pgvector optional
-- JSONB metadata
+- SQLite (WAL) — 초기 설계는 PostgreSQL 기준
+- JSON metadata
 
 Interfaces:
 - REST API

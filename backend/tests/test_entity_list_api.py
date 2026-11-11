@@ -2,9 +2,9 @@
 
 import uuid
 from httpx import AsyncClient
+
+from tests.conftest import create_project
 from app.db.session import async_session_factory
-from app.service.auth_service import AuthService
-from app.service.project_service import ProjectService
 
 
 async def _create(admin_client: AsyncClient, **kwargs) -> str:
@@ -101,18 +101,7 @@ async def test_list_entities_limit_max(client: AsyncClient):
 # ---------------------------------------------------------------------------
 
 async def _create_project(alias: str) -> str:
-    project_id = alias.upper()
-    async with async_session_factory() as session:
-        admin = await AuthService(session).create_user(
-            login_id=f"admin_{alias.lower()}",
-            password="pass123",
-            display_name=alias,
-            role="admin",
-        )
-        await ProjectService(session).create_project(
-            id=project_id, alias=alias, description=None, created_by=admin.id
-        )
-    return project_id
+    return await create_project(alias.upper())
 
 
 async def test_list_entities_filter_project_id(admin_client: AsyncClient):

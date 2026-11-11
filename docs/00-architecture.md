@@ -33,15 +33,15 @@ LLM Reference Registry는 코딩 에이전트가 화면, 기능, 인프라 단�
 ┌────────────────────────────┐
 │ Storage                     │
 ├────────────────────────────┤
-│ PostgreSQL                  │
+│ SQLite (WAL, registry.db)   │
 │ - entity                    │
 │ - entity_alias              │
 │ - entity_context            │
 │ - entity_relation           │
 │ - entity_metadata           │
 │                             │
-│ pgvector optional            │
-│ - context_embedding         │
+│ vector search: 필요 시       │
+│ sqlite-vec 기준 재설계       │
 └──────────────┬─────────────┘
                │
                ▼
@@ -116,15 +116,9 @@ MVP에서는 API 서버와 MCP 서버를 같은 repository에 두되, 실행 프
 
 ```text
 services:
-  llm-ref-api:
-    role: REST API, write/read
+  api:
+    role: REST API (write/read) + MCP read-only (/mcp), SQLite on volume /data
 
-  llm-ref-mcp:
-    role: MCP server, read-only
-
-  postgres:
-    role: primary storage
-
-  minio:
-    role: optional source artifact storage
+  frontend:
+    role: 관리자 콘솔 + 에이전트 게이트웨이 (/api/v1/*, /api/v1/mcp)
 ```

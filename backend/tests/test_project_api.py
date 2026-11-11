@@ -1,30 +1,10 @@
-"""Tests for project & membership API (Step 2-2)."""
+"""Tests for project API and key-scoped entity access."""
 from __future__ import annotations
 
-import uuid
 import pytest
 from httpx import AsyncClient
 
-from app.db.session import async_session_factory
-from app.service.auth_service import AuthService
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-async def _create_user(login_id: str, password: str = "pw123", role: str = "user") -> dict:
-    async with async_session_factory() as session:
-        user = await AuthService(session).create_user(
-            login_id=login_id, password=password, display_name="Test User", role=role
-        )
-    return {"id": str(user.id), "login_id": login_id, "password": password}
-
-
-async def _login(client: AsyncClient, login_id: str, password: str) -> None:
-    resp = await client.post("/auth/login", json={"login_id": login_id, "password": password})
-    assert resp.status_code == 200, resp.text
-
+from tests.conftest import bearer, create_key
 
 # ---------------------------------------------------------------------------
 # Step 2-2-1: Project CRUD
@@ -46,10 +26,8 @@ async def test_create_project_as_admin(admin_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_create_project_non_admin_returns_403(client: AsyncClient):
-    user = await _create_user("user_test")
-    await _login(client, user["login_id"], user["password"])
-    resp = await client.post("/projects", json={"id": "Beta", "alias": "베타"})
+async def test_create_project_non_admin_returns_403(client: AsyncClient, write_key: str):
+    resp = await client.post("/projects", json={"id": "Beta", "alias": "베타"}, headers=bearer(write_key))
     assert resp.status_code == 403
 
 
@@ -138,147 +116,40 @@ async def test_list_projects(admin_client: AsyncClient):
 
 
 # ---------------------------------------------------------------------------
-# Step 2-2-2: Membership
+# Entity project_id + access policy (project API keys)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_admin_can_add_member(admin_client: AsyncClient):
-    user = await _create_user("member_test")
-    await admin_client.post("/projects", json={"id": "Eps", "alias": "엡실론"})
+async def test_list_and_get_projects_scoped_to_key(admin_client: AsyncClient, client: AsyncClient):
+    await admin_client.post("/projects", json={"id": "Mine", "alias": "내 것"})
+    await admin_client.post("/projects", json={"id": "Other", "alias": "남의 것"})
+    key = await create_key("Mine", "read")
 
-    resp = await admin_client.post("/projects/Eps/members", json={
-        "user_id": user["id"],
-        "role": "member",
-    })
-    assert resp.status_code == 201
-    data = resp.json()["data"]
-    assert data["project_id"] == "Eps"
-    assert data["user_id"] == user["id"]
-    assert data["role"] == "member"
+    resp = await client.get("/projects", headers=bearer(key))
+    assert [p["id"] for p in resp.json()["data"]] == ["Mine"]
+    assert (await client.get("/projects/Mine", headers=bearer(key))).status_code == 200
+    assert (await client.get("/projects/Other", headers=bearer(key))).status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_admin_can_assign_project_admin_role(admin_client: AsyncClient):
-    user = await _create_user("pa_test")
-    await admin_client.post("/projects", json={"id": "Zeta", "alias": "제타"})
-    resp = await admin_client.post("/projects/Zeta/members", json={
-        "user_id": user["id"],
-        "role": "project_admin",
-    })
-    assert resp.status_code == 201
-    assert resp.json()["data"]["role"] == "project_admin"
-
-
-@pytest.mark.asyncio
-async def test_non_admin_non_project_admin_cannot_add_member(client: AsyncClient, admin_client: AsyncClient):
-    """Regular member cannot manage membership."""
-    member = await _create_user("member2_test")
-    other = await _create_user("other_test")
-    await admin_client.post("/projects", json={"id": "Eta", "alias": "에타"})
-    await admin_client.post("/projects/Eta/members", json={"user_id": member["id"], "role": "member"})
-
-    await _login(client, member["login_id"], member["password"])
-    resp = await client.post("/projects/Eta/members", json={"user_id": other["id"], "role": "member"})
-    assert resp.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_project_admin_can_add_member(client: AsyncClient, admin_client: AsyncClient):
-    """project_admin can add members but not project_admin role."""
-    pa = await _create_user("pa2_test")
-    member = await _create_user("newmember_test")
-    await admin_client.post("/projects", json={"id": "Theta", "alias": "세타"})
-    await admin_client.post("/projects/Theta/members", json={"user_id": pa["id"], "role": "project_admin"})
-
-    await _login(client, pa["login_id"], pa["password"])
-    resp = await client.post("/projects/Theta/members", json={"user_id": member["id"], "role": "member"})
-    assert resp.status_code == 201
-
-
-@pytest.mark.asyncio
-async def test_project_admin_cannot_assign_project_admin_role(client: AsyncClient, admin_client: AsyncClient):
-    pa = await _create_user("pa3_test")
-    other = await _create_user("other2_test")
-    await admin_client.post("/projects", json={"id": "Iota", "alias": "이오타"})
-    await admin_client.post("/projects/Iota/members", json={"user_id": pa["id"], "role": "project_admin"})
-
-    await _login(client, pa["login_id"], pa["password"])
-    resp = await client.post("/projects/Iota/members", json={"user_id": other["id"], "role": "project_admin"})
-    assert resp.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_list_members(admin_client: AsyncClient):
-    user1 = await _create_user("m1_test")
-    user2 = await _create_user("m2_test")
-    await admin_client.post("/projects", json={"id": "Kappa", "alias": "카파"})
-    await admin_client.post("/projects/Kappa/members", json={"user_id": user1["id"], "role": "member"})
-    await admin_client.post("/projects/Kappa/members", json={"user_id": user2["id"], "role": "member"})
-
-    resp = await admin_client.get("/projects/Kappa/members")
-    assert resp.status_code == 200
-    member_ids = [m["user_id"] for m in resp.json()["data"]]
-    assert user1["id"] in member_ids
-    assert user2["id"] in member_ids
-
-
-@pytest.mark.asyncio
-async def test_remove_member(admin_client: AsyncClient):
-    user = await _create_user("rm_test")
-    await admin_client.post("/projects", json={"id": "Lambda", "alias": "람다"})
-    await admin_client.post("/projects/Lambda/members", json={"user_id": user["id"], "role": "member"})
-
-    resp = await admin_client.delete(f"/projects/Lambda/members/{user['id']}")
-    assert resp.status_code == 200
-
-    list_resp = await admin_client.get("/projects/Lambda/members")
-    member_ids = [m["user_id"] for m in list_resp.json()["data"]]
-    assert user["id"] not in member_ids
-
-
-@pytest.mark.asyncio
-async def test_update_member_role(admin_client: AsyncClient):
-    user = await _create_user("role_test")
-    await admin_client.post("/projects", json={"id": "Muuuu", "alias": "뮤"})
-    await admin_client.post("/projects/Muuuu/members", json={"user_id": user["id"], "role": "member"})
-
-    resp = await admin_client.put(f"/projects/Muuuu/members/{user['id']}/role", json={"role": "project_admin"})
-    assert resp.status_code == 200
-    assert resp.json()["data"]["role"] == "project_admin"
-
-
-# ---------------------------------------------------------------------------
-# Step 2-2-3 & 2-2-4: Entity project_id + access policy
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_create_project_entity_as_member(client: AsyncClient, admin_client: AsyncClient):
-    """Project members can create entities in their project."""
-    user = await _create_user("projuser_test")
+async def test_create_project_entity_with_write_key(client: AsyncClient, admin_client: AsyncClient):
     await admin_client.post("/projects", json={"id": "Nuuuu", "alias": "뉴"})
-    await admin_client.post("/projects/Nuuuu/members", json={"user_id": user["id"], "role": "member"})
-
-    await _login(client, user["login_id"], user["password"])
+    key = await create_key("Nuuuu", "write")
     resp = await client.post("/entities", json={
         "type": "FEATURE",
         "canonical_name": "프로젝트 기능",
         "project_id": "Nuuuu",
-    })
+    }, headers=bearer(key))
     assert resp.status_code == 201
 
 
 @pytest.mark.asyncio
-async def test_create_public_entity_as_non_admin_forbidden(client: AsyncClient):
-    """Non-admin cannot create public (project_id=None) entities."""
-    user = await _create_user("nonadmin_test")
-    await _login(client, user["login_id"], user["password"])
-
+async def test_create_public_entity_with_key_forbidden(client: AsyncClient, write_key: str):
     resp = await client.post("/entities", json={
         "type": "FEATURE",
         "canonical_name": "공개 기능",
-    })
+    }, headers=bearer(write_key))
     assert resp.status_code == 403
 
 
@@ -293,61 +164,17 @@ async def test_project_entity_hidden_from_unauthenticated(admin_client: AsyncCli
     })
     entity_id = resp.json()["data"]["id"]
 
-    # Unauthenticated cannot see project entity
     get_resp = await client.get(f"/entities/{entity_id}")
     assert get_resp.status_code == 401
 
-    # Unauthenticated list shows no project entities
     list_resp = await client.get("/entities")
     ids = [e["id"] for e in list_resp.json()["data"]["items"]]
     assert entity_id not in ids
 
 
 @pytest.mark.asyncio
-async def test_project_entity_visible_to_member(client: AsyncClient, admin_client: AsyncClient):
-    """Project members can see their project's entities."""
-    user = await _create_user("viewer_test")
-    await admin_client.post("/projects", json={"id": "Omicron", "alias": "오미크론"})
-    await admin_client.post("/projects/Omicron/members", json={"user_id": user["id"], "role": "member"})
-
-    entity_resp = await admin_client.post("/entities", json={
-        "type": "FEATURE",
-        "canonical_name": "팀원 공개 기능",
-        "project_id": "Omicron",
-    })
-    entity_id = entity_resp.json()["data"]["id"]
-
-    await _login(client, user["login_id"], user["password"])
-    get_resp = await client.get(f"/entities/{entity_id}")
-    assert get_resp.status_code == 200
-    assert get_resp.json()["data"]["project_id"] == "Omicron"
-
-
-@pytest.mark.asyncio
-async def test_project_entity_hidden_from_non_member(client: AsyncClient, admin_client: AsyncClient):
-    """Non-members cannot see project entities."""
-    user = await _create_user("outsider_test")
-    await admin_client.post("/projects", json={"id": "Pii", "alias": "파이"})
-
-    entity_resp = await admin_client.post("/entities", json={
-        "type": "FEATURE",
-        "canonical_name": "파이 기능",
-        "project_id": "Pii",
-    })
-    entity_id = entity_resp.json()["data"]["id"]
-
-    await _login(client, user["login_id"], user["password"])
-    get_resp = await client.get(f"/entities/{entity_id}")
-    assert get_resp.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_member_can_modify_project_entity(client: AsyncClient, admin_client: AsyncClient):
-    """Project members can modify their project's entities."""
-    user = await _create_user("editor_test")
+async def test_write_key_can_modify_own_project_entity(client: AsyncClient, admin_client: AsyncClient):
     await admin_client.post("/projects", json={"id": "Rho", "alias": "로"})
-    await admin_client.post("/projects/Rho/members", json={"user_id": user["id"], "role": "member"})
-
     entity_resp = await admin_client.post("/entities", json={
         "type": "FEATURE",
         "canonical_name": "수정 대상 기능",
@@ -355,42 +182,33 @@ async def test_member_can_modify_project_entity(client: AsyncClient, admin_clien
     })
     entity_id = entity_resp.json()["data"]["id"]
 
-    await _login(client, user["login_id"], user["password"])
-    patch_resp = await client.patch(f"/entities/{entity_id}", json={"canonical_name": "수정됨"})
+    key = await create_key("Rho", "write")
+    patch_resp = await client.patch(
+        f"/entities/{entity_id}", json={"canonical_name": "수정됨"}, headers=bearer(key)
+    )
     assert patch_resp.status_code == 200
     assert patch_resp.json()["data"]["canonical_name"] == "수정됨"
 
 
 @pytest.mark.asyncio
 async def test_public_entity_and_project_entity_in_list(client: AsyncClient, admin_client: AsyncClient):
-    """Authenticated user sees public + their project entities."""
-    user = await _create_user("listuser_test")
+    """A key sees public + its own project entities, never another project's."""
     await admin_client.post("/projects", json={"id": "Sigma", "alias": "시그마"})
-    await admin_client.post("/projects/Sigma/members", json={"user_id": user["id"], "role": "member"})
-
-    # public entity
-    pub_resp = await admin_client.post("/entities", json={
-        "type": "FEATURE", "canonical_name": "공개 기능 Sigma",
-    })
-    pub_id = pub_resp.json()["data"]["id"]
-
-    # project entity
-    proj_resp = await admin_client.post("/entities", json={
-        "type": "FEATURE", "canonical_name": "프로젝트 기능 Sigma", "project_id": "Sigma",
-    })
-    proj_id = proj_resp.json()["data"]["id"]
-
-    # another project entity (user is NOT a member)
     await admin_client.post("/projects", json={"id": "Tau", "alias": "타우"})
-    other_resp = await admin_client.post("/entities", json={
+    pub_id = (await admin_client.post("/entities", json={
+        "type": "FEATURE", "canonical_name": "공개 기능 Sigma",
+    })).json()["data"]["id"]
+    proj_id = (await admin_client.post("/entities", json={
+        "type": "FEATURE", "canonical_name": "프로젝트 기능 Sigma", "project_id": "Sigma",
+    })).json()["data"]["id"]
+    other_id = (await admin_client.post("/entities", json={
         "type": "FEATURE", "canonical_name": "타우 기능", "project_id": "Tau",
-    })
-    other_id = other_resp.json()["data"]["id"]
+    })).json()["data"]["id"]
 
-    await _login(client, user["login_id"], user["password"])
-    list_resp = await client.get("/entities")
+    key = await create_key("Sigma", "read")
+    list_resp = await client.get("/entities", headers=bearer(key))
     ids = [e["id"] for e in list_resp.json()["data"]["items"]]
 
-    assert pub_id in ids          # public: visible
-    assert proj_id in ids         # own project: visible
-    assert other_id not in ids    # other project: hidden
+    assert pub_id in ids
+    assert proj_id in ids
+    assert other_id not in ids

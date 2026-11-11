@@ -5,9 +5,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_actor, get_optional_actor
+from app.auth.dependencies import OptionalActorDep, WriterDep
 from app.service.audit_service import actor_identifier
-from app.auth.policy import AccessPolicy
+from app.auth.policy import check_can_mutate_entity, check_can_view_entity, visible_project_ids
 from app.db.session import get_session
 from app.domain.enums import RelationType
 from app.domain.schemas import OkResponse, RelationCreate, RelationRead
@@ -26,17 +26,13 @@ _VALID_DIRECTIONS = {"out", "in", "both"}
 async def create_relation(
     body: RelationCreate,
     session: SessionDep,
-    auth: Annotated[tuple, Depends(get_actor)],
+    actor: WriterDep,
 ) -> OkResponse[RelationRead]:
-    user, api_key = auth
-    policy = AccessPolicy(session)
-    user_project_ids = await policy.get_user_project_ids(user.id)
 
     from_entity = await EntityService(session).get_by_id(body.from_entity_id)
-    policy.check_can_mutate_entity(from_entity.project_id, user, user_project_ids, api_key)
+    check_can_mutate_entity(from_entity.project_id, actor)
 
-    actor = actor_identifier(user, api_key)
-    relation = await RelationService(session).create_relation(body, actor=actor)
+    relation = await RelationService(session).create_relation(body, actor=actor_identifier(actor))
     return OkResponse(data=RelationRead.model_validate(relation))
 
 
@@ -44,7 +40,7 @@ async def create_relation(
 async def list_relations(
     entity_ref: str,
     session: SessionDep,
-    auth: Annotated[tuple, Depends(get_optional_actor)],
+    actor: OptionalActorDep,
     direction: str = Query("both", description="Traversal direction: out, in, or both"),
     relation_type: RelationType | None = Query(None, description="Filter by relation type"),
     max_depth: int = Query(1, ge=1, le=10, description="Maximum traversal depth"),
@@ -55,10 +51,7 @@ async def list_relations(
             message=f"direction must be one of: {', '.join(sorted(_VALID_DIRECTIONS))}",
             status_code=400,
         )
-    user, api_key = auth
-    policy = AccessPolicy(session)
-    visible_ids = await policy.get_visible_project_ids(user, api_key)
     entity = await EntityService(session).resolve_ref(entity_ref)
-    policy.check_can_view_entity(entity.project_id, user, visible_ids)
+    check_can_view_entity(entity.project_id, actor)
     relations = await RelationService(session).list_relations(entity.id, direction, relation_type, max_depth)
     return OkResponse(data=[RelationRead.model_validate(r) for r in relations])

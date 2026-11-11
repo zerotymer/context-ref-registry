@@ -1,34 +1,18 @@
+# Production-style stack: `docker compose -f docker-compose.yml up -d`
+# Plain `docker compose up` also merges docker-compose.override.yml (dev: reload + bind mount).
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: llmref
-      POSTGRES_USER: llmref
-      POSTGRES_PASSWORD: llmref
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U llmref"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   api:
     build: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      - ./backend/.env  # ADMIN_PASSWORD (required), optional ADMIN_LOGIN_ID / JWT_SECRET
     environment:
-      - DATABASE_URL=postgresql+asyncpg://llmref:llmref@postgres:5432/llmref
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - DATABASE_URL=sqlite+aiosqlite:////data/registry.db
+      # The frontend BFF reaches MCP as http://api:8000 — allow that Host (localhost is always allowed).
+      - MCP_ALLOWED_HOSTS=api:*
     volumes:
-      - ./backend:/app
+      - registry_data:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -53,24 +37,7 @@ services:
     depends_on:
       - api
 
-  backup:
-    build:
-      context: ./backup
-    environment:
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGUSER=llmref
-      - PGPASSWORD=llmref
-      - PGDATABASE=llmref
-      - BACKUP_SCHEDULE=0 2 * * *
-      - BACKUP_RETAIN_DAYS=7
-    volumes:
-      - backup_data:/backups
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-
+# Backup: stop api, then copy registry.db, registry.db-wal, registry.db-shm out of the volume.
 volumes:
-  postgres_data:
-  backup_data:
+  registry_data:
+

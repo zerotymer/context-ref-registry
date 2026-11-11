@@ -19,10 +19,10 @@ from mcp.client.streamable_http import streamablehttp_client
 
 from app.db.session import async_session_factory
 from app.domain.schemas import EntityCreate
-from app.service.auth_service import AuthService
 from app.service.entity_service import EntityService
-from app.service.project_service import ProjectService
 from app.main import app
+from app.mcp.server import build_transport_security, mcp
+from tests.conftest import create_key, create_project
 
 
 def _free_port() -> int:
@@ -59,36 +59,8 @@ async def mcp_url():
         await task
 
 
-async def _make_api_key(*, project_id: str | None, role: str = "admin", suffix: str = "") -> str:
-    """Create a user + API key, returning the raw key."""
-    async with async_session_factory() as session:
-        svc = AuthService(session)
-        user = await svc.create_user(
-            login_id=f"mcp_http_{role}{suffix}",
-            password="pass1234",
-            display_name="MCP HTTP",
-            role=role,
-        )
-        _, raw_key = await svc.create_api_key(
-            name=f"mcp-http-key{suffix}",
-            scopes=["read"],
-            project_id=project_id,
-            created_by=user.id,
-        )
-    return raw_key
-
-
-async def _create_project(project_id: str) -> None:
-    async with async_session_factory() as session:
-        admin = await AuthService(session).create_user(
-            login_id=f"owner_{project_id.lower()}",
-            password="pass1234",
-            display_name=project_id,
-            role="admin",
-        )
-        await ProjectService(session).create_project(
-            id=project_id, alias=project_id, description=None, created_by=admin.id
-        )
+async def _make_api_key(*, project_id: str = "MCPHTTP", scope: str = "read") -> str:
+    return await create_key(project_id, scope)
 
 
 async def _create_entity(*, canonical_name: str, project_id: str | None) -> str:
@@ -136,13 +108,29 @@ async def test_mcp_invalid_api_key(mcp_url: str):
     assert resp.status_code == 401
 
 
+async def test_mcp_rejects_x_api_key_header(mcp_url: str):
+    """X-API-Key is no longer accepted — only Authorization: Bearer."""
+    key = await _make_api_key()
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resp = await client.post(
+            mcp_url,
+            headers={
+                "Accept": "application/json, text/event-stream",
+                "Content-Type": "application/json",
+                "X-API-Key": key,
+            },
+            json={"jsonrpc": "2.0", "id": 1, "method": "ping"},
+        )
+    assert resp.status_code == 401
+
+
 # ---------------------------------------------------------------------------
 # Handshake + tool call
 # ---------------------------------------------------------------------------
 
 
 async def test_mcp_handshake_and_list_tools(mcp_url: str):
-    key = await _make_api_key(project_id=None, role="admin")
+    key = await _make_api_key()
     headers = {"Authorization": f"Bearer {key}"}
     async with streamablehttp_client(mcp_url, headers=headers) as (read, write, _):
         async with ClientSession(read, write) as session:
@@ -162,7 +150,7 @@ async def test_mcp_handshake_and_list_tools(mcp_url: str):
 
 
 async def test_mcp_tool_call_end_to_end(mcp_url: str):
-    key = await _make_api_key(project_id=None, role="admin")
+    key = await _make_api_key()
     entity_id = await _create_entity(canonical_name="검색가능한공개기능", project_id=None)
 
     headers = {"Authorization": f"Bearer {key}"}
@@ -183,15 +171,15 @@ async def test_mcp_tool_call_end_to_end(mcp_url: str):
 
 async def test_mcp_project_scope_filters_tools(mcp_url: str):
     """A project-scoped API key sees public + in-scope entities, never out-of-scope ones."""
-    await _create_project("SCOPEX")
-    await _create_project("SCOPEY")
+    await create_project("SCOPEX")
+    await create_project("SCOPEY")
 
     e_in = await _create_entity(canonical_name="스코프토큰_in", project_id="SCOPEX")
     e_out = await _create_entity(canonical_name="스코프토큰_out", project_id="SCOPEY")
     e_pub = await _create_entity(canonical_name="스코프토큰_pub", project_id=None)
 
-    key = await _make_api_key(project_id="SCOPEX", role="user", suffix="_scoped")
-    headers = {"X-API-Key": key}
+    key = await _make_api_key(project_id="SCOPEX")
+    headers = {"Authorization": f"Bearer {key}"}
     async with streamablehttp_client(mcp_url, headers=headers) as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
@@ -218,3 +206,48 @@ async def test_mcp_project_scope_filters_tools(mcp_url: str):
             assert e_in in resolved_ids
             assert e_out in validated["missing"]
             assert validated["valid"] is False
+
+
+# ---------------------------------------------------------------------------
+# Host header allowlist (DNS rebinding protection)
+# ---------------------------------------------------------------------------
+
+
+def test_transport_security_defaults_to_localhost_and_accepts_extras():
+    default = build_transport_security("")
+    assert default.allowed_hosts == ["127.0.0.1:*", "localhost:*", "[::1]:*"]
+
+    extra = build_transport_security(" api:* , mcp.example.com ,")
+    assert extra.allowed_hosts[-2:] == ["api:*", "mcp.example.com"]
+    assert "https://mcp.example.com" in extra.allowed_origins
+
+
+async def _initialize_status(mcp_url: str, host: str) -> int:
+    key = await _make_api_key()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            mcp_url + "/",
+            headers={
+                "Host": host,
+                "Authorization": f"Bearer {key}",
+                "Accept": "application/json, text/event-stream",
+                "Content-Type": "application/json",
+            },
+            json={
+                "jsonrpc": "2.0", "id": 1, "method": "initialize",
+                "params": {"protocolVersion": "2025-03-26", "capabilities": {},
+                           "clientInfo": {"name": "t", "version": "0"}},
+            },
+        )
+    return resp.status_code
+
+
+async def test_mcp_rejects_unlisted_host(mcp_url: str):
+    assert await _initialize_status(mcp_url, "api:8000") == 421
+
+
+async def test_mcp_accepts_configured_host(mcp_url: str, monkeypatch: pytest.MonkeyPatch):
+    # The transport holds this settings object by reference, so patching it applies live.
+    security = mcp.settings.transport_security
+    monkeypatch.setattr(security, "allowed_hosts", [*security.allowed_hosts, "api:*"])
+    assert await _initialize_status(mcp_url, "api:8000") == 200

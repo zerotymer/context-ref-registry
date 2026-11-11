@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_admin, get_current_user
+from app.auth.dependencies import AdminDep
 from app.db.session import get_session
-from app.domain.models import UserAccount
 from app.domain.schemas import OkResponse
 from app.exceptions import RegistryError
 from app.repository.audit_log_repository import AuditLogRepository
-from app.repository.project_member_repository import ProjectMemberRepository
 from app.repository.project_repository import ProjectRepository
 from app.service.project_service import ProjectService
 
@@ -48,24 +45,6 @@ class ProjectUpdateRequest(BaseModel):
     is_active: bool | None = None
 
 
-class MemberRead(BaseModel):
-    project_id: str
-    user_id: uuid.UUID
-    role: str
-    is_active: bool
-
-    model_config = {"from_attributes": True}
-
-
-class MemberCreateRequest(BaseModel):
-    user_id: uuid.UUID
-    role: str = "member"
-
-
-class MemberRoleUpdateRequest(BaseModel):
-    role: str
-
-
 # ---------------------------------------------------------------------------
 # Projects
 # ---------------------------------------------------------------------------
@@ -74,22 +53,11 @@ class MemberRoleUpdateRequest(BaseModel):
 @router.get("", response_model=OkResponse[list[ProjectRead]])
 async def list_projects(
     session: SessionDep,
-    user: Annotated[UserAccount, Depends(get_current_user)],
+    _admin: AdminDep,
     is_active: bool | None = Query(default=None),
     search: str | None = Query(default=None),
 ) -> OkResponse[list[ProjectRead]]:
-    if user.role not in ("admin", "project_admin"):
-        raise RegistryError("FORBIDDEN", "Admin or project_admin required", status_code=403)
-
-    all_projects = await ProjectService(session).list_all_projects(is_active=is_active, search=search)
-
-    if user.role == "admin":
-        projects = all_projects
-    else:
-        member_ids = await ProjectMemberRepository(session).get_project_ids_for_user(user.id)
-        member_id_set = set(member_ids)
-        projects = [p for p in all_projects if p.id in member_id_set]
-
+    projects = await ProjectService(session).list_all_projects(is_active=is_active, search=search)
     return OkResponse(data=[ProjectRead.model_validate(p) for p in projects])
 
 
@@ -97,16 +65,15 @@ async def list_projects(
 async def create_project(
     body: ProjectCreateRequest,
     session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
+    _admin: AdminDep,
 ) -> OkResponse[ProjectRead]:
     project = await ProjectService(session).create_project(
         id=body.id,
         alias=body.alias,
         description=body.description,
-        created_by=admin.id,
     )
     await AuditLogRepository(session).create(
-        actor=str(admin.id),
+        actor="admin",
         action="project.create",
         target_type="project",
         target_id=project.id,
@@ -121,7 +88,7 @@ async def update_project(
     project_id: str,
     body: ProjectUpdateRequest,
     session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
+    _admin: AdminDep,
 ) -> OkResponse[ProjectRead]:
     svc = ProjectService(session)
 
@@ -139,7 +106,7 @@ async def update_project(
     )
 
     await AuditLogRepository(session).create(
-        actor=str(admin.id),
+        actor="admin",
         action="project.update",
         target_type="project",
         target_id=project_id,
@@ -148,92 +115,3 @@ async def update_project(
     )
     await session.commit()
     return OkResponse(data=ProjectRead.model_validate(project))
-
-
-# ---------------------------------------------------------------------------
-# Members (admin only)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/{project_id}/members", response_model=OkResponse[list[MemberRead]])
-async def list_members(
-    project_id: str,
-    session: SessionDep,
-    user: Annotated[UserAccount, Depends(get_current_user)],
-) -> OkResponse[list[MemberRead]]:
-    if user.role not in ("admin", "project_admin"):
-        raise RegistryError("FORBIDDEN", "Admin or project_admin required", status_code=403)
-    if user.role == "project_admin":
-        member_ids = await ProjectMemberRepository(session).get_project_ids_for_user(user.id)
-        if project_id not in member_ids:
-            raise RegistryError("FORBIDDEN", "Not a member of this project", status_code=403)
-    members = await ProjectService(session).list_members(project_id)
-    return OkResponse(data=[MemberRead.model_validate(m) for m in members])
-
-
-@router.post("/{project_id}/members", status_code=201, response_model=OkResponse[MemberRead])
-async def add_member(
-    project_id: str,
-    body: MemberCreateRequest,
-    session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
-) -> OkResponse[MemberRead]:
-    member = await ProjectService(session).add_member(
-        project_id=project_id,
-        user_id=body.user_id,
-        role=body.role,
-        actor_role=admin.role,
-        actor_id=admin.id,
-    )
-    await AuditLogRepository(session).create(
-        actor=str(admin.id),
-        action="project_member.add",
-        target_type="project_member",
-        target_id=f"{project_id}:{member.user_id}",
-        after_snapshot={"role": member.role, "is_active": member.is_active},
-    )
-    await session.commit()
-    return OkResponse(data=MemberRead.model_validate(member))
-
-
-@router.patch("/{project_id}/members/{user_id}", response_model=OkResponse[MemberRead])
-async def update_member_role(
-    project_id: str,
-    user_id: uuid.UUID,
-    body: MemberRoleUpdateRequest,
-    session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
-) -> OkResponse[MemberRead]:
-    member = await ProjectService(session).update_member_role(
-        project_id=project_id,
-        user_id=user_id,
-        role=body.role,
-        actor_role=admin.role,
-    )
-    await AuditLogRepository(session).create(
-        actor=str(admin.id),
-        action="project_member.role_change",
-        target_type="project_member",
-        target_id=f"{project_id}:{user_id}",
-        after_snapshot={"role": body.role},
-    )
-    await session.commit()
-    return OkResponse(data=MemberRead.model_validate(member))
-
-
-@router.delete("/{project_id}/members/{user_id}", response_model=OkResponse[dict])
-async def remove_member(
-    project_id: str,
-    user_id: uuid.UUID,
-    session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
-) -> OkResponse[dict]:
-    await ProjectService(session).remove_member(project_id=project_id, user_id=user_id)
-    await AuditLogRepository(session).create(
-        actor=str(admin.id),
-        action="project_member.remove",
-        target_type="project_member",
-        target_id=f"{project_id}:{user_id}",
-    )
-    await session.commit()
-    return OkResponse(data={"removed": str(user_id)})

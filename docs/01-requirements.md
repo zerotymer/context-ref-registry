@@ -165,7 +165,7 @@ MVP의 MCP 서버는 read-only로 시작한다.
 
 ### NFR-001. 단순성
 
-MVP는 PostgreSQL만으로 동작해야 한다. pgvector는 optional이다.
+MVP는 단일 DB만으로 동작해야 한다. (초기 설계: PostgreSQL → 현재 구현: SQLite 단일 파일) 벡터 검색은 범위 밖이다.
 
 ### NFR-002. 변경 추적
 

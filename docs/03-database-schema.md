@@ -1,8 +1,12 @@
 # 03. Database Schema
 
-이 문서는 PostgreSQL 기준 스키마 초안이다.
+이 문서는 PostgreSQL 기준으로 작성한 **초기 스키마 초안**이다.
 
-MVP에서는 PostgreSQL만 사용하고, semantic search가 필요해지는 시점에 pgvector를 추가한다.
+> **현재 구현 (2026-11)**: DB는 SQLite(WAL)이다. `jsonb` → JSON(TEXT), `uuid` → 32자 문자열,
+> timestamp는 naive UTC로 저장하고 앱(`UtcDateTime`)이 UTC를 붙인다. 사용자·멤버십 테이블은 없고
+> `api_key`는 `project_id`(필수)·`scope`(`read`/`write`)·`expires_at`·`last_used_at`를 가진다.
+> 실제 스키마의 기준은 `backend/app/domain/models.py`와 `migrations/versions/001_baseline.py`다.
+> pgvector는 폐기했고, 필요해지면 sqlite-vec 기준으로 새로 설계한다.
 
 ## Extension
 

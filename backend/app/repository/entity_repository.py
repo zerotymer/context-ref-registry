@@ -54,14 +54,10 @@ class EntityRepository:
     async def next_short_seq(self, project_id: str, type_: str) -> int:
         """Next per-(project, type) short sequence number, concurrency-safe.
 
-        A transaction-scoped advisory lock keyed on (project_id, type)
-        serializes concurrent assignments, so MAX+1 can't collide. The lock
-        auto-releases at commit. ponytail: advisory lock over a sequence table
-        or IntegrityError-retry — one round-trip, no extra schema.
+        Every transaction starts with BEGIN IMMEDIATE (see db/session.py), so
+        writers are serialized and MAX+1 can't collide; uq_entity_short_seq
+        is the backstop.
         """
-        await self._session.execute(
-            select(func.pg_advisory_xact_lock(func.hashtext(f"{project_id}:{type_}")))
-        )
         result = await self._session.execute(
             select(func.coalesce(func.max(Entity.short_seq), 0) + 1).where(
                 Entity.project_id == project_id, Entity.type == type_

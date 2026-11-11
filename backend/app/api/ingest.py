@@ -5,11 +5,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_actor, get_current_user
-from app.service.audit_service import actor_identifier
-from app.auth.policy import AccessPolicy
+from app.auth.dependencies import WriterDep
+from app.auth.policy import check_can_assign_project, check_can_mutate_entity
 from app.db.session import get_session
+from app.domain.models import Entity
 from app.domain.schemas import BatchIngestRequest, BatchIngestResult, OkResponse
+from app.service.audit_service import actor_identifier
 from app.service.ingest_service import IngestService
 
 router = APIRouter(tags=["ingest"])
@@ -21,18 +22,16 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 async def batch_ingest(
     body: BatchIngestRequest,
     session: SessionDep,
-    auth: Annotated[tuple, Depends(get_actor)],
+    actor: WriterDep,
 ) -> OkResponse[BatchIngestResult]:
-    user, api_key = auth
-    policy = AccessPolicy(session)
     for item in body.entities:
-        project_id = getattr(item, "project_id", None)
-        await policy.check_can_assign_project(project_id, user)
-        if api_key is not None:
-            user_project_ids = await policy.get_user_project_ids(user.id)
-            policy.check_can_mutate_entity(
-                str(project_id) if project_id else None, user, user_project_ids, api_key
-            )
-    actor = actor_identifier(user, api_key)
-    result = await IngestService(session).batch_ingest(body, actor=actor)
+        await check_can_assign_project(session, item.project_id, actor)
+    if not actor.is_admin:
+        # Upsert-by-id and relation sources must not reach outside the key's project.
+        ids = {item.id for item in body.entities if item.id} | {r.from_entity_id for r in body.relations}
+        for entity_id in ids:
+            existing = await session.get(Entity, entity_id)
+            if existing is not None:
+                check_can_mutate_entity(existing.project_id, actor)
+    result = await IngestService(session).batch_ingest(body, actor=actor_identifier(actor))
     return OkResponse(data=result)

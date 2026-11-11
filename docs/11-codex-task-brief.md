@@ -57,7 +57,7 @@ MVP는 다음 기준으로 구현한다.
 ```text
 Language: Python
 Framework: FastAPI
-Database: PostgreSQL
+Database: PostgreSQL (초기 브리프) → 현재 SQLite
 ORM: SQLAlchemy 2.x
 Migration: Alembic
 MCP: Python MCP SDK

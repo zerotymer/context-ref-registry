@@ -3,6 +3,8 @@ import uuid
 
 from httpx import AsyncClient
 
+from tests.conftest import bearer
+
 
 async def test_create_entity_returns_201(admin_client: AsyncClient):
     response = await admin_client.post("/entities", json={
@@ -99,28 +101,18 @@ async def test_patch_entity_unauthenticated_returns_401(admin_client: AsyncClien
     assert patch_resp.status_code == 401
 
 
-async def test_patch_public_entity_by_non_admin_forbidden(admin_client: AsyncClient):
-    """Non-admin cannot modify public (project_id=None) entities."""
-    from app.service.auth_service import AuthService
-    from app.db.session import async_session_factory
-
+async def test_patch_public_entity_by_non_admin_forbidden(admin_client: AsyncClient, client: AsyncClient, write_key: str):
+    """A write key cannot modify public (project_id=None) entities."""
     create_resp = await admin_client.post("/entities", json={
         "type": "FEATURE",
         "canonical_name": "공개 엔티티",
     })
     entity_id = create_resp.json()["data"]["id"]
 
-    # create a regular user
-    async with async_session_factory() as session:
-        await AuthService(session).create_user(
-            login_id="user_test", password="pw", display_name="User", role="user"
-        )
-    await admin_client.post("/auth/logout")
-    await admin_client.post("/auth/login", json={"login_id": "user_test", "password": "pw"})
-
-    patch_resp = await admin_client.patch(f"/entities/{entity_id}", json={"canonical_name": "변경"})
+    patch_resp = await client.patch(
+        f"/entities/{entity_id}", json={"canonical_name": "변경"}, headers=bearer(write_key)
+    )
     assert patch_resp.status_code == 403
-
 
 async def test_patch_entity_type_not_changeable(admin_client: AsyncClient):
     """type 필드는 EntityUpdate 스키마에 없으므로 extra 필드로 무시된다."""

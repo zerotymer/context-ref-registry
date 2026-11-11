@@ -1,4 +1,4 @@
-VERSION  ?= 1.0.0
+VERSION  ?= 2.0.0
 HUB_ORG   = zerotymer
 PLATFORM  = linux/amd64
 

@@ -58,3 +58,11 @@ sbom.json
 # deliverables stay tracked; new files here are ignored.
 /.output/
 graphify-out/
+
+# SQLite database files
+*.db
+*.db-wal
+*.db-shm
+
+# uv.lock records the local package index URL — kept local. Commit requirements.lock instead.
+backend/uv.lock

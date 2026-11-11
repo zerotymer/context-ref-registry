@@ -2,8 +2,8 @@
 
 The MCP app is a sub-ASGI app, so FastAPI ``Depends`` cannot gate it. This pure
 ASGI middleware authenticates every HTTP request to ``/mcp`` using the same API
-key logic as the REST layer (``AuthService.get_user_by_api_key``), resolves the
-caller's project visibility (``AccessPolicy.get_visible_project_ids``), and stows
+key logic as the REST layer (``AuthService.get_api_key``), resolves the
+caller's project visibility (``policy.visible_project_ids``), and stows
 the result on the ASGI ``scope`` so tools can read it back (see ``scope.py``).
 """
 from __future__ import annotations
@@ -11,7 +11,8 @@ from __future__ import annotations
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.auth.policy import AccessPolicy
+from app.auth.dependencies import Actor, bearer_token
+from app.auth.policy import visible_project_ids
 from app.db.session import async_session_factory
 from app.exceptions import RegistryError
 from app.mcp.scope import SCOPE_KEY
@@ -19,14 +20,10 @@ from app.service.auth_service import AuthService
 
 
 def _extract_api_key(scope: Scope) -> str | None:
-    """Pull the raw API key from Authorization: Bearer or X-API-Key headers."""
-    headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])}
-    authorization = headers.get("authorization")
-    if authorization and authorization.lower().startswith("bearer "):
-        return authorization[7:].strip()
-    x_api_key = headers.get("x-api-key")
-    if x_api_key:
-        return x_api_key.strip()
+    """Pull the raw API key from the Authorization: Bearer header."""
+    for k, v in scope.get("headers", []):
+        if k.lower() == b"authorization":
+            return bearer_token(v.decode("latin-1"))
     return None
 
 
@@ -56,8 +53,8 @@ class McpApiKeyAuthMiddleware:
 
         try:
             async with async_session_factory() as session:
-                user, api_key = await AuthService(session).get_user_by_api_key(raw_key)
-                visible = await AccessPolicy(session).get_visible_project_ids(user, api_key)
+                api_key = await AuthService(session).get_api_key(raw_key)
+            visible = visible_project_ids(Actor(is_admin=False, api_key=api_key))
         except RegistryError as exc:
             await _send_401(exc.message, scope, receive, send)
             return

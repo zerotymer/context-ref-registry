@@ -9,7 +9,7 @@ export default async function AdminProjectsPage({
   searchParams?: { is_active?: string; search?: string };
 }) {
   const me = await getCurrentUser();
-  if (!me || (me.role !== "admin" && me.role !== "project_admin")) redirect("/");
+  if (!me) redirect("/");
 
   const params: { is_active?: boolean; search?: string } = {};
   if (searchParams?.is_active !== undefined) {
@@ -24,7 +24,7 @@ export default async function AdminProjectsPage({
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
         <h1 className="font-semibold text-gray-900">프로젝트 관리</h1>
       </header>
-      <ProjectsTable projects={projects} isAdmin={me.role === "admin"} currentFilters={searchParams} />
+      <ProjectsTable projects={projects} currentFilters={searchParams} />
     </>
   );
 }

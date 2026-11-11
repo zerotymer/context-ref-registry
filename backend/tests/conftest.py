@@ -1,36 +1,38 @@
 import os
+import tempfile
 
-# Must be set before app modules are imported so pydantic-settings picks up the test URL
+# Must be set before app modules are imported so pydantic-settings picks up the test values.
+# A file DB (not :memory:) — every connection must see the same database.
+_TMP_DIR = tempfile.mkdtemp(prefix="registry-test-")
 os.environ["DATABASE_URL"] = os.environ.get(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://llmref:llmref@localhost:5432/llmref_test",
+    "TEST_DATABASE_URL", f"sqlite+aiosqlite:///{_TMP_DIR}/test.db"
 )
+ADMIN_PASSWORD = "admin-test-pw"
+os.environ["ADMIN_PASSWORD"] = ADMIN_PASSWORD
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.domain.models import Base
+from app.db.session import async_session_factory, engine
+from app.domain.models import Base, Project
 from app.main import app
 from app.service.auth_service import AuthService
-from app.db.session import async_session_factory
 
-_test_engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+TEST_PROJECT = "TESTPRJ"
 
 
 @pytest.fixture(scope="session", autouse=True)
 async def _create_schema():
-    async with _test_engine.begin() as conn:
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield
-    async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
 
 @pytest.fixture(autouse=True)
 async def _clean_tables():
-    async with _test_engine.begin() as conn:
+    async with engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
             await conn.execute(table.delete())
 
@@ -45,32 +47,46 @@ async def client() -> AsyncClient:
 async def admin_client() -> AsyncClient:
     """Separate authenticated admin client — independent from `client` fixture."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        async with async_session_factory() as session:
-            await AuthService(session).create_user(
-                login_id="admin",
-                password="admin123",
-                display_name="Test Admin",
-                role="admin",
-            )
-        resp = await ac.post("/auth/login", json={"login_id": "admin", "password": "admin123"})
+        resp = await ac.post("/auth/login", json={"login_id": "admin", "password": ADMIN_PASSWORD})
         assert resp.status_code == 200, resp.text
         yield ac
+
+
+async def create_project(project_id: str = TEST_PROJECT) -> str:
+    async with async_session_factory() as session:
+        if await session.get(Project, project_id) is None:
+            session.add(Project(id=project_id, alias=project_id))
+            await session.commit()
+    return project_id
+
+
+async def create_key(project_id: str = TEST_PROJECT, scope: str = "read", **kwargs) -> str:
+    """Issue an API key for ``project_id`` (created if missing); returns the raw key."""
+    await create_project(project_id)
+    async with async_session_factory() as session:
+        _, raw = await AuthService(session).create_api_key(
+            name=f"{project_id}-{scope}", project_id=project_id, scope=scope, **kwargs
+        )
+    return raw
+
+
+def bearer(raw_key: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {raw_key}"}
 
 
 @pytest.fixture
-async def project_admin_client() -> AsyncClient:
-    """Authenticated project_admin client."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        async with async_session_factory() as session:
-            await AuthService(session).create_user(
-                login_id="padmin",
-                password="padmin123",
-                display_name="Project Admin",
-                role="project_admin",
-            )
-        resp = await ac.post("/auth/login", json={"login_id": "padmin", "password": "padmin123"})
-        assert resp.status_code == 200, resp.text
-        yield ac
+async def project() -> str:
+    return await create_project()
+
+
+@pytest.fixture
+async def read_key(project: str) -> str:
+    return await create_key(project, "read")
+
+
+@pytest.fixture
+async def write_key(project: str) -> str:
+    return await create_key(project, "write")
 
 
 # ---------------------------------------------------------------------------

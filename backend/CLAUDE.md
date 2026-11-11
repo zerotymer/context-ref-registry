@@ -15,13 +15,11 @@ backend/
     main.py                 # FastAPI 진입점, RegistryError 핸들러
     config.py               # pydantic-settings 환경변수
     exceptions.py           # RegistryError (code, message, status_code)
-    dependencies.py         # FastAPI Depends — 인증 미들웨어 (get_current_user 등)
-    policy.py               # 접근 정책 — 프로젝트 멤버십 기반 권한 검사
     api/
-      auth.py               # POST /auth/login, /logout, /users, /api-keys; GET /auth/me
-      projects.py           # CRUD /projects, /projects/{id}/members
-      admin_projects.py     # GET /admin/projects (관리자 전용)
-      admin_users.py        # GET /admin/users (관리자 전용)
+      auth.py               # POST /auth/login, /logout; GET /auth/me (단일 관리자)
+      projects.py           # /projects (생성은 관리자, 조회는 키 프로젝트로 제한)
+      admin_projects.py     # /admin/projects (관리자 전용)
+      admin_api_keys.py     # /admin/api-keys 발급·목록·폐기 (관리자 전용)
       entities.py           # POST/GET/PATCH /entities
       aliases.py            # POST/GET /entities/{id}/aliases, GET /resolve, PATCH alias 비활성화
       contexts.py           # POST/GET /entities/{id}/contexts
@@ -33,29 +31,27 @@ backend/
       export.py             # GET /export/agents-md, GET /export/openapi
       validate.py           # POST /validate-references
     auth/
-      dependencies.py       # 인증 Depends 구현체 (JWT 검증, API Key 조회)
-      policy.py             # 역할 기반 접근 제어
+      dependencies.py       # Actor(관리자 쿠키 | Bearer API Key), get_actor / require_admin / require_write
+      policy.py             # 권한 규칙 (관리자 전체, 키는 자기 프로젝트 + 공개 엔티티)
     domain/
       enums.py              # EntityType, EntityStatus, ContextType, RelationType, Locale
-      models.py             # SQLAlchemy ORM (Entity, EntityAlias, User, Project, …)
+      models.py             # SQLAlchemy ORM (Entity, EntityAlias, Project, ApiKey, …) + UtcDateTime
       schemas.py            # Pydantic v2 request/response
     repository/             # DB 접근 계층
       entity_repository.py
       alias_repository.py
       context_repository.py
       relation_repository.py
-      user_repository.py
       api_key_repository.py
       project_repository.py
-      project_member_repository.py
       history_repository.py
     service/                # 비즈니스 로직
       entity_service.py
       alias_service.py
       context_service.py
       relation_service.py
-      auth_service.py       # 로그인, JWT 발급, API Key 관리
-      project_service.py    # 프로젝트 생성, 멤버 초대, 권한 검사
+      auth_service.py       # 관리자 로그인(env 비교), JWT 발급, API Key 발급·검증
+      project_service.py    # 프로젝트 생성·수정
       bundle_service.py
       ingest_service.py
       search_service.py
@@ -67,14 +63,14 @@ backend/
       http_auth.py          # /mcp API Key 인증 ASGI 미들웨어
       scope.py              # per-request 프로젝트 가시성 헬퍼
     db/
-      session.py            # async_session_factory
-      migrations/           # Alembic (versions/)
+      session.py            # async_session_factory, SQLite PRAGMA(WAL·FK·busy_timeout) + BEGIN IMMEDIATE
+      migrations/           # Alembic (versions/001_baseline.py, render_as_batch)
   tests/
     conftest.py
-    test_auth_api.py
     test_project_api.py
     test_admin_projects_api.py
-    test_admin_users_api.py
+    test_auth_single_admin.py
+    test_sqlite_specific.py
     test_entity_api.py
     test_entity_list_api.py
     test_alias_resolve.py
@@ -102,6 +98,9 @@ backend/
 ```bash
 # 의존성 설치 (backend/ 에서)
 uv pip install -e ".[dev]"
+# 의존성을 바꾼 뒤 (pyproject.toml 수정 후)
+make lock   # uv.lock(로컬 전용, gitignore) 갱신 + requirements.lock(커밋 대상) 재생성
+# (uv.lock은 로컬 저장소 주소가 기록돼 gitignore. 이미지는 requirements.lock을 --require-hashes로 설치)
 
 # 개발 서버 (hot-reload)
 uvicorn app.main:app --reload --port 8000
@@ -124,11 +123,14 @@ alembic revision --autogenerate -m "describe change"
 `.env.example`을 복사해서 `.env` 생성:
 
 ```
-DATABASE_URL=postgresql+asyncpg://llmref:llmref@localhost:5432/llmref
-TEST_DATABASE_URL=postgresql+asyncpg://llmref:llmref@localhost:5432/llmref_test
+DATABASE_URL=sqlite+aiosqlite:///./registry.db
+ADMIN_LOGIN_ID=admin
+ADMIN_PASSWORD=          # 필수 — 없으면 로그인 503
+JWT_SECRET=              # 선택 — 없으면 기동마다 새로 생성
 ```
 
-테스트는 `TEST_DATABASE_URL`을 우선 사용하며, `conftest.py`에서 `os.environ["DATABASE_URL"]`에 주입한다.
+테스트는 임시 디렉토리의 SQLite 파일(`:memory:` 아님)을 쓰고, `TEST_DATABASE_URL`이 있으면 그것을 우선한다.
+`ADMIN_PASSWORD`도 `conftest.py`가 테스트 값으로 주입한다.
 
 ## 레이어 구조 및 규칙
 
@@ -147,16 +149,13 @@ domain/     → enums, ORM models, Pydantic schemas. 순수 데이터 정의.
 
 | 테이블 | 역할 |
 |--------|------|
-| `users` | 사용자 계정 (email, hashed_password, role) |
-| `sessions` | JWT 세션 (token, expires_at) |
-| `api_keys` | API Key (key_hash, name, user_id) |
-| `projects` | 프로젝트 (name, owner_id) |
-| `project_members` | 프로젝트 멤버십 (project_id, user_id, role: viewer/editor/admin) |
+| `project` | 프로젝트 (id, alias, description, is_active) |
+| `api_key` | API Key (key_hash, name, project_id NOT NULL, scope read/write, expires_at, last_used_at, revoked_at) |
 | `entity` | UUID, type, canonical_name, status, confidence, project_id |
 | `entity_alias` | locale별 alias (unique 제약 없음, is_active로 비활성화) |
 | `entity_context` | context_type별 텍스트 (RAG 단위) |
 | `entity_relation` | from/to entity 간 관계 (CONTAINS, RELATED_TO, USES 등) |
-| `entity_metadata` | JSONB 타입별 상세 필드 |
+| `entity_metadata` | JSON 타입별 상세 필드 |
 | `entity_tag` | entity ↔ tag 다중 부착 |
 | `entity_history` | entity 변경 이력 (field, old_value, new_value) |
 | `source_ref` | 원본 문서 참조 |
@@ -182,11 +181,11 @@ Locale:       ko | en
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| POST | `/auth/users` | 사용자 등록 |
 | POST | `/auth/login` | 로그인 (JWT 발급) |
 | POST | `/auth/logout` | 로그아웃 (세션 무효화) |
-| GET | `/auth/me` | 현재 사용자 조회 |
-| POST | `/auth/api-keys` | API Key 발급 |
+| GET | `/auth/me` | 관리자 세션 확인 (API Key는 403) |
+| GET/POST | `/admin/api-keys` | API Key 목록·발급 (관리자, `project_id` 필수·`scope`·`expires_at`) |
+| DELETE | `/admin/api-keys/{id}` | API Key 폐기 (관리자) |
 
 ### 프로젝트
 
@@ -195,10 +194,6 @@ Locale:       ko | en
 | POST | `/projects` | 프로젝트 생성 |
 | GET | `/projects` | 프로젝트 목록 |
 | GET | `/projects/{id}` | 프로젝트 조회 |
-| GET | `/projects/{id}/members` | 멤버 목록 |
-| POST | `/projects/{id}/members` | 멤버 추가 |
-| PUT | `/projects/{id}/members/{user_id}` | 멤버 역할 변경 |
-| DELETE | `/projects/{id}/members/{user_id}` | 멤버 제거 |
 
 ### Registry
 
@@ -254,7 +249,7 @@ streamable-http로 `api` 앱의 `/mcp`에 마운트(read-only, API Key 인증). 
 
 - `entity.id` (UUID)는 생성 후 절대 변경 금지. PATCH에서 `id`·`type` 필드 수신 시 무시.
 - `entity.short_seq`(짧은 식별자 순번)는 부여 후 불변. project_id 있는 엔티티에만
-  `(project_id, type)` 단위로 1부터 발급(`pg_advisory_xact_lock`+`UNIQUE`로 동시성 안전).
+  `(project_id, type)` 단위로 1부터 발급(`BEGIN IMMEDIATE` 쓰기 직렬화 + `UNIQUE`로 동시성 안전).
   짧은 식별자 `PROJECT_ID-TYPE-N`은 저장하지 않고 `Entity.short_id`로 파생.
 - alias는 unique 제약 없음. 중복 resolve 시 `ambiguous` 반환 — 임의 선택 금지.
 - deprecated entity는 DELETE 금지. `status=deprecated` + `replacement_entity_id` 기록.
@@ -304,10 +299,10 @@ locale별 활성 `aliases` 동봉). `id` 없이 업로드해 서버가 UUID를 �
 
 ```
 conftest.py                    DB 픽스처 (schema drop/create, table clean), 공유 fixture
-test_auth_api.py               로그인, 로그아웃, 사용자 등록, API Key 발급
-test_project_api.py            프로젝트 CRUD, 멤버 초대/제거, 역할 변경
-test_admin_projects_api.py     관리자 프로젝트 관리 API (project_admin 권한 포함)
-test_admin_users_api.py        관리자 사용자 관리 API
+test_project_api.py            프로젝트 CRUD, 키 범위 엔티티 접근
+test_admin_projects_api.py     관리자 프로젝트 관리 API
+test_auth_single_admin.py      관리자 로그인(503/401), 키 발급·scope·만료·폐기, X-API-Key 거부
+test_sqlite_specific.py        tz 붙은 timestamp, 동시 short_seq, FK cascade
 test_entity_api.py             Entity CRUD, PATCH 제한, deprecated
 test_entity_list_api.py        GET /entities 목록 조회, 필터·페이징
 test_alias_resolve.py          ambiguous/resolved/not_found, locale/type 필터
@@ -331,10 +326,10 @@ test_observability.py          Observability 엔드포인트
 test_entity_mockup_api.py      GET /entities/{id}/mockup — UI_AREA 렌더, 비-UI_AREA 400, 범위밖 404, XSS 이스케이프
 ```
 
-테스트는 **실제 PostgreSQL**(TEST_DATABASE_URL)에서 실행. mock DB 사용 금지.
+테스트는 **실제 SQLite 파일 DB**에서 실행 (앱과 같은 PRAGMA·트랜잭션 설정). mock DB 사용 금지.
 
 각 테스트는 `_clean_tables` fixture로 테이블 전체 truncate 후 실행.
 
 ## 주의사항
-- MCP server는 **streamable-http** transport로 `api` 앱의 `/mcp`에 마운트 (`app/main.py`의 `app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))`). stdio(`python -m app.mcp`)는 폐기. 클라이언트는 `http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 또는 `X-API-Key` 헤더 필수. 외부 에이전트의 권장 진입점은 프론트 BFF `:3000/api/v1/mcp` (단계 C 스트리밍 프록시) — `:8000/mcp`는 내부/dev용. lifespan에서 `mcp.session_manager.run()`을 bootstrap_admin과 `AsyncExitStack`으로 합쳐 기동한다.
+- MCP server는 **streamable-http** transport로 `api` 앱의 `/mcp`에 마운트 (`app/main.py`의 `app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))`). stdio(`python -m app.mcp`)는 폐기. 클라이언트는 `http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 헤더 필수 (`X-API-Key` 폐기). Host 헤더는 기본 `localhost`만 허용하고(DNS rebinding 방어, 그 외 421) `MCP_ALLOWED_HOSTS`(쉼표 구분)로 추가한다 — compose는 게이트웨이용 `api:*`. 외부 에이전트의 권장 진입점은 프론트 BFF `:3000/api/v1/mcp` (단계 C 스트리밍 프록시) — `:8000/mcp`는 내부/dev용. lifespan에서 `mcp.session_manager.run()`을 `AsyncExitStack`으로 기동한다.
 - `pyproject.toml`의 `mcp>=1.0.0` 의존성은 시스템 Python이 아닌 `.venv`에만 설치됨 — 항상 `.venv/bin/python` 사용.

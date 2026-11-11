@@ -50,7 +50,7 @@ def call_validate_api(references: list[str]) -> dict:
     payload = json.dumps({"references": references}).encode()
     headers = {"Content-Type": "application/json"}
     if REGISTRY_API_KEY:
-        headers["X-API-Key"] = REGISTRY_API_KEY
+        headers["Authorization"] = f"Bearer {REGISTRY_API_KEY}"
 
     req = Request(
         f"{REGISTRY_URL.rstrip('/')}/validate-references",

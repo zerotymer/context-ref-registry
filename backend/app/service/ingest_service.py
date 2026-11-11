@@ -5,7 +5,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.domain.models import EntityAlias, EntityContext, EntityMetadata, EntityRelation, EntityTag, SourceRef
 from app.domain.schemas import (
@@ -263,9 +263,9 @@ class IngestService:
         """tags 있으면 ON CONFLICT DO NOTHING으로 삽입 (기존 태그 유지)."""
         for tag in tags:
             stmt = (
-                pg_insert(EntityTag)
+                sqlite_insert(EntityTag)
                 .values(entity_id=entity_id, tag=tag)
-                .on_conflict_do_nothing(constraint="uq_entity_tag")
+                .on_conflict_do_nothing(index_elements=["entity_id", "tag"])
             )
             await self._session.execute(stmt)
         await self._session.flush()

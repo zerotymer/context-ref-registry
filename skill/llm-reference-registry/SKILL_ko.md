@@ -62,35 +62,34 @@ context-bundle  ingest  export  validate-references  projects
 
 ## 인증 (API Key)
 
-모든 에이전트 HTTP 요청은 **API Key**로 인증한다. 백엔드는 다음 두 헤더 중 하나를 받는다 —
-둘 중 하나만 보내면 된다:
+모든 에이전트 HTTP 요청은 **API Key**를 Bearer 토큰으로 보내 인증한다 (`X-API-Key`는 폐기):
 
 ```
-X-API-Key: <발급받은-api-key>
-```
-또는
-```
-Authorization: Bearer <발급받은-api-key>
+Authorization: Bearer crr_<발급받은-api-key>
 ```
 
-- 게이트웨이는 이 헤더들(`x-api-key`, `authorization`, `content-type`, `accept`)만 백엔드로
+- 게이트웨이는 이 헤더들(`authorization`, `content-type`, `accept`)만 백엔드로
   전달하고 나머지(쿠키 등)는 버린다.
-- **키 발급**: 사용자가 관리자 콘솔(`/settings/api-keys`)이나 `POST /auth/api-keys`로 발급한다.
-  API Key는 프로젝트 단위로 스코프되며, 키가 속한 프로젝트가 접근 가능한 엔티티로 요청이 제한된다.
-- 키가 없거나 유효하지 않으면 백엔드는 `401`을 반환한다. 키를 소스에 하드코딩하지 말고
+- **키 발급**: 관리자가 관리자 콘솔(`/admin/api-keys`)에서 발급한다. 키 하나는 **프로젝트 하나**에
+  묶이며 scope를 가진다:
+  - `read` — 자기 프로젝트 + 공개 엔티티 조회 (MCP 포함).
+  - `write` — `read` + 자기 프로젝트 엔티티 변경(ingest, entity·alias·relation·context·tag).
+    공개 엔티티·다른 프로젝트는 `403`.
+- 만료일을 둘 수 있다. 키가 없거나 유효하지 않거나 만료·폐기되면 `401`, `read` 키로 변경
+  엔드포인트를 호출하면 `403`. 키를 소스에 하드코딩하지 말고
   환경변수(예: `REGISTRY_API_KEY`)에서 읽어라.
 
 **예시 (게이트웨이, 권장):**
 
 ```bash
-curl -H "X-API-Key: $REGISTRY_API_KEY" \
+curl -H "Authorization: Bearer $REGISTRY_API_KEY" \
   "https://llm-reg.zerotymer.net/api/v1/resolve?alias=사용자%20검색&locale=ko"
 ```
 
 **예시 (백엔드 직접, 대체):**
 
 ```bash
-curl -H "X-API-Key: $REGISTRY_API_KEY" \
+curl -H "Authorization: Bearer $REGISTRY_API_KEY" \
   "https://llm-api.zerotymer.net/resolve?alias=사용자%20검색&locale=ko"
 ```
 
@@ -572,7 +571,7 @@ entities:
 | **Deprecated 엔티티 삭제 금지** | `status: deprecated`로 설정하고 `replacement_entity_id` 기록. |
 | **MCP는 읽기 전용** | 모든 MCP 도구는 읽기 전용. 쓰기는 HTTP API 사용. |
 | **엔티티 타입 변경 불가** | `TYPE_CHANGE_FORBIDDEN` 에러. 필요시 삭제 후 재생성. |
-| **HTTP는 API Key 필수** | `X-API-Key` 또는 `Authorization: Bearer` 전송. 하드코딩 금지. |
+| **HTTP는 API Key 필수** | `Authorization: Bearer <key>` 전송. 하드코딩 금지. |
 
 ---
 

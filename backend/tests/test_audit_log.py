@@ -6,6 +6,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.db.session import async_session_factory
+from tests.conftest import create_project
 from app.domain.models import EntityAuditLog
 
 
@@ -182,25 +183,19 @@ async def test_audit_log_actor_uses_email_for_user_session(admin_client: AsyncCl
 
 async def test_audit_log_actor_uses_api_key_name(client: AsyncClient):
     """API key 인증 시 actor는 'api_key:{name}' 형식."""
+    from app.service.auth_service import AuthService
+
+    await create_project("AUDITPRJ")
     async with async_session_factory() as session:
-        from app.service.auth_service import AuthService
-        svc = AuthService(session)
-        user = await svc.create_user(
-            login_id="apikey_user",
-            password="pass1234",
-            display_name="API Key User",
-            role="admin",
-        )
-        _, raw_key = await svc.create_api_key(
-            name="my-test-key",
-            scopes=["write"],
-            created_by=user.id,
+        _, raw_key = await AuthService(session).create_api_key(
+            name="my-test-key", project_id="AUDITPRJ", scope="write"
         )
 
     resp = await client.post("/entities", json={
         "type": "FEATURE",
         "canonical_name": "API key actor 테스트",
-    }, headers={"X-API-Key": raw_key})
+        "project_id": "AUDITPRJ",
+    }, headers={"Authorization": f"Bearer {raw_key}"})
     assert resp.status_code == 201
 
     logs = await _get_audit_logs("entity_create")
