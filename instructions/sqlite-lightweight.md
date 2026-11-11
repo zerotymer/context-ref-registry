@@ -116,13 +116,9 @@ prerequisite: none
 
 ### Step 1 — 의존성 교체
 
-> **진행 메모 (2026-11-11)**: Nexus PyPI/npm이 500/404를 반환해 lock 갱신이 막힘.
-> `pyproject.toml`(asyncpg·argon2-cffi 제거, aiosqlite 추가)과 `package.json`(devtools 제거)은 직접 수정했고,
-> 로컬 `.venv`에는 uv 캐시로 aiosqlite만 설치함. Nexus 복구 후 `uv lock && uv sync`, `pnpm install`로
-> `uv.lock`·`pnpm-lock.yaml`을 갱신해야 함. ctx7도 Nexus 경유라 문서 확인 불가 → 레시피는 테스트로 검증.
-- [ ] `cd backend && uv remove asyncpg && uv add aiosqlite` (`argon2-cffi`는 Step 3이 끝난 뒤 제거)
-- [ ] `cd frontend && pnpm remove @tanstack/react-query-devtools` (src에서 import하는 곳 없음 확인 완료)
-- [ ] `cd backend && uv sync` — 로컬 `.venv`에 남은 미선언 패키지(openai, numpy 등) 정리
+> **진행 메모 (2026-11-11)**: Nexus blob store(NFS) 쓰기 권한 문제로 lock 갱신이 지연됐다가 Nexus 복구 후 완료.
+> `uv.lock`: asyncpg 제거·aiosqlite 추가(기존 lock에서 누락된 structlog 반영, 그 외 버전 변경 없음).
+> ctx7은 당시 Nexus 장애로 사용 불가 → `BEGIN IMMEDIATE` 레시피는 동시성 테스트로 검증.
 
 ### Step 2 — 모델 타입 교체 (DB 범용화)
 - [x] `from sqlalchemy.dialects.postgresql import ...` 제거
@@ -140,7 +136,7 @@ prerequisite: none
 - [x] API 라우트 정리: "삭제 대상" 표의 엔드포인트 삭제. `/admin/api-keys`(발급·목록·폐기)는 관리자 전용으로 유지하고 요청 바디에 `project_id`(필수)·`scope`·`expires_at`을 받는다. `/auth/login`·`/auth/logout`·`/auth/me`는 유지
 - [x] 쓰기 엔드포인트(ingest, entity·alias·relation·context·tag 변경, batch)는 `require_write`(관리자 또는 `write` 키)를 거친다
 - [x] `audit_service.actor_identifier` → `"admin"` 또는 `f"api_key:{name}"`
-- [ ] `argon2-cffi` 사용처가 0건이면 `uv remove argon2-cffi`
+- [x] `argon2-cffi` 사용처가 0건이면 `uv remove argon2-cffi`
 - [x] 프론트: "삭제 대상" 표의 화면·액션 삭제, Sidebar 메뉴 정리, `/admin/api-keys` 발급 폼에 프로젝트(필수)·scope·만료일 추가, 발급 결과에 키 1회 표시, 목록에 `last_used_at`·`expires_at` 표시
 - [x] 프론트 게이트웨이: `gateway.ts`·`mcp-gateway.ts` 허용 헤더에서 `x-api-key` 삭제, 관련 테스트를 "X-API-Key는 전달하지 않음"으로 바꾼다
 
@@ -188,8 +184,8 @@ prerequisite: none
 - [x] `backup/` 디렉토리 삭제. 백업 방법은 "api 정지 후 볼륨 안의 `registry.db*` 복사"로 문서화
 - [x] `backend/Dockerfile`: builder 스테이지에서 `uv sync --frozen --no-dev --no-editable`, runtime 스테이지는 `python:3.12-slim`에 `.venv`만 복사. Nexus 인덱스 인증은 BuildKit secret(`--mount=type=secret`)으로 넘기고 이미지 레이어에 남기지 않는다. `/data` 디렉토리 생성·권한 처리
 - [x] `entrypoint.sh`의 `JWT_SECRET` 생성 로직은 유지
-- [ ] API 이미지 크기(기존 383MB)를 다시 측정해 결과를 기록
-- [ ] `docker compose up -d` → 빈 볼륨에서 스키마 자동 생성, `/health` 200, 관리자 로그인, 키 발급, 그 키로 `/api/v1/mcp` 호출까지 확인
+- [x] API 이미지 크기(기존 383MB)를 다시 측정해 결과를 기록 → **211MB** (2026-11-11, 레이어·히스토리에 Nexus 인증 정보 없음 확인)
+- [ ] (API 단독 컨테이너로 확인 완료: 빈 볼륨 스키마 생성·`/health` 200·로그인·키 발급·`/mcp` 200. **프론트 이미지 미빌드** — `frontend/Dockerfile`이 `.npmrc` 없이 공개 npm에서 설치하므로 Nexus secret 적용 후 확인) `docker compose up -d` → 빈 볼륨에서 스키마 자동 생성, `/health` 200, 관리자 로그인, 키 발급, 그 키로 `/api/v1/mcp` 호출까지 확인
 
 ### Step 9 — 문서 동기화
 - [x] `CLAUDE.md`: 기술 스택(DB), Docker Compose 서비스, 구현 현황(인증 행 갱신, pgvector 행 → 폐기/재설계), 프로젝트 구조(`backup/` 제거)
