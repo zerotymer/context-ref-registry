@@ -118,7 +118,7 @@ export function Sidebar({ candidateCount = 0, user }: SidebarProps) {
           <br />
           Registry
         </div>
-        <div className="text-xs text-gray-400 mt-0.5">v0.1.0</div>
+        <div className="text-xs text-gray-400 mt-0.5">v2.0.0</div>
       </div>
 
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">

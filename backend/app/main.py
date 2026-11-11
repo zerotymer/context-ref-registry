@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="LLM Reference Registry", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="LLM Reference Registry", version="2.0.0", lifespan=lifespan)
 app.add_middleware(RequestLoggingMiddleware)
 
 # Read-only MCP server over streamable-http at /mcp, gated by API key auth.

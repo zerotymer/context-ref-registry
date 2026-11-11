@@ -19,9 +19,9 @@ created: 2026-06-03
 | 이미지 | 레지스트리 | 태그 | 풀네임 |
 |--------|-----------|------|--------|
 | api | Docker Hub | latest | `zerotymer/llm-registry-api:latest` |
-| api | Docker Hub | 1.0.0 | `zerotymer/llm-registry-api:1.0.0` |
+| api | Docker Hub | 2.0.0 | `zerotymer/llm-registry-api:2.0.0` |
 | front | Docker Hub | latest | `zerotymer/llm-registry-front:latest` |
-| front | Docker Hub | 1.0.0 | `zerotymer/llm-registry-front:1.0.0` |
+| front | Docker Hub | 2.0.0 | `zerotymer/llm-registry-front:2.0.0` |
 
 ---
 
@@ -57,12 +57,12 @@ docker build --platform linux/amd64 --secret id=npmrc,src=$HOME/.npmrc \
 ```bash
 # api — Docker Hub
 docker tag llm-registry-api:build zerotymer/llm-registry-api:latest
-docker tag llm-registry-api:build zerotymer/llm-registry-api:1.0.0
+docker tag llm-registry-api:build zerotymer/llm-registry-api:2.0.0
 
 
 # front — Docker Hub
 docker tag llm-registry-front:build zerotymer/llm-registry-front:latest
-docker tag llm-registry-front:build zerotymer/llm-registry-front:1.0.0
+docker tag llm-registry-front:build zerotymer/llm-registry-front:2.0.0
 
 ```
 
@@ -71,9 +71,9 @@ docker tag llm-registry-front:build zerotymer/llm-registry-front:1.0.0
 ```bash
 # Docker Hub
 docker push zerotymer/llm-registry-api:latest
-docker push zerotymer/llm-registry-api:1.0.0
+docker push zerotymer/llm-registry-api:2.0.0
 docker push zerotymer/llm-registry-front:latest
-docker push zerotymer/llm-registry-front:1.0.0
+docker push zerotymer/llm-registry-front:2.0.0
 
 ```
 
@@ -84,7 +84,7 @@ docker push zerotymer/llm-registry-front:1.0.0
 > 버전 번호만 바꿔서 재사용할 수 있도록 변수 분리.
 
 ```makefile
-VERSION ?= 1.0.0
+VERSION ?= 2.0.0
 DOCKERHUB_ORG = zerotymer
 PLATFORM = linux/amd64
 
@@ -112,8 +112,8 @@ release: build tag push
 사용법:
 
 ```bash
-make release              # VERSION=1.0.0 (기본값)
-make release VERSION=1.1.0  # 버전 지정
+make release              # VERSION=2.0.0 (기본값)
+make release VERSION=2.1.0  # 버전 지정
 ```
 
 ---

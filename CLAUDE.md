@@ -95,8 +95,8 @@ docker compose up -d                         # dev (override 병합: --reload + 
 태그: `latest` + 버전 태그 → 2×2 = **4개**
 
 ```bash
-make release              # VERSION=1.0.0 (기본값)
-make release VERSION=1.1.0  # 버전 지정
+make release              # VERSION=2.0.0 (기본값)
+make release VERSION=2.1.0  # 버전 지정
 ```
 
 빌드 전 레지스트리 로그인 필요:
