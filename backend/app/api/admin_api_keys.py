@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import AdminApiKeyRead, ApiKeyCreateRequest, ApiKeyCreatedResponse
-from app.auth.dependencies import get_current_admin
+from app.auth.dependencies import AdminDep
 from app.db.session import get_session
-from app.domain.models import UserAccount
+from app.domain.models import ApiKey
 from app.domain.schemas import OkResponse
 from app.exceptions import RegistryError
+from app.repository.api_key_repository import ApiKeyRepository
 from app.repository.project_repository import ProjectRepository
 from app.service.auth_service import AuthService
 
@@ -20,63 +22,73 @@ router = APIRouter(prefix="/admin/api-keys", tags=["admin"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-@router.get("", response_model=OkResponse[list[AdminApiKeyRead]])
-async def list_all_api_keys(
+class ApiKeyCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    project_id: str
+    scope: Literal["read", "write"] = "read"
+    expires_at: datetime | None = None
+
+
+class ApiKeyRead(BaseModel):
+    id: uuid.UUID
+    name: str
+    project_id: str
+    project_name: str | None = None
+    scope: str
+    created_at: datetime
+    expires_at: datetime | None
+    last_used_at: datetime | None
+    revoked_at: datetime | None
+    is_active: bool
+
+    @classmethod
+    def build(cls, key: ApiKey, project_name: str | None = None) -> ApiKeyRead:
+        return cls(
+            id=key.id,
+            name=key.name,
+            project_id=key.project_id,
+            project_name=project_name,
+            scope=key.scope,
+            created_at=key.created_at,
+            expires_at=key.expires_at,
+            last_used_at=key.last_used_at,
+            revoked_at=key.revoked_at,
+            is_active=key.revoked_at is None,
+        )
+
+
+class ApiKeyCreatedResponse(ApiKeyRead):
+    key: str  # raw key — shown only once
+
+
+@router.get("", response_model=OkResponse[list[ApiKeyRead]])
+async def list_api_keys(
     session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
-    search: str | None = Query(default=None, description="Filter by owner login_id"),
+    _admin: AdminDep,
+    project_id: str | None = Query(default=None),
     is_active: bool | None = Query(default=None),
-) -> OkResponse[list[AdminApiKeyRead]]:
-    rows = await AuthService(session).list_all_api_keys(
-        created_by_login_id=search,
-        is_active=is_active,
-    )
-    return OkResponse(data=[
-        AdminApiKeyRead.from_orm_with_email(k, login_id, project_name=pn, owner_role=role)
-        for k, login_id, pn, role in rows
-    ])
+) -> OkResponse[list[ApiKeyRead]]:
+    rows = await ApiKeyRepository(session).list_all(project_id=project_id, is_active=is_active)
+    return OkResponse(data=[ApiKeyRead.build(k, pn) for k, pn in rows])
 
 
 @router.post("", status_code=201, response_model=OkResponse[ApiKeyCreatedResponse])
-async def admin_create_api_key(
+async def create_api_key(
     body: ApiKeyCreateRequest,
     session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
+    _admin: AdminDep,
 ) -> OkResponse[ApiKeyCreatedResponse]:
-    """Admin creates a key; project_id=null means global key."""
-    if body.project_id is not None:
-        proj = await ProjectRepository(session).get_by_id(body.project_id)
-        if proj is None:
-            raise RegistryError("NOT_FOUND", f"Project '{body.project_id}' not found", status_code=404)
-
-    api_key, raw_key = await AuthService(session).create_api_key(
-        name=body.name,
-        scopes=body.scopes,
-        project_id=body.project_id,
-        created_by=admin.id,
+    project = await ProjectRepository(session).get_by_id(body.project_id)
+    if project is None:
+        raise RegistryError("NOT_FOUND", f"Project '{body.project_id}' not found", status_code=404)
+    key, raw_key = await AuthService(session).create_api_key(
+        name=body.name, project_id=body.project_id, scope=body.scope, expires_at=body.expires_at
     )
-    return OkResponse(
-        data=ApiKeyCreatedResponse(
-            id=api_key.id,
-            name=api_key.name,
-            scopes=api_key.scopes,
-            key=raw_key,
-        )
-    )
+    read = ApiKeyRead.build(key, project.alias)
+    return OkResponse(data=ApiKeyCreatedResponse(**read.model_dump(), key=raw_key))
 
 
-@router.delete("/{key_id}", status_code=200, response_model=OkResponse[AdminApiKeyRead])
-async def admin_revoke_api_key(
-    key_id: uuid.UUID,
-    session: SessionDep,
-    admin: Annotated[UserAccount, Depends(get_current_admin)],
-) -> OkResponse[AdminApiKeyRead]:
-    key = await AuthService(session).revoke_api_key(
-        key_id,
-        actor_id=admin.id,
-        is_admin=True,
-    )
-    rows = await AuthService(session).list_all_api_keys()
-    row = next(((k, login_id, pn, role) for k, login_id, pn, role in rows if k.id == key.id), None)
-    login_id, pn, role = (row[1], row[2], row[3]) if row else (None, None, None)
-    return OkResponse(data=AdminApiKeyRead.from_orm_with_email(key, login_id, project_name=pn, owner_role=role))
+@router.delete("/{key_id}", response_model=OkResponse[ApiKeyRead])
+async def revoke_api_key(key_id: uuid.UUID, session: SessionDep, _admin: AdminDep) -> OkResponse[ApiKeyRead]:
+    key = await AuthService(session).revoke_api_key(key_id)
+    return OkResponse(data=ApiKeyRead.build(key))

@@ -74,7 +74,7 @@ describe("proxyMcpToBackend — header forwarding", () => {
     expect(headers.get("authorization")).toBe("Bearer secret-key");
   });
 
-  it("forwards X-API-Key", async () => {
+  it("does not forward X-API-Key", async () => {
     mockBackend();
     await proxyMcpToBackend(
       makeRequest("mcp", {
@@ -84,7 +84,7 @@ describe("proxyMcpToBackend — header forwarding", () => {
       }),
     );
     const headers = new Headers(lastCall!.init.headers);
-    expect(headers.get("x-api-key")).toBe("abc123");
+    expect(headers.get("x-api-key")).toBeNull();
   });
 
   it("forwards MCP session / protocol / resumability headers", async () => {

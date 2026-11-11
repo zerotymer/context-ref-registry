@@ -8,9 +8,10 @@ FRONT_LOCAL = llm-registry-front:build
 
 .PHONY: build tag push release clean
 
-## Build local images
+## Build local images (API needs NEXUS_PYPI_URL — credentialed Nexus PyPI index URL)
 build:
-	docker build --platform $(PLATFORM) -t $(API_LOCAL)   ./backend
+	@test -n "$$NEXUS_PYPI_URL" || (echo "NEXUS_PYPI_URL is not set" && exit 1)
+	docker build --platform $(PLATFORM) --secret id=nexus_pypi,env=NEXUS_PYPI_URL -t $(API_LOCAL) ./backend
 	docker build --platform $(PLATFORM) -t $(FRONT_LOCAL) ./frontend
 
 ## Tag local images → 8 remote tags

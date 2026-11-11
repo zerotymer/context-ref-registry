@@ -5,7 +5,7 @@
 // status code, content-type, and body verbatim. Unlike `backendFetch` in
 // `server.ts` (JWT cookie-based, for admin web UI Server Actions), this proxy
 // does NOT inject cookies and does NOT unwrap the `OkResponse` envelope.
-// Authentication is delegated entirely to the backend via API Key headers.
+// Authentication is delegated entirely to the backend via `Authorization: Bearer <api-key>`.
 
 const BACKEND = process.env.BACKEND_API_URL ?? "http://localhost:8000";
 
@@ -31,7 +31,6 @@ const DENIED_PREFIXES = new Set(["auth", "admin"]);
 // hop-by-hop headers are intentionally dropped.
 const FORWARD_REQUEST_HEADERS = [
   "authorization",
-  "x-api-key",
   "content-type",
   "accept",
 ];

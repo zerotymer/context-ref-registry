@@ -8,7 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://llmref:llmref@localhost:5432/llmref"
+    database_url: str = "sqlite+aiosqlite:////data/registry.db"
+    # Single admin account for the web console. Login is disabled (503) when
+    # admin_password is unset — inject it via backend/.env, never commit it.
+    admin_login_id: str = "admin"
+    admin_password: str | None = None
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
@@ -29,14 +33,11 @@ JWT_SECRET = os.environ.get("JWT_SECRET") or secrets.token_hex(32)
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
-# Initial admin account, created once on startup if no admin exists.
-# Fixed to admin/admin by design — rotating it is the operator's responsibility.
-BOOTSTRAP_ADMIN_LOGIN_ID = "admin"
-BOOTSTRAP_ADMIN_PASSWORD = "admin"
-BOOTSTRAP_ADMIN_DISPLAY_NAME = "Admin"
-
 # Do not log the secret itself; only whether it came from the environment.
 logger.info(
     "JWT secret loaded (source=%s)",
     "env" if os.environ.get("JWT_SECRET") else "per-process-fallback",
 )
+
+if not settings.admin_password:
+    logger.warning("ADMIN_PASSWORD is not set — admin login is disabled (503)")

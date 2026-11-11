@@ -3,26 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { backendFetch } from "@/lib/api/server";
 
-export interface ApiKeyItem {
+export type ApiKeyScope = "read" | "write";
+
+export interface AdminApiKeyItem {
   id: string;
   name: string;
-  scopes: string[];
-  project_id: string | null;
+  project_id: string;
   project_name: string | null;
-  is_legacy: boolean;
+  scope: ApiKeyScope;
   created_at: string;
+  expires_at: string | null;
+  last_used_at: string | null;
   revoked_at: string | null;
   is_active: boolean;
 }
 
-export interface AdminApiKeyItem extends ApiKeyItem {
-  created_by_email: string | null;
-}
-
-export interface ApiKeyCreated {
-  id: string;
-  name: string;
-  scopes: string[];
+export interface ApiKeyCreated extends AdminApiKeyItem {
   key: string;
 }
 
@@ -31,40 +27,12 @@ export interface ProjectOption {
   name: string;
 }
 
-export async function listMyApiKeys(): Promise<ApiKeyItem[]> {
-  return backendFetch<ApiKeyItem[]>("/auth/api-keys");
-}
-
-export async function listMyProjects(): Promise<ProjectOption[]> {
-  interface ProjectRead { id: string; alias: string; }
-  const projects = await backendFetch<ProjectRead[]>("/projects");
-  return projects.map((p) => ({ id: p.id, name: p.alias }));
-}
-
-export async function createApiKey(body: {
-  name: string;
-  scopes: string[];
-  project_id: string;
-}): Promise<ApiKeyCreated> {
-  const result = await backendFetch<ApiKeyCreated>("/auth/api-keys", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-  revalidatePath("/settings/api-keys");
-  return result;
-}
-
-export async function revokeApiKey(id: string): Promise<void> {
-  await backendFetch(`/auth/api-keys/${id}`, { method: "DELETE" });
-  revalidatePath("/settings/api-keys");
-}
-
 export async function listAdminApiKeys(params?: {
-  search?: string;
+  project_id?: string;
   is_active?: boolean;
 }): Promise<AdminApiKeyItem[]> {
   const qs = new URLSearchParams();
-  if (params?.search) qs.set("search", params.search);
+  if (params?.project_id) qs.set("project_id", params.project_id);
   if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active));
   const q = qs.toString();
   return backendFetch<AdminApiKeyItem[]>(`/admin/api-keys${q ? "?" + q : ""}`);
@@ -72,8 +40,9 @@ export async function listAdminApiKeys(params?: {
 
 export async function adminCreateApiKey(body: {
   name: string;
-  scopes: string[];
-  project_id?: string | null;
+  project_id: string;
+  scope: ApiKeyScope;
+  expires_at?: string | null;
 }): Promise<ApiKeyCreated> {
   const result = await backendFetch<ApiKeyCreated>("/admin/api-keys", {
     method: "POST",

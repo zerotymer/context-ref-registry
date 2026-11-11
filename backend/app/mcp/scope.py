@@ -6,7 +6,7 @@ The streamable-http transport builds a Starlette ``Request`` from that same scop
 and threads it into the MCP request context, so tools can read the scope back via
 ``mcp.get_context().request_context.request``.
 
-Scope semantics mirror ``AccessPolicy.get_visible_project_ids`` / the repository
+Scope semantics mirror ``policy.visible_project_ids`` / the repository
 ``_apply_visibility`` helper:
 
     None   → no scoping (admin / direct in-process call): everything is visible.

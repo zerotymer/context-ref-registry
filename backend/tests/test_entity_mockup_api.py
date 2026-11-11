@@ -1,9 +1,7 @@
 """GET /entities/{id}/mockup — UI_AREA mockup HTML rendering."""
 from httpx import AsyncClient
 
-from app.db.session import async_session_factory
-from app.service.auth_service import AuthService
-from app.service.project_service import ProjectService
+from tests.conftest import create_project
 
 
 async def _ingest_ui_area(client: AsyncClient, mockup: dict | None, project_id: str | None = None) -> str:
@@ -61,13 +59,7 @@ async def test_mockup_non_ui_area_returns_400(admin_client: AsyncClient):
 
 async def test_mockup_out_of_scope_returns_404(client: AsyncClient, admin_client: AsyncClient):
     project_id = "MOCKUP_PROJ"
-    async with async_session_factory() as session:
-        admin = await AuthService(session).create_user(
-            login_id="mockup_admin", password="pass123", display_name="M", role="admin",
-        )
-        await ProjectService(session).create_project(
-            id=project_id, alias="MOCKUP", description=None, created_by=admin.id,
-        )
+    await create_project(project_id)
     eid = await _ingest_ui_area(admin_client, {"components": [{"kind": "header", "text": "x"}]}, project_id=project_id)
 
     resp = await client.get(f"/entities/{eid}/mockup")

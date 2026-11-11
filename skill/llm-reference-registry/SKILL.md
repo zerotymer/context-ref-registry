@@ -64,37 +64,35 @@ at the gateway and return `404`. Use the direct backend for those if ever needed
 
 ## Authentication (API Key)
 
-All agent HTTP requests authenticate with an **API Key**. The backend accepts
-the key in either of two headers — send one:
+All agent HTTP requests authenticate with an **API Key** sent as a Bearer token
+(`X-API-Key` is no longer accepted):
 
 ```
-X-API-Key: <your-api-key>
-```
-or
-```
-Authorization: Bearer <your-api-key>
+Authorization: Bearer crr_<your-api-key>
 ```
 
-- The gateway forwards exactly these headers (`x-api-key`, `authorization`,
-  `content-type`, `accept`) to the backend; everything else (cookies, etc.) is
-  dropped.
-- **Get a key**: a user issues one from the admin console (`/settings/api-keys`)
-  or via `POST /auth/api-keys`. API Keys are scoped to a project; requests are
-  limited to entities the key's project can access.
-- On missing/invalid key the backend returns `401`. Never hard-code the key in
+- The gateway forwards exactly these headers (`authorization`, `content-type`,
+  `accept`) to the backend; everything else (cookies, etc.) is dropped.
+- **Get a key**: the admin issues one from the admin console (`/admin/api-keys`).
+  Each key belongs to exactly **one project** and has a scope:
+  - `read` — read your project's entities + public entities (MCP included).
+  - `write` — `read` plus changes (ingest, entity/alias/relation/context/tag) to
+    your project's entities only. Public entities and other projects → `403`.
+- Keys may carry an expiry date. On missing/invalid/expired/revoked key the backend
+  returns `401`; a `read` key on a write endpoint returns `403`. Never hard-code the key in
   source — read it from an environment variable (e.g. `REGISTRY_API_KEY`).
 
 **Example (gateway, preferred):**
 
 ```bash
-curl -H "X-API-Key: $REGISTRY_API_KEY" \
+curl -H "Authorization: Bearer $REGISTRY_API_KEY" \
   "https://llm-reg.zerotymer.net/api/v1/resolve?alias=User%20Search&locale=en"
 ```
 
 **Example (direct backend, fallback):**
 
 ```bash
-curl -H "X-API-Key: $REGISTRY_API_KEY" \
+curl -H "Authorization: Bearer $REGISTRY_API_KEY" \
   "https://llm-api.zerotymer.net/resolve?alias=User%20Search&locale=en"
 ```
 
@@ -586,7 +584,7 @@ File: src/app/...
 | **Deprecated entities must not be deleted** | Set `status: deprecated` and record `replacement_entity_id`. |
 | **MCP is read-only** | All MCP tools are read-only. Use the HTTP API for writes. |
 | **Entity type cannot change** | `TYPE_CHANGE_FORBIDDEN` error. Delete and recreate if needed. |
-| **API Key required for HTTP** | Send `X-API-Key` or `Authorization: Bearer`. Never hard-code it. |
+| **API Key required for HTTP** | Send `Authorization: Bearer <key>`. Never hard-code it. |
 
 ---
 

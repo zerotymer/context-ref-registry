@@ -40,7 +40,8 @@ Phase 3.7 — 에이전트 API 게이트웨이 (Next BFF /api/v1) ✅ 완료 (20
 Phase 3.8 — MCP HTTP transport (단계 A+C)            ✅ 완료 (2026-06-06)
 Phase 3.9 — 목업 HTML·Ingest 식별자·짧은 식별자      ✅ 완료 (2026-06-23)
 Phase 4.0 — Bundle 탐색기 Graph 탭 (AntV G6)         ✅ 완료 (2026-07-22, 지침 없이 PR #15·#16)
-Phase 3-1 — pgvector semantic search                 ⏸ 백로그 (main 미머지)
+Phase 4.1 — SQLite 전환·경량화·단일 관리자 인증       🚧 진행 중 (8607659b)
+Phase 3-1 — pgvector semantic search                 ✖ 폐기 (sqlite-vec 기준 재설계 예정)
 ```
 
 ---
@@ -84,6 +85,7 @@ Phase 3-1 — pgvector semantic search                 ⏸ 백로그 (main 미�
 
 | UUID | 파일 | 분류 | 상태 |
 |------|------|------|------|
+| 8607659b | `sqlite-lightweight.md` | SQLite·경량화·인증 | `in-progress` — PostgreSQL → SQLite, 컨테이너 2개, 단일 관리자 + 프로젝트 키 |
 | c5e60dba | .completed/ | UI_AREA 목업 | `completed` 2026-06-23 — `GET /entities/{id}/mockup` |
 | 71f9e0d0 | .completed/ | Ingest 식별자 | `completed` 2026-06-23 — `/ingest/batch` 응답 `entities[]` 매핑 |
 | ad25787d | .completed/ | 짧은 식별자 | `completed` 2026-06-23 — `PROJECT_ID-TYPE-N` 4번째 참조 패턴 |
@@ -98,7 +100,7 @@ Phase 3-1 — pgvector semantic search                 ⏸ 백로그 (main 미�
 
 | 항목 | 설명 | 처리 방향 |
 |------|------|-----------|
-| pgvector semantic search (3-1) | `feat/ext-pgvector`에만 존재. main의 `009_extend_project_id_to_50`과 migration 번호 충돌, postgres 이미지도 `16-alpine`(vector 미포함) | 필요 시 지침화 → migration `013`으로 재번호 후 리베이스 |
+| ~~pgvector semantic search (3-1)~~ | SQLite 전환(8607659b)으로 `feat/ext-pgvector` 폐기 | 필요해지면 sqlite-vec 기준으로 새 지침 작성 |
 | Bundle Graph 탭 지침 누락 | PR #15·#16이 지침 파일 없이 머지됨 | 사후 기록만 (README 로드맵 반영 완료) |
 | ~~오래된 로컬/원격 브랜치 정리~~ | 2026-11-09 완료 — 로컬 23개 삭제(내용 main 반영 확인), 원격은 이미 `main`만 존재. `feat/ext-pgvector`는 **로컬에만** 보존 | 완료 |
 | code symbol analyzer / source permission sync | `docs/08` '추후 확장' 항목, 미착수 | 수요 생기면 지침화 |

@@ -8,7 +8,6 @@ from sqlalchemy import text
 
 from app.api.admin_api_keys import router as admin_api_keys_router
 from app.api.admin_projects import router as admin_projects_router
-from app.api.admin_users import router as admin_users_router
 from app.api.aliases import router as aliases_router
 from app.api.auth import router as auth_router
 from app.api.bundles import router as bundles_router
@@ -27,7 +26,6 @@ from app.logging_config import configure_logging
 from app.middleware import RequestLoggingMiddleware
 from app.mcp.http_auth import McpApiKeyAuthMiddleware
 from app.mcp.server import mcp
-from app.service.auth_service import AuthService
 
 configure_logging()
 
@@ -39,13 +37,6 @@ async def lifespan(app: FastAPI):
     async with contextlib.AsyncExitStack() as stack:
         # Run the MCP streamable-http session manager for the mounted /mcp app.
         await stack.enter_async_context(mcp.session_manager.run())
-        # Create the fixed admin/admin account on first startup if no admin exists.
-        # Best-effort: never block startup if the DB/schema is not ready yet.
-        try:
-            async with async_session_factory() as session:
-                await AuthService(session).bootstrap_admin()
-        except Exception:
-            logger.warning("bootstrap_admin skipped (DB not ready?)", exc_info=True)
         yield
 
 
@@ -68,7 +59,6 @@ async def _registry_error_handler(request: Request, exc: RegistryError) -> JSONR
 
 
 app.include_router(auth_router)
-app.include_router(admin_users_router)
 app.include_router(admin_projects_router)
 app.include_router(admin_api_keys_router)
 app.include_router(projects_router)

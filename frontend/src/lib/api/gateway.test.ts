@@ -52,14 +52,14 @@ describe("proxyToBackend — header forwarding", () => {
     expect(headers.get("authorization")).toBe("Bearer secret-key");
   });
 
-  it("forwards X-API-Key to the backend", async () => {
+  it("does not forward X-API-Key", async () => {
     mockBackend();
     await proxyToBackend(
       makeRequest("search?q=foo", { headers: { "X-API-Key": "abc123" } }),
       ["search"],
     );
     const headers = new Headers(lastCall!.init.headers);
-    expect(headers.get("x-api-key")).toBe("abc123");
+    expect(headers.get("x-api-key")).toBeNull();
   });
 
   it("does NOT forward Cookie / access_token", async () => {

@@ -12,14 +12,13 @@
 |------|------|
 | MVP Core (Steps 0–10) | ✅ 완료 |
 | 관리자 UI (Next.js + Tailwind) | ✅ 완료 |
-| 인증 시스템 (JWT + API Key + 프로젝트 권한) | ✅ 완료 |
-| 운영 준비 (API Key 인증, Audit Log, Backup, Observability) | ✅ 완료 |
-| 관리자 콘솔 UI (로그인·사용자·프로젝트·멤버 화면) | ✅ 완료 |
-| 인증 고급 (관리자·프로젝트 관리자 기능) | ✅ 완료 |
+| 인증 시스템 — 단일 관리자(환경변수, JWT 쿠키) + 프로젝트 API Key(`read`/`write`) | ✅ 완료 (사용자·멤버십 폐지) |
+| 운영 준비 (API Key 인증, Audit Log, Observability — 백업은 DB 파일 복사) | ✅ 완료 |
+| 관리자 콘솔 UI (로그인·프로젝트·API Key 화면) | ✅ 완료 |
 | 확장 기능 (Revision, Review UI, Export, PR 검증, OpenAPI 내보내기) | ✅ 완료 |
-| 확장 기능 — pgvector semantic search (`feat/ext-pgvector`, main 미머지) | ⏸ 백로그 |
-| API Key 관리 UI (사용자 셀프서비스 + 관리자 화면) | ✅ 완료 |
-| API Key 프로젝트 접근 제어 (project_id 기반 발급·레거시 키 제한) | ✅ 완료 |
+| 확장 기능 — pgvector semantic search | ✖ 폐기 (필요 시 sqlite-vec 기준 재설계) |
+| API Key 관리 UI (관리자 화면: 프로젝트·scope·만료일·마지막 사용) | ✅ 완료 |
+| API Key 프로젝트 접근 제어 (키당 프로젝트 1개 필수, 전역·레거시 키 폐지) | ✅ 완료 |
 | Project ID 특수문자 제한 (`[A-Za-z0-9_]`만 허용) | ✅ 완료 |
 | 배치 저장 & 참조 패턴 (`POST /entities/batch`, UUID/PROJECT_ID@UUID/PROJECT_ID@TAG) | ✅ 완료 |
 | 짧은 식별자 4번째 참조 패턴 (`PROJECT_ID-TYPE-N`, `(project_id,type)` 순번 불변, `EntityRead.short_id` 노출) | ✅ 완료 |
@@ -29,10 +28,11 @@
 | UI_AREA 목업 HTML (`GET /entities/{id}/mockup`) | ✅ 완료 |
 | Ingest 식별자 반환 (`POST /ingest/batch` 응답 `entities[]`) | ✅ 완료 |
 | Bundle Graph 탭 (`/bundle` AntV G6 d3-force 관계도) | ✅ 완료 |
+| PostgreSQL → SQLite(WAL) 전환·경량화 (컨테이너 4→2개, 마이그레이션 baseline 1개) | 🚧 진행 중 (lock 갱신·이미지 검증 남음) |
 
-테스트: 백엔드 **354 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **297 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
-에이전트 MCP 진입점: `http://<host>:3000/api/v1/mcp` (streamable-http, `Authorization: Bearer <api-key>` 또는 `X-API-Key`).
+에이전트 MCP 진입점: `http://<host>:3000/api/v1/mcp` (streamable-http, `Authorization: Bearer <api-key>`, `read`·`write` 키 모두 허용).
 
 ### 진행상태 점검 / 지침 업데이트 시 필수 작업
 

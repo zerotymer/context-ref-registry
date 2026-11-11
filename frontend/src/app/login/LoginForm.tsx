@@ -16,19 +16,15 @@ export function LoginForm() {
     setError(null);
     startTransition(async () => {
       try {
-        const user = await loginAction(loginId, password);
-        if (user.must_change_password) {
-          router.push("/change-password");
-        } else {
-          router.push("/");
-        }
+        await loginAction(loginId, password);
+        router.push("/");
         router.refresh();
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "로그인에 실패했습니다.";
         const [code, ...rest] = msg.split(":");
         const message = rest.join(":") || msg;
-        if (code === "UNAUTHORIZED" && message.toLowerCase().includes("inactive")) {
-          setError({ code: "INACTIVE", message: "비활성화된 계정입니다. 관리자에게 문의하세요." });
+        if (code === "ADMIN_DISABLED") {
+          setError({ code: "INACTIVE", message: "ADMIN_PASSWORD가 설정되지 않아 로그인할 수 없습니다. 서버 설정을 확인하세요." });
         } else {
           setError({ code: code || "ERROR", message: "아이디 또는 비밀번호가 올바르지 않습니다." });
         }

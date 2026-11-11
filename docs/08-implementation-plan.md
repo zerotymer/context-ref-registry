@@ -34,8 +34,8 @@ MVP는 FastAPI 추천.
 ### DB
 
 ```text
-PostgreSQL
-pgvector optional
+PostgreSQL (초기 계획) → SQLite WAL (현재 구현)
+pgvector optional (폐기 — 필요 시 sqlite-vec)
 ```
 
 ### Deployment

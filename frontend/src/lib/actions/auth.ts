@@ -8,12 +8,8 @@ const COOKIE_NAME = "access_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
 export interface UserRead {
-  id: string;
   login_id: string;
-  display_name: string;
-  role: string;
-  is_active: boolean;
-  must_change_password: boolean;
+  role: "admin";
 }
 
 export async function getCurrentUser(): Promise<UserRead | null> {
@@ -65,31 +61,6 @@ export async function loginAction(loginId: string, password: string): Promise<Us
   }
 
   return body.data as UserRead;
-}
-
-export async function changePasswordAction(
-  currentPassword: string,
-  newPassword: string,
-): Promise<void> {
-  const token = cookies().get(COOKIE_NAME)?.value;
-  if (!token) throw new Error("UNAUTHORIZED:로그인이 필요합니다.");
-
-  const res = await fetch(`${BACKEND}/auth/change-password`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: `${COOKIE_NAME}=${token}`,
-    },
-    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-    cache: "no-store",
-  });
-
-  const body = await res.json();
-  if (!body.ok) {
-    const code = body.error?.code ?? "UNKNOWN";
-    const message = body.error?.message ?? "비밀번호 변경에 실패했습니다.";
-    throw new Error(`${code}:${message}`);
-  }
 }
 
 export async function logoutAction(): Promise<void> {

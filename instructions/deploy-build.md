@@ -45,8 +45,15 @@ docker login nexus.zerotymer.net
 
 ### Step 1 — 빌드 (로컬 임시 태그)
 
+API 이미지는 의존성을 **개인 Nexus PyPI 인덱스로만** 받는다. 인증이 포함된 인덱스 URL을
+BuildKit secret으로 넘기므로 이미지 레이어·히스토리에 남지 않는다.
+
 ```bash
-docker build --platform linux/amd64 -t llm-registry-api:build ./backend
+# 셸에서만 설정 (커밋·.env 금지)
+export NEXUS_PYPI_URL='https://<user>:<pass>@nexus.zerotymer.net/repository/pypi/simple'
+
+docker build --platform linux/amd64 --secret id=nexus_pypi,env=NEXUS_PYPI_URL \
+  -t llm-registry-api:build ./backend
 docker build --platform linux/amd64 -t llm-registry-front:build ./frontend
 ```
 
@@ -146,4 +153,9 @@ make release VERSION=1.1.0  # 버전 지정
 - **MCP 서버는 `api` 이미지에 포함** — streamable-http로 `api` 앱의 `/mcp`에 마운트되므로
   별도 이미지·태그 추가 없이 기존 `llm-registry-api` 이미지로 함께 배포된다(8개 태그 영향 없음).
   stdio 단독 `mcp` 서비스는 폐기. 외부 노출 표면 단일화(BFF `/api/v1/mcp`)는 단계 C에서 처리.
-- **backup 서비스도 배포 이미지에서 제외** — 운영 환경에서 별도 스케줄러(cron 등)로 대체.
+- **backup 서비스 폐기** — DB가 SQLite 단일 파일이므로 `api` 정지 후 볼륨의
+  `registry.db`, `registry.db-wal`, `registry.db-shm`을 함께 복사한다.
+- **`ADMIN_PASSWORD` 필수** — 없으면 관리자 로그인이 503으로 막힌다. 배포 환경의 `.env`나
+  secret으로만 주입하고 커밋하지 않는다. `JWT_SECRET`은 선택(없으면 기동마다 새로 생성).
+- **데이터 볼륨** — 컨테이너는 non-root(`app`, uid 10001)로 실행되며 `/data`에 DB를 쓴다.
+  named volume을 `/data`에 마운트한다(`registry_data:/data`).

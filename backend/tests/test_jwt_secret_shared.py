@@ -14,12 +14,10 @@ two workers as two subprocesses and assert cross-worker token validity.
 import os
 import subprocess
 import sys
-import uuid
 from pathlib import Path
 
 # backend/ root — so the subprocess can `import app...`.
 _BACKEND_ROOT = Path(__file__).resolve().parents[1]
-_SAMPLE_UUID = uuid.UUID(int=0x1234)
 
 
 def _run_worker(snippet: str, *, jwt_secret: str | None) -> str:
@@ -51,17 +49,16 @@ def test_workers_with_shared_env_secret_agree() -> None:
 def test_token_signed_by_one_worker_validates_in_another() -> None:
     secret = "f0f0f0f0" * 8
     sign = (
-        "import uuid; from app.service.auth_service import create_access_token; "
-        f"print(create_access_token(uuid.UUID(int={_SAMPLE_UUID.int})))"
+        "from app.service.auth_service import create_access_token; "
+        "print(create_access_token())"
     )
     token = _run_worker(sign, jwt_secret=secret)
 
     decode = (
-        "from app.service.auth_service import decode_access_token; "
-        f"print(decode_access_token({token!r}))"
+        "from app.service.auth_service import verify_access_token; "
+        f"verify_access_token({token!r}); print('OK')"
     )
-    decoded = _run_worker(decode, jwt_secret=secret)
-    assert decoded == str(_SAMPLE_UUID)
+    assert _run_worker(decode, jwt_secret=secret) == "OK"
 
 
 def test_token_is_rejected_when_secrets_differ() -> None:
@@ -69,15 +66,15 @@ def test_token_is_rejected_when_secrets_differ() -> None:
     # token must be rejected by a worker holding a different secret (401), which
     # is exactly what the env-shared secret prevents in production.
     sign = (
-        "import uuid; from app.service.auth_service import create_access_token; "
-        f"print(create_access_token(uuid.UUID(int={_SAMPLE_UUID.int})))"
+        "from app.service.auth_service import create_access_token; "
+        "print(create_access_token())"
     )
     token = _run_worker(sign, jwt_secret="1111111111" * 6 + "1111")
 
     decode = (
         "from app.exceptions import RegistryError; "
-        "from app.service.auth_service import decode_access_token; "
-        f"\ntry:\n    decode_access_token({token!r}); print('ACCEPTED')\n"
+        "from app.service.auth_service import verify_access_token; "
+        f"\ntry:\n    verify_access_token({token!r}); print('ACCEPTED')\n"
         "except RegistryError as e:\n    print(f'REJECTED:{e.status_code}')"
     )
     result = _run_worker(decode, jwt_secret="2222222222" * 6 + "2222")

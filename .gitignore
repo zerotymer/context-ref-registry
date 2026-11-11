@@ -58,3 +58,8 @@ sbom.json
 # deliverables stay tracked; new files here are ignored.
 /.output/
 graphify-out/
+
+# SQLite database files
+*.db
+*.db-wal
+*.db-shm

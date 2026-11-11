@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models import ApiKey, Project, UserAccount
+from app.domain.models import ApiKey, Project
 
 
 class ApiKeyRepository:
@@ -20,54 +20,24 @@ class ApiKeyRepository:
         return result.scalar_one_or_none()
 
     async def get_by_id(self, api_key_id: uuid.UUID) -> ApiKey | None:
-        result = await self._session.execute(select(ApiKey).where(ApiKey.id == api_key_id))
-        return result.scalar_one_or_none()
+        return await self._session.get(ApiKey, api_key_id)
 
-    async def create(
-        self,
-        *,
-        name: str,
-        key_hash: str,
-        scopes: list[str],
-        project_id: uuid.UUID | None = None,
-        created_by: uuid.UUID | None = None,
-    ) -> ApiKey:
-        key = ApiKey(
-            name=name,
-            key_hash=key_hash,
-            scopes=scopes,
-            project_id=project_id,
-            created_by=created_by,
-        )
+    async def create(self, **fields) -> ApiKey:
+        key = ApiKey(**fields)
         self._session.add(key)
         await self._session.flush()
         await self._session.refresh(key)
         return key
 
-    async def list_by_user(
-        self, user_id: uuid.UUID
-    ) -> list[tuple[ApiKey, str | None, str | None]]:
-        """Returns (ApiKey, project_name, owner_role) tuples for user view."""
-        stmt = (
-            select(ApiKey, Project.alias, UserAccount.role)
-            .outerjoin(Project, ApiKey.project_id == Project.id)
-            .outerjoin(UserAccount, ApiKey.created_by == UserAccount.id)
-            .where(ApiKey.created_by == user_id)
-            .order_by(ApiKey.created_at.desc())
-        )
-        result = await self._session.execute(stmt)
-        return [(row[0], row[1], row[2]) for row in result.all()]
-
     async def list_all(
         self,
         *,
-        created_by_login_id: str | None = None,
+        project_id: str | None = None,
         is_active: bool | None = None,
-    ) -> list[tuple[ApiKey, str | None, str | None, str | None]]:
-        """Returns (ApiKey, owner_login_id, project_name, owner_role) for admin view."""
+    ) -> list[tuple[ApiKey, str | None]]:
+        """Returns (ApiKey, project_alias) tuples, newest first."""
         stmt = (
-            select(ApiKey, UserAccount.login_id, Project.alias, UserAccount.role)
-            .outerjoin(UserAccount, ApiKey.created_by == UserAccount.id)
+            select(ApiKey, Project.alias)
             .outerjoin(Project, ApiKey.project_id == Project.id)
             .order_by(ApiKey.created_at.desc())
         )
@@ -75,25 +45,16 @@ class ApiKeyRepository:
             stmt = stmt.where(ApiKey.revoked_at.is_(None))
         elif is_active is False:
             stmt = stmt.where(ApiKey.revoked_at.is_not(None))
-        if created_by_login_id:
-            stmt = stmt.where(UserAccount.login_id.ilike(f"%{created_by_login_id}%"))
+        if project_id:
+            stmt = stmt.where(ApiKey.project_id == project_id)
         result = await self._session.execute(stmt)
-        return [(row[0], row[1], row[2], row[3]) for row in result.all()]
-
-    async def delete_all_by_user(self, user_id: uuid.UUID) -> int:
-        """Hard-delete all API keys owned by user. Returns number of deleted rows."""
-        from sqlalchemy import delete
-        result = await self._session.execute(
-            delete(ApiKey).where(ApiKey.created_by == user_id)
-        )
-        await self._session.flush()
-        return result.rowcount
+        return [(row[0], row[1]) for row in result.all()]
 
     async def revoke(self, api_key_id: uuid.UUID) -> ApiKey | None:
         key = await self.get_by_id(api_key_id)
         if key is None:
             return None
-        key.revoked_at = datetime.now(timezone.utc)
-        await self._session.flush()
-        await self._session.refresh(key)
+        if key.revoked_at is None:
+            key.revoked_at = datetime.now(UTC)
+            await self._session.flush()
         return key

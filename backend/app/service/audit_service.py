@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models import ApiKey, EntityAuditLog, UserAccount
+from app.domain.models import EntityAuditLog
 from app.repository.audit_repository import AuditRepository
 
+if TYPE_CHECKING:
+    from app.auth.dependencies import Actor
 
-def actor_identifier(user: UserAccount | None, api_key: ApiKey | None) -> str:
-    if api_key is not None:
-        return f"api_key:{api_key.name}"
-    if user is not None:
-        return user.login_id
-    return "system"
+
+def actor_identifier(actor: Actor) -> str:
+    return "admin" if actor.is_admin else f"api_key:{actor.api_key.name}"
 
 
 class AuditService:
