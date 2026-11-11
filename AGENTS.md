@@ -30,7 +30,7 @@
 | Bundle Graph 탭 (`/bundle` AntV G6 d3-force 관계도) | ✅ 완료 |
 | PostgreSQL → SQLite(WAL) 전환·경량화 (컨테이너 4→2개, 마이그레이션 baseline 1개) | 🚧 진행 중 (lock 갱신·이미지 검증 남음) |
 
-테스트: 백엔드 **297 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **300 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
 에이전트 MCP 진입점: `http://<host>:3000/api/v1/mcp` (streamable-http, `Authorization: Bearer <api-key>`, `read`·`write` 키 모두 허용).
 

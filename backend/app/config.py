@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # admin_password is unset — inject it via backend/.env, never commit it.
     admin_login_id: str = "admin"
     admin_password: str | None = None
+    # Extra Host headers accepted by the MCP endpoint, comma-separated (e.g. "api:*,mcp.example.com").
+    # localhost is always allowed; anything else is rejected with 421 (DNS rebinding protection).
+    mcp_allowed_hosts: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

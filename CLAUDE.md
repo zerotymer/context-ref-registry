@@ -31,7 +31,7 @@ LLM Reference Registry — 코딩 에이전트(Codex, Claude Code, Cursor 등)�
 | Bundle Graph 탭 | `/bundle` 탐색기 Graph 탭 — AntV G6 d3-force 관계도 (degree 비례 노드, `next/dynamic` 지연 로딩) | 완료 |
 | SQLite 전환·경량화 | PostgreSQL 16 → SQLite(WAL, `BEGIN IMMEDIATE` 쓰기 직렬화), 컨테이너 4→2개, 마이그레이션 baseline 1개, API 이미지 멀티스테이지 | 진행 중 |
 
-테스트: 백엔드 **297 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **300 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
 ## 기술 스택
 

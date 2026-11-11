@@ -21,6 +21,7 @@ from app.db.session import async_session_factory
 from app.domain.schemas import EntityCreate
 from app.service.entity_service import EntityService
 from app.main import app
+from app.mcp.server import build_transport_security, mcp
 from tests.conftest import create_key, create_project
 
 
@@ -205,3 +206,48 @@ async def test_mcp_project_scope_filters_tools(mcp_url: str):
             assert e_in in resolved_ids
             assert e_out in validated["missing"]
             assert validated["valid"] is False
+
+
+# ---------------------------------------------------------------------------
+# Host header allowlist (DNS rebinding protection)
+# ---------------------------------------------------------------------------
+
+
+def test_transport_security_defaults_to_localhost_and_accepts_extras():
+    default = build_transport_security("")
+    assert default.allowed_hosts == ["127.0.0.1:*", "localhost:*", "[::1]:*"]
+
+    extra = build_transport_security(" api:* , mcp.example.com ,")
+    assert extra.allowed_hosts[-2:] == ["api:*", "mcp.example.com"]
+    assert "https://mcp.example.com" in extra.allowed_origins
+
+
+async def _initialize_status(mcp_url: str, host: str) -> int:
+    key = await _make_api_key()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            mcp_url + "/",
+            headers={
+                "Host": host,
+                "Authorization": f"Bearer {key}",
+                "Accept": "application/json, text/event-stream",
+                "Content-Type": "application/json",
+            },
+            json={
+                "jsonrpc": "2.0", "id": 1, "method": "initialize",
+                "params": {"protocolVersion": "2025-03-26", "capabilities": {},
+                           "clientInfo": {"name": "t", "version": "0"}},
+            },
+        )
+    return resp.status_code
+
+
+async def test_mcp_rejects_unlisted_host(mcp_url: str):
+    assert await _initialize_status(mcp_url, "api:8000") == 421
+
+
+async def test_mcp_accepts_configured_host(mcp_url: str, monkeypatch: pytest.MonkeyPatch):
+    # The transport holds this settings object by reference, so patching it applies live.
+    security = mcp.settings.transport_security
+    monkeypatch.setattr(security, "allowed_hosts", [*security.allowed_hosts, "api:*"])
+    assert await _initialize_status(mcp_url, "api:8000") == 200

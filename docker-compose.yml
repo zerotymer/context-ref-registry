@@ -12,6 +12,8 @@ services:
       - ./backend/.env  # ADMIN_PASSWORD (required), optional ADMIN_LOGIN_ID / JWT_SECRET
     environment:
       - DATABASE_URL=sqlite+aiosqlite:////data/registry.db
+      # The frontend BFF reaches MCP as http://api:8000 — allow that Host (localhost is always allowed).
+      - MCP_ALLOWED_HOSTS=api:*
     volumes:
       - registry_data:/data
     healthcheck:

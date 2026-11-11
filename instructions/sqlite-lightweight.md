@@ -185,7 +185,7 @@ prerequisite: none
 - [x] `backend/Dockerfile`: builder 스테이지에서 `uv sync --frozen --no-dev --no-editable`, runtime 스테이지는 `python:3.12-slim`에 `.venv`만 복사. 패키지 저장소 설정(사용자 `uv.toml`)은 BuildKit secret(`--mount=type=secret`)으로 넘기고 이미지 레이어에 남기지 않는다. `/data` 디렉토리 생성·권한 처리
 - [x] `entrypoint.sh`의 `JWT_SECRET` 생성 로직은 유지
 - [x] API 이미지 크기(기존 383MB)를 다시 측정해 결과를 기록 → **211MB** (2026-11-11, 레이어·히스토리에 저장소 인증 정보 없음 확인)
-- [ ] (API 단독 컨테이너로 확인 완료: 빈 볼륨 스키마 생성·`/health` 200·로그인·키 발급·`/mcp` 200. 프론트 이미지는 사용자 `.npmrc` secret 적용 후 확인) `docker compose up -d` → 빈 볼륨에서 스키마 자동 생성, `/health` 200, 관리자 로그인, 키 발급, 그 키로 `/api/v1/mcp` 호출까지 확인
+- [x] `docker compose up -d` → 빈 볼륨에서 스키마 자동 생성, `/health` 200, 관리자 로그인, 키 발급, 그 키로 `/api/v1/mcp` 호출까지 확인 → 2026-11-11 전체 스택(api·frontend) 확인 완료. 게이트웨이 경유 MCP는 SDK Host 검사(421) 때문에 `MCP_ALLOWED_HOSTS=api:*` 추가 후 200
 
 ### Step 9 — 문서 동기화
 - [x] `CLAUDE.md`: 기술 스택(DB), Docker Compose 서비스, 구현 현황(인증 행 갱신, pgvector 행 → 폐기/재설계), 프로젝트 구조(`backup/` 제거)

@@ -92,6 +92,7 @@ services:
       - "8000:8000"
     environment:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}   # 필수 — 커밋 금지
+      MCP_ALLOWED_HOSTS: "api:*"                              # 게이트웨이(/api/v1/mcp) → api:8000
       # DATABASE_URL 기본값: sqlite+aiosqlite:////data/registry.db
     volumes:
       - registry_data:/data
@@ -140,6 +141,7 @@ ADMIN_PASSWORD='<강한 비밀번호>' docker compose up -d
 | `ADMIN_LOGIN_ID` | | `admin` | 관리자 아이디 |
 | `DATABASE_URL` | | `sqlite+aiosqlite:////data/registry.db` | SQLite 파일 경로 |
 | `JWT_SECRET` | | 기동 시 자동 생성 | 고정하면 재기동 후에도 관리자 세션 유지 |
+| `MCP_ALLOWED_HOSTS` | | — | `/mcp`가 추가로 받을 Host 헤더 (쉼표 구분, `api:*`·`mcp.example.com` 형식). `localhost`는 항상 허용, 그 외는 421. compose는 게이트웨이용 `api:*`를 설정 |
 
 > `JWT_SECRET`을 지정하지 않으면 `entrypoint.sh`가 기동할 때마다 새로 만들어 모든 워커가 공유한다.
 > 재기동하면 관리자 세션이 끊긴다(API Key에는 영향 없음). 알고리즘(`HS256`)과 만료(7일)는 코드에 고정.
@@ -180,7 +182,7 @@ uvicorn app.main:app --reload --port 8000
 
 # 테스트 (임시 SQLite 파일 DB를 자동 생성)
 .venv/bin/pytest tests/ -q
-# 현재: 297 passed
+# 현재: 300 passed
 ```
 
 ### Frontend

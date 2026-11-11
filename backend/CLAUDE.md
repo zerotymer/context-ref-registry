@@ -328,5 +328,5 @@ test_entity_mockup_api.py      GET /entities/{id}/mockup — UI_AREA 렌더, 비
 각 테스트는 `_clean_tables` fixture로 테이블 전체 truncate 후 실행.
 
 ## 주의사항
-- MCP server는 **streamable-http** transport로 `api` 앱의 `/mcp`에 마운트 (`app/main.py`의 `app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))`). stdio(`python -m app.mcp`)는 폐기. 클라이언트는 `http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 헤더 필수 (`X-API-Key` 폐기). 외부 에이전트의 권장 진입점은 프론트 BFF `:3000/api/v1/mcp` (단계 C 스트리밍 프록시) — `:8000/mcp`는 내부/dev용. lifespan에서 `mcp.session_manager.run()`을 `AsyncExitStack`으로 기동한다.
+- MCP server는 **streamable-http** transport로 `api` 앱의 `/mcp`에 마운트 (`app/main.py`의 `app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))`). stdio(`python -m app.mcp`)는 폐기. 클라이언트는 `http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 헤더 필수 (`X-API-Key` 폐기). Host 헤더는 기본 `localhost`만 허용하고(DNS rebinding 방어, 그 외 421) `MCP_ALLOWED_HOSTS`(쉼표 구분)로 추가한다 — compose는 게이트웨이용 `api:*`. 외부 에이전트의 권장 진입점은 프론트 BFF `:3000/api/v1/mcp` (단계 C 스트리밍 프록시) — `:8000/mcp`는 내부/dev용. lifespan에서 `mcp.session_manager.run()`을 `AsyncExitStack`으로 기동한다.
 - `pyproject.toml`의 `mcp>=1.0.0` 의존성은 시스템 Python이 아닌 `.venv`에만 설치됨 — 항상 `.venv/bin/python` 사용.
