@@ -5,7 +5,7 @@ services:
     build:
       context: ./backend
       secrets:
-        - nexus_pypi
+        - uv_config
     ports:
       - "8000:8000"
     env_file:
@@ -31,6 +31,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      secrets:
+        - npmrc
     ports:
       - "3000:3000"
     environment:
@@ -42,6 +44,9 @@ services:
 volumes:
   registry_data:
 
+# Build-time package sources: the builder's own uv / npm configs (never copied into images).
 secrets:
-  nexus_pypi:
-    environment: NEXUS_PYPI_URL
+  uv_config:
+    file: ${HOME}/.config/uv/uv.toml
+  npmrc:
+    file: ${HOME}/.npmrc

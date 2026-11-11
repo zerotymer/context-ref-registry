@@ -7,11 +7,13 @@ FRONT_LOCAL = llm-registry-front:build
 
 .PHONY: build tag push release clean
 
-## Build local images (API needs NEXUS_PYPI_URL — credentialed Nexus PyPI index URL)
+UV_CONFIG ?= $(HOME)/.config/uv/uv.toml
+NPMRC     ?= $(HOME)/.npmrc
+
+## Build local images — package sources come from the builder's uv / npm configs (BuildKit secrets)
 build:
-	@test -n "$$NEXUS_PYPI_URL" || (echo "NEXUS_PYPI_URL is not set" && exit 1)
-	docker build --platform $(PLATFORM) --secret id=nexus_pypi,env=NEXUS_PYPI_URL -t $(API_LOCAL) ./backend
-	docker build --platform $(PLATFORM) -t $(FRONT_LOCAL) ./frontend
+	docker build --platform $(PLATFORM) --secret id=uv_config,src=$(UV_CONFIG) -t $(API_LOCAL)   ./backend
+	docker build --platform $(PLATFORM) --secret id=npmrc,src=$(NPMRC)        -t $(FRONT_LOCAL) ./frontend
 
 ## Tag local images → 4 Docker Hub tags
 tag:
@@ -20,7 +22,7 @@ tag:
 	docker tag $(FRONT_LOCAL) $(HUB_ORG)/llm-registry-front:latest
 	docker tag $(FRONT_LOCAL) $(HUB_ORG)/llm-registry-front:$(VERSION)
 
-## Push all 4 tags to Docker Hub (Nexus is an install proxy only — never push there)
+## Push all 4 tags to Docker Hub
 push:
 	docker push $(HUB_ORG)/llm-registry-api:latest
 	docker push $(HUB_ORG)/llm-registry-api:$(VERSION)

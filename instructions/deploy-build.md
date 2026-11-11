@@ -39,19 +39,15 @@ docker login
 
 ### Step 1 — 빌드 (로컬 임시 태그)
 
-> **Nexus는 업로드 대상이 아니다.** 공급망 공격 방어용 패키지 설치 프록시(PyPI·npm)로만 쓰며,
-> 이미지는 Docker Hub에만 푸시한다.
-
-API 이미지는 의존성을 **개인 Nexus PyPI 인덱스로만** 받는다. 인증이 포함된 인덱스 URL을
-BuildKit secret으로 넘기므로 이미지 레이어·히스토리에 남지 않는다.
+패키지는 **빌드하는 사람의 사용자 설정**(`~/.config/uv/uv.toml`, `~/.npmrc`)에 적힌 저장소에서 받는다.
+두 파일을 BuildKit secret으로 마운트하므로 저장소 주소·인증 정보가 이미지 레이어·히스토리에 남지 않고,
+프로젝트 소스에도 특정 저장소를 적지 않는다.
 
 ```bash
-# 셸에서만 설정 (커밋·.env 금지)
-export NEXUS_PYPI_URL='https://<user>:<pass>@nexus.zerotymer.net/repository/pypi/simple'
-
-docker build --platform linux/amd64 --secret id=nexus_pypi,env=NEXUS_PYPI_URL \
+docker build --platform linux/amd64 --secret id=uv_config,src=$HOME/.config/uv/uv.toml \
   -t llm-registry-api:build ./backend
-docker build --platform linux/amd64 -t llm-registry-front:build ./frontend
+docker build --platform linux/amd64 --secret id=npmrc,src=$HOME/.npmrc \
+  -t llm-registry-front:build ./frontend
 ```
 
 > `--platform linux/amd64`: 배포 서버가 amd64인 경우 명시. arm Mac에서 빌드 시 필수.

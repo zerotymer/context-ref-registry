@@ -91,7 +91,7 @@ docker compose up -d                         # dev (override 병합: --reload + 
 > 상세 절차는 **[`instructions/deploy-build.md`](instructions/deploy-build.md)** 참고.
 
 이미지: `llm-registry-api` (backend) + `llm-registry-front` (frontend)  
-레지스트리: Docker Hub (`zerotymer/`) — Nexus는 패키지 설치 프록시(공급망 방어) 전용, 업로드 금지  
+레지스트리: Docker Hub (`zerotymer/`)  
 태그: `latest` + 버전 태그 → 2×2 = **4개**
 
 ```bash

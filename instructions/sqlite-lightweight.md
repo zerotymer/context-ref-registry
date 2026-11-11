@@ -116,9 +116,9 @@ prerequisite: none
 
 ### Step 1 — 의존성 교체
 
-> **진행 메모 (2026-11-11)**: Nexus blob store(NFS) 쓰기 권한 문제로 lock 갱신이 지연됐다가 Nexus 복구 후 완료.
+> **진행 메모 (2026-11-11)**: 패키지 저장소 장애로 lock 갱신이 지연됐다가 복구 후 완료.
 > `uv.lock`: asyncpg 제거·aiosqlite 추가(기존 lock에서 누락된 structlog 반영, 그 외 버전 변경 없음).
-> ctx7은 당시 Nexus 장애로 사용 불가 → `BEGIN IMMEDIATE` 레시피는 동시성 테스트로 검증.
+> ctx7은 당시 저장소 장애로 사용 불가 → `BEGIN IMMEDIATE` 레시피는 동시성 테스트로 검증.
 
 ### Step 2 — 모델 타입 교체 (DB 범용화)
 - [x] `from sqlalchemy.dialects.postgresql import ...` 제거
@@ -182,10 +182,10 @@ prerequisite: none
 - [x] `backend/.env.example`(없으면 신규)에 `ADMIN_LOGIN_ID`, `ADMIN_PASSWORD=` (값 비움), `JWT_SECRET=` (선택) 기재
 - [x] `docker-compose.override.yml` 신규: api의 `command: uvicorn ... --reload`와 `./backend:/app` 바인드만 옮긴다 (운영은 `docker compose -f docker-compose.yml up`)
 - [x] `backup/` 디렉토리 삭제. 백업 방법은 "api 정지 후 볼륨 안의 `registry.db*` 복사"로 문서화
-- [x] `backend/Dockerfile`: builder 스테이지에서 `uv sync --frozen --no-dev --no-editable`, runtime 스테이지는 `python:3.12-slim`에 `.venv`만 복사. Nexus 인덱스 인증은 BuildKit secret(`--mount=type=secret`)으로 넘기고 이미지 레이어에 남기지 않는다. `/data` 디렉토리 생성·권한 처리
+- [x] `backend/Dockerfile`: builder 스테이지에서 `uv sync --frozen --no-dev --no-editable`, runtime 스테이지는 `python:3.12-slim`에 `.venv`만 복사. 패키지 저장소 설정(사용자 `uv.toml`)은 BuildKit secret(`--mount=type=secret`)으로 넘기고 이미지 레이어에 남기지 않는다. `/data` 디렉토리 생성·권한 처리
 - [x] `entrypoint.sh`의 `JWT_SECRET` 생성 로직은 유지
-- [x] API 이미지 크기(기존 383MB)를 다시 측정해 결과를 기록 → **211MB** (2026-11-11, 레이어·히스토리에 Nexus 인증 정보 없음 확인)
-- [ ] (API 단독 컨테이너로 확인 완료: 빈 볼륨 스키마 생성·`/health` 200·로그인·키 발급·`/mcp` 200. **프론트 이미지 미빌드** — `frontend/Dockerfile`이 `.npmrc` 없이 공개 npm에서 설치하므로 Nexus secret 적용 후 확인) `docker compose up -d` → 빈 볼륨에서 스키마 자동 생성, `/health` 200, 관리자 로그인, 키 발급, 그 키로 `/api/v1/mcp` 호출까지 확인
+- [x] API 이미지 크기(기존 383MB)를 다시 측정해 결과를 기록 → **211MB** (2026-11-11, 레이어·히스토리에 저장소 인증 정보 없음 확인)
+- [ ] (API 단독 컨테이너로 확인 완료: 빈 볼륨 스키마 생성·`/health` 200·로그인·키 발급·`/mcp` 200. 프론트 이미지는 사용자 `.npmrc` secret 적용 후 확인) `docker compose up -d` → 빈 볼륨에서 스키마 자동 생성, `/health` 200, 관리자 로그인, 키 발급, 그 키로 `/api/v1/mcp` 호출까지 확인
 
 ### Step 9 — 문서 동기화
 - [x] `CLAUDE.md`: 기술 스택(DB), Docker Compose 서비스, 구현 현황(인증 행 갱신, pgvector 행 → 폐기/재설계), 프로젝트 구조(`backup/` 제거)
