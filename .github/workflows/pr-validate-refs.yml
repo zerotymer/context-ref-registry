@@ -26,6 +26,8 @@ jobs:
         run: git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr.diff
 
       - name: Validate registry references
+        # Skipped unless the REGISTRY_URL repo variable points at a registry reachable from the runner.
+        if: vars.REGISTRY_URL != ''
         env:
           REGISTRY_URL: ${{ vars.REGISTRY_URL }}
           REGISTRY_API_KEY: ${{ secrets.REGISTRY_API_KEY }}
