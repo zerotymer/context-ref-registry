@@ -178,10 +178,13 @@ python3 -m http.server 8081 --directory .output/
 
 ## LLM-wiki 스킬 참조
 
-작업 완료 보고 및 리뷰 시 아래 스킬을 활용한다.
+작업 완료 보고 및 리뷰 시 아래 스킬을 활용한다. UUID 스킬은 로컬 파일이 아니며, 관리 스킬
+`wiki-skill-import`(전역 설치)의 규칙에 따라 `md-gw` MCP `get_page_by_uuid(uuid, type="skill")`로 읽는다.
 
 | UUID | 용도 |
 |------|------|
+| `14cea96f-f1e2-461e-b9a7-96b5a6f63b67` | **wiki-skill-import (관리 스킬)** — 아래 UUID 스킬 조회 방법 |
+| `e03f48fb-3e00-41d7-b99d-c32854567d67` | git 브랜치 전략 |
 | `a43a68f9-fda2-4960-a49a-0a97ebf96a8a` | 백엔드/인프라 완료 보고 |
 | `4de41e4d-536a-44ca-8194-f8c5c316e6bf` | Full-stack 완료 보고 |
 | `dbdfdbab-77ed-49fe-b70e-1f1708fc7aab` | 프론트엔드 완료 보고 |
