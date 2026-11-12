@@ -6,20 +6,20 @@ from httpx import AsyncClient
 
 
 async def _create_entity(admin_client: AsyncClient, etype: str, name: str, status: str = "active") -> dict:
-    r = await admin_client.post("/entities", json={"type": etype, "canonical_name": name, "status": status})
+    r = await admin_client.post("/api/v1/entities", json={"type": etype, "canonical_name": name, "status": status})
     assert r.status_code == 201
     return r.json()["data"]
 
 
 async def _add_alias(admin_client: AsyncClient, entity_id: str, alias: str, locale: str = "en") -> None:
-    r = await admin_client.post(f"/entities/{entity_id}/aliases", json={"locale": locale, "alias": alias})
+    r = await admin_client.post(f"/api/v1/entities/{entity_id}/aliases", json={"locale": locale, "alias": alias})
     assert r.status_code == 201
 
 
 @pytest.mark.asyncio
 async def test_validate_valid_uuid(admin_client: AsyncClient):
     entity = await _create_entity(admin_client, "FEATURE", "결제 기능")
-    r = await admin_client.post("/validate-references", json={"references": [entity["id"]]})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": [entity["id"]]})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["valid"] is True
@@ -34,7 +34,7 @@ async def test_validate_valid_uuid(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_validate_unknown_uuid(admin_client: AsyncClient):
     fake_id = str(uuid.uuid4())
-    r = await admin_client.post("/validate-references", json={"references": [fake_id]})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": [fake_id]})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["valid"] is False
@@ -46,7 +46,7 @@ async def test_validate_unknown_uuid(admin_client: AsyncClient):
 async def test_validate_alias_resolved(admin_client: AsyncClient):
     entity = await _create_entity(admin_client, "UI_AREA", "검색 영역")
     await _add_alias(admin_client, entity["id"], "search-area")
-    r = await admin_client.post("/validate-references", json={"references": ["search-area"]})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": ["search-area"]})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["valid"] is True
@@ -57,7 +57,7 @@ async def test_validate_alias_resolved(admin_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_validate_alias_not_found(admin_client: AsyncClient):
-    r = await admin_client.post("/validate-references", json={"references": ["nonexistent-alias"]})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": ["nonexistent-alias"]})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["valid"] is False
@@ -70,7 +70,7 @@ async def test_validate_ambiguous_alias(admin_client: AsyncClient):
     e2 = await _create_entity(admin_client, "FEATURE", "기능 B")
     await _add_alias(admin_client, e1["id"], "shared-alias")
     await _add_alias(admin_client, e2["id"], "shared-alias")
-    r = await admin_client.post("/validate-references", json={"references": ["shared-alias"]})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": ["shared-alias"]})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["valid"] is False
@@ -86,7 +86,7 @@ async def test_validate_mixed_references(admin_client: AsyncClient):
     entity = await _create_entity(admin_client, "INFRA_UNIT", "DB 서버")
     await _add_alias(admin_client, entity["id"], "db-server")
     fake_id = str(uuid.uuid4())
-    r = await admin_client.post("/validate-references", json={"references": [entity["id"], "db-server", fake_id, "bad-alias"]})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": [entity["id"], "db-server", fake_id, "bad-alias"]})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["valid"] is False
@@ -98,7 +98,7 @@ async def test_validate_mixed_references(admin_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_validate_empty_references(admin_client: AsyncClient):
-    r = await admin_client.post("/validate-references", json={"references": []})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": []})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["valid"] is True
@@ -110,7 +110,7 @@ async def test_validate_empty_references(admin_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_validate_deprecated_entity_still_resolved(admin_client: AsyncClient):
     entity = await _create_entity(admin_client, "FEATURE", "구형 기능", status="deprecated")
-    r = await admin_client.post("/validate-references", json={"references": [entity["id"]]})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": [entity["id"]]})
     assert r.status_code == 200
     data = r.json()["data"]
     assert data["valid"] is True
@@ -120,7 +120,7 @@ async def test_validate_deprecated_entity_still_resolved(admin_client: AsyncClie
 
 @pytest.mark.asyncio
 async def test_validate_response_structure(admin_client: AsyncClient):
-    r = await admin_client.post("/validate-references", json={"references": []})
+    r = await admin_client.post("/api/v1/validate-references", json={"references": []})
     assert r.status_code == 200
     body = r.json()
     assert body["ok"] is True

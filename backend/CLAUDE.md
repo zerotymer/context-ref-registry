@@ -60,7 +60,7 @@ backend/
     mcp/
       server.py             # FastMCP 인스턴스 (streamable_http_path="/")
       tools.py              # 7개 read-only tool (프로젝트 범위 필터 적용)
-      http_auth.py          # /mcp API Key 인증 ASGI 미들웨어
+      http_auth.py          # /api/v1/mcp API Key 인증 ASGI 미들웨어
       scope.py              # per-request 프로젝트 가시성 헬퍼
     db/
       session.py            # async_session_factory, SQLite PRAGMA(WAL·FK·busy_timeout) + BEGIN IMMEDIATE
@@ -114,8 +114,8 @@ uvicorn app.main:app --reload --port 8000
 alembic upgrade head
 alembic revision --autogenerate -m "describe change"
 
-# MCP 서버는 api 앱에 streamable-http로 마운트됨 (/mcp). 단독 실행 없음.
-# uvicorn app.main:app 기동 후 http://localhost:8000/mcp 로 접속.
+# MCP 서버는 api 앱에 streamable-http로 마운트됨 (/api/v1/mcp). 단독 실행 없음.
+# uvicorn app.main:app 기동 후 http://localhost:8000/api/v1/mcp 로 접속.
 ```
 
 ## 환경변수
@@ -177,6 +177,8 @@ Locale:       ko | en
 
 ## API 엔드포인트 목록
 
+> `/health`를 제외한 모든 경로는 `API_PREFIX = "/api/v1"` 아래에 있다 (`app/main.py`, Swagger: `/api/v1/docs`). 아래 표는 prefix를 생략해 표기한다. 리버스 프록시 규격은 `docs/12-reverse-proxy.md`.
+
 ### 인증
 
 | 메서드 | 경로 | 설명 |
@@ -227,7 +229,7 @@ Locale:       ko | en
 
 ## MCP Tool 목록
 
-streamable-http로 `api` 앱의 `/mcp`에 마운트(read-only, API Key 인증). 모든 tool은
+streamable-http로 `api` 앱의 `/api/v1/mcp`에 마운트(read-only, API Key 인증). 모든 tool은
 호출자의 API Key 프로젝트 범위(`visible_project_ids`)로 결과를 필터링한다 —
 범위 밖 entity는 `ENTITY_NOT_FOUND`로 은닉되거나 결과에서 제외된다.
 
@@ -331,5 +333,5 @@ test_entity_mockup_api.py      GET /entities/{id}/mockup — UI_AREA 렌더, 비
 각 테스트는 `_clean_tables` fixture로 테이블 전체 truncate 후 실행.
 
 ## 주의사항
-- MCP server는 **streamable-http** transport로 `api` 앱의 `/mcp`에 마운트 (`app/main.py`의 `app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))`). stdio(`python -m app.mcp`)는 폐기. 클라이언트는 `http://<host>:8000/mcp`로 접속하며 `Authorization: Bearer <api-key>` 헤더 필수 (`X-API-Key` 폐기). Host 헤더는 기본 `localhost`만 허용하고(DNS rebinding 방어, 그 외 421) `MCP_ALLOWED_HOSTS`(쉼표 구분)로 추가한다 — compose는 게이트웨이용 `api:*`. 외부 에이전트의 권장 진입점은 프론트 BFF `:3000/api/v1/mcp` (단계 C 스트리밍 프록시) — `:8000/mcp`는 내부/dev용. lifespan에서 `mcp.session_manager.run()`을 `AsyncExitStack`으로 기동한다.
+- MCP server는 **streamable-http** transport로 `api` 앱의 `/mcp`에 마운트 (`app/main.py`의 `app.mount(f"{API_PREFIX}/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))`). stdio(`python -m app.mcp`)는 폐기. 클라이언트는 `http://<host>:8000/api/v1/mcp`로 접속하며 `Authorization: Bearer <api-key>` 헤더 필수 (`X-API-Key` 폐기). Host 헤더는 기본 `localhost`만 허용하고(DNS rebinding 방어, 그 외 421) `MCP_ALLOWED_HOSTS`(쉼표 구분)로 추가한다 — compose는 게이트웨이용 `api:*`. 외부 에이전트의 권장 진입점은 프론트 BFF `:3000/api/v1/mcp` (단계 C 스트리밍 프록시, 백엔드와 같은 경로) — `:8000`은 루프백/dev용. lifespan에서 `mcp.session_manager.run()`을 `AsyncExitStack`으로 기동한다.
 - `pyproject.toml`의 `mcp>=1.0.0` 의존성은 시스템 Python이 아닌 `.venv`에만 설치됨 — 항상 `.venv/bin/python` 사용.

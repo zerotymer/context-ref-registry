@@ -24,13 +24,14 @@
 | 짧은 식별자 4번째 참조 패턴 (`PROJECT_ID-TYPE-N`, `(project_id,type)` 순번 불변, `EntityRead.short_id` 노출) | ✅ 완료 |
 | 에이전트 API 게이트웨이 (Next BFF `/api/v1/*` → 백엔드 프록시, API Key passthrough) | ✅ 완료 |
 | MCP HTTP transport 단계 A (stdio 폐기 → `api` 앱 `/mcp` streamable-http, API Key 인증, 프로젝트 범위 필터) | ✅ 완료 |
-| MCP HTTP transport 단계 C (Next BFF 스트리밍 프록시 `/api/v1/mcp` → 백엔드 `/mcp/`, SSE pipe·세션 헤더 passthrough) | ✅ 완료 |
+| MCP HTTP transport 단계 C (Next BFF 스트리밍 프록시 `/api/v1/mcp` → 백엔드 `/api/v1/mcp/`, SSE pipe·세션 헤더 passthrough) | ✅ 완료 |
 | UI_AREA 목업 HTML (`GET /entities/{id}/mockup`) | ✅ 완료 |
 | Ingest 식별자 반환 (`POST /ingest/batch` 응답 `entities[]`) | ✅ 완료 |
 | Bundle Graph 탭 (`/bundle` AntV G6 d3-force 관계도) | ✅ 완료 |
 | PostgreSQL → SQLite(WAL) 전환·경량화 (컨테이너 4→2개, 마이그레이션 baseline 1개) | ✅ 완료 (v2.0.0) |
+| 백엔드 `/api/v1` prefix 규격화 + 리버스 프록시 안내 (프론트 단일·경로 분리 동시 호환, `docs/12-reverse-proxy.md`) | ✅ 완료 (v2.1.0) |
 
-테스트: 백엔드 **300 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
+테스트: 백엔드 **303 passed** (`cd backend && .venv/bin/pytest tests/`) · 프론트 **30 passed** (`cd frontend && pnpm test`)
 
 에이전트 MCP 진입점: `http://<host>:3000/api/v1/mcp` (streamable-http, `Authorization: Bearer <api-key>`, `read`·`write` 키 모두 허용).
 

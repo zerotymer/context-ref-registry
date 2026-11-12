@@ -47,7 +47,7 @@ async def client() -> AsyncClient:
 async def admin_client() -> AsyncClient:
     """Separate authenticated admin client — independent from `client` fixture."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        resp = await ac.post("/auth/login", json={"login_id": "admin", "password": ADMIN_PASSWORD})
+        resp = await ac.post("/api/v1/auth/login", json={"login_id": "admin", "password": ADMIN_PASSWORD})
         assert resp.status_code == 200, resp.text
         yield ac
 
@@ -102,7 +102,7 @@ _INFRA_ID = "ed832d61-3319-4d61-83d4-6a29f68932a5"
 @pytest.fixture
 async def entity_user_search_area(admin_client: AsyncClient) -> dict:  # noqa: F811
     """UI_AREA: 사용자 검색 조건 영역 (docs/10 example 1)."""
-    resp = await admin_client.post("/ingest/batch", json={
+    resp = await admin_client.post("/api/v1/ingest/batch", json={
         "source": {"type": "screen_spec", "name": "examples.md", "uri": "file://docs/10-examples.md", "version": "2026-05-25"},
         "entities": [{
             "id": _AREA_ID,
@@ -123,7 +123,7 @@ async def entity_user_search_area(admin_client: AsyncClient) -> dict:  # noqa: F
 @pytest.fixture
 async def entity_user_search_feature(admin_client: AsyncClient) -> dict:
     """FEATURE: 사용자 검색 (docs/10 example 1)."""
-    resp = await admin_client.post("/ingest/batch", json={
+    resp = await admin_client.post("/api/v1/ingest/batch", json={
         "source": {"type": "screen_spec", "name": "examples.md", "uri": "file://docs/10-examples.md", "version": "2026-05-25"},
         "entities": [{
             "id": _FEATURE_ID,
@@ -147,7 +147,7 @@ async def entity_user_search_feature(admin_client: AsyncClient) -> dict:
 @pytest.fixture
 async def entity_user_db(admin_client: AsyncClient) -> dict:
     """INFRA_UNIT: 사용자 서비스 PostgreSQL (docs/10 example 1)."""
-    resp = await admin_client.post("/ingest/batch", json={
+    resp = await admin_client.post("/api/v1/ingest/batch", json={
         "source": {"type": "screen_spec", "name": "examples.md", "uri": "file://docs/10-examples.md", "version": "2026-05-25"},
         "entities": [{
             "id": _INFRA_ID,
@@ -172,7 +172,7 @@ async def relation_area_to_feature(
     entity_user_search_feature: dict,
 ) -> dict:
     """RELATED_TO: 사용자 검색 조건 영역 → 사용자 검색 (docs/10 example 2)."""
-    resp = await admin_client.post("/relations", json={
+    resp = await admin_client.post("/api/v1/relations", json={
         "from_entity_id": entity_user_search_area["id"],
         "to_entity_id": entity_user_search_feature["id"],
         "relation_type": "RELATED_TO",
@@ -189,7 +189,7 @@ async def relation_feature_to_db(
     entity_user_db: dict,
 ) -> dict:
     """READS_FROM: 사용자 검색 → 사용자 서비스 PostgreSQL (docs/10 example 2)."""
-    resp = await admin_client.post("/relations", json={
+    resp = await admin_client.post("/api/v1/relations", json={
         "from_entity_id": entity_user_search_feature["id"],
         "to_entity_id": entity_user_db["id"],
         "relation_type": "READS_FROM",

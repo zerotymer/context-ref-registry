@@ -6,6 +6,10 @@
 
 따라서 기본값은 보수적으로 잡는다.
 
+## 외부 노출 범위
+
+외부에 공개하는 경로와 비공개 경로(`/api/v1/auth/*`, `/api/v1/admin/*`, `/api/v1/docs`)는 [12-reverse-proxy.md](12-reverse-proxy.md)에 정의한다. 프록시 자체는 이 저장소에 포함하지 않는다.
+
 ## MCP 보안
 
 ```text

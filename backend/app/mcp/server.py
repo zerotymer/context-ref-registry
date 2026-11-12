@@ -34,6 +34,6 @@ mcp: FastMCP = FastMCP(
 # Import tools module to trigger @mcp.tool() registrations
 import app.mcp.tools  # noqa: E402, F401
 
-# Mount at /mcp so the streamable-http endpoint is exactly /mcp (the mount adds
-# the prefix; without this the endpoint would be /mcp/mcp).
+# Mounted at /api/v1/mcp so the endpoint is exactly that path (the mount adds
+# the prefix; without this the endpoint would be .../mcp/mcp).
 mcp.settings.streamable_http_path = "/"

@@ -117,8 +117,10 @@ MVP에서는 API 서버와 MCP 서버를 같은 repository에 두되, 실행 프
 ```text
 services:
   api:
-    role: REST API (write/read) + MCP read-only (/mcp), SQLite on volume /data
+    role: REST API (write/read) + MCP read-only, 모두 /api/v1 아래 (MCP: /api/v1/mcp). SQLite on volume /data
 
   frontend:
-    role: 관리자 콘솔 + 에이전트 게이트웨이 (/api/v1/*, /api/v1/mcp)
+    role: 관리자 콘솔 + 에이전트 게이트웨이 (/api/v1/*, /api/v1/mcp — 백엔드와 같은 경로)
 ```
+
+같은 서버·같은 포트의 리버스 프록시 뒤에서 운영할 때의 URL 규격·라우팅 방식은 [12-reverse-proxy.md](12-reverse-proxy.md) 참고.

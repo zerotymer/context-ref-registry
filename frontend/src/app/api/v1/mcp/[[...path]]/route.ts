@@ -2,7 +2,7 @@
 //
 // Proxies `/api/v1/mcp` (and any sub-path) to the backend MCP endpoint with
 // API Key passthrough and full request/response streaming. This is the single
-// external entry point for MCP clients; the backend `/mcp` stays internal.
+// external entry point for MCP clients; the backend `/api/v1/mcp` stays internal.
 // See `@/lib/api/mcp-gateway` for the streaming proxy logic.
 //
 // A dedicated `mcp` segment takes precedence over the REST gateway's

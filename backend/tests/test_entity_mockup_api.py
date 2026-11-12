@@ -16,14 +16,14 @@ async def _ingest_ui_area(client: AsyncClient, mockup: dict | None, project_id: 
     }
     if project_id is not None:
         entity["project_id"] = project_id
-    resp = await client.post("/ingest/batch", json={
+    resp = await client.post("/api/v1/ingest/batch", json={
         "source": {"type": "screen_spec", "name": "t.md", "uri": "file://t.md", "version": "1"},
         "entities": [entity],
         "relations": [],
     })
     assert resp.status_code == 200, resp.text
     # ingest returns nothing useful here; fetch the id via list
-    listed = await client.get("/entities", params={"types": "UI_AREA", "limit": 100})
+    listed = await client.get("/api/v1/entities", params={"types": "UI_AREA", "limit": 100})
     items = [e for e in listed.json()["data"]["items"] if e["canonical_name"] == "주문 목록 화면"]
     return items[-1]["id"]
 
@@ -39,7 +39,7 @@ async def test_mockup_renders_html(admin_client: AsyncClient):
             {"kind": "field", "label": "검색", "input": "text"},
         ],
     })
-    resp = await admin_client.get(f"/entities/{eid}/mockup")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/mockup")
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/html")
     html = resp.text
@@ -50,9 +50,9 @@ async def test_mockup_renders_html(admin_client: AsyncClient):
 
 
 async def test_mockup_non_ui_area_returns_400(admin_client: AsyncClient):
-    create = await admin_client.post("/entities", json={"type": "FEATURE", "canonical_name": "기능"})
+    create = await admin_client.post("/api/v1/entities", json={"type": "FEATURE", "canonical_name": "기능"})
     eid = create.json()["data"]["id"]
-    resp = await admin_client.get(f"/entities/{eid}/mockup")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/mockup")
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "NOT_A_UI_AREA"
 
@@ -62,7 +62,7 @@ async def test_mockup_out_of_scope_returns_404(client: AsyncClient, admin_client
     await create_project(project_id)
     eid = await _ingest_ui_area(admin_client, {"components": [{"kind": "header", "text": "x"}]}, project_id=project_id)
 
-    resp = await client.get(f"/entities/{eid}/mockup")
+    resp = await client.get(f"/api/v1/entities/{eid}/mockup")
     assert resp.status_code == 404
 
 
@@ -71,7 +71,7 @@ async def test_mockup_escapes_user_text(admin_client: AsyncClient):
         "title": "<script>alert(1)</script>",
         "components": [{"kind": "text", "text": "<img src=x onerror=alert(1)>"}],
     })
-    resp = await admin_client.get(f"/entities/{eid}/mockup")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/mockup")
     html = resp.text
     assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;" in html
@@ -82,14 +82,14 @@ async def test_mockup_unknown_kind_renders_safe(admin_client: AsyncClient):
     eid = await _ingest_ui_area(admin_client, {
         "components": [{"kind": "wormhole", "text": "boom"}],
     })
-    resp = await admin_client.get(f"/entities/{eid}/mockup")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/mockup")
     assert resp.status_code == 200
     assert "c-unknown" in resp.text
 
 
 async def test_mockup_no_definition_renders_placeholder(admin_client: AsyncClient):
     eid = await _ingest_ui_area(admin_client, None)
-    resp = await admin_client.get(f"/entities/{eid}/mockup")
+    resp = await admin_client.get(f"/api/v1/entities/{eid}/mockup")
     assert resp.status_code == 200
     assert "주문 목록 화면" in resp.text  # canonical_name fallback title
     assert "placeholder" in resp.text

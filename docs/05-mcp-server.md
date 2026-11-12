@@ -4,6 +4,8 @@ MVP의 MCP 서버는 read-only로 구현한다.
 
 코딩 에이전트가 registry를 조회해서 작업 컨텍스트를 얻는 것이 목적이다.
 
+엔드포인트: `/api/v1/mcp/` (streamable-http, `Authorization: Bearer <api-key>`). 백엔드(:8000)와 프론트 게이트웨이(:3000) 어느 쪽으로 접속해도 경로는 같다. 리버스 프록시 연동은 [12-reverse-proxy.md](12-reverse-proxy.md) 참고.
+
 ## MCP Tool 목록
 
 ```text

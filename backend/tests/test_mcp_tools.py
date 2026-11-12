@@ -42,10 +42,10 @@ class TestResolveAlias:
         assert result["status"] == "not_found"
 
     async def test_resolved(self, admin_client: AsyncClient):
-        entity = await _post(admin_client, "/entities", {
+        entity = await _post(admin_client, "/api/v1/entities", {
             "type": "FEATURE", "canonical_name": "사용자 검색"
         })
-        await _post(admin_client, f"/entities/{entity['id']}/aliases", {
+        await _post(admin_client, f"/api/v1/entities/{entity['id']}/aliases", {
             "locale": "ko", "alias": "회원 검색"
         })
 
@@ -54,10 +54,10 @@ class TestResolveAlias:
         assert result["entity"]["id"] == entity["id"]
 
     async def test_ambiguous(self, admin_client: AsyncClient):
-        e1 = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "검색 A"})
-        e2 = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "검색 B"})
+        e1 = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "검색 A"})
+        e2 = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "검색 B"})
         for eid in [e1["id"], e2["id"]]:
-            await _post(admin_client, f"/entities/{eid}/aliases", {"locale": "ko", "alias": "검색"})
+            await _post(admin_client, f"/api/v1/entities/{eid}/aliases", {"locale": "ko", "alias": "검색"})
 
         result = await _call("resolve_alias", {"alias": "검색"})
         assert result["status"] == "ambiguous"
@@ -72,10 +72,10 @@ class TestResolveAlias:
 
 class TestGetEntity:
     async def test_found(self, admin_client: AsyncClient):
-        entity = await _post(admin_client, "/entities", {
+        entity = await _post(admin_client, "/api/v1/entities", {
             "type": "UI_AREA", "canonical_name": "검색 조건 영역"
         })
-        await _post(admin_client, f"/entities/{entity['id']}/aliases", {
+        await _post(admin_client, f"/api/v1/entities/{entity['id']}/aliases", {
             "locale": "ko", "alias": "검색조건"
         })
 
@@ -90,12 +90,12 @@ class TestGetEntity:
         assert result.get("error") == "ENTITY_NOT_FOUND"
 
     async def test_by_short_id(self, admin_client: AsyncClient):
-        await _post(admin_client, "/projects", {"id": "proj_mcp", "alias": "proj_mcp"})
-        created = await _post(admin_client, "/entities", {
+        await _post(admin_client, "/api/v1/projects", {"id": "proj_mcp", "alias": "proj_mcp"})
+        created = await _post(admin_client, "/api/v1/entities", {
             "type": "FEATURE", "canonical_name": "짧은 식별자", "project_id": "proj_mcp"
         })
         # POST returns only {id}; GET yields the full EntityRead (incl. short_id).
-        entity = (await admin_client.get(f"/entities/{created['id']}")).json()["data"]
+        entity = (await admin_client.get(f"/api/v1/entities/{created['id']}")).json()["data"]
         short_id = entity["short_id"]
         assert short_id == "proj_mcp-FEATURE-1"
 
@@ -104,9 +104,9 @@ class TestGetEntity:
         assert result["entity"]["short_id"] == short_id
 
     async def test_deprecated_warning(self, admin_client: AsyncClient):
-        e1 = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "구 기능"})
-        e2 = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "신 기능"})
-        await admin_client.patch(f"/entities/{e1['id']}", json={
+        e1 = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "구 기능"})
+        e2 = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "신 기능"})
+        await admin_client.patch(f"/api/v1/entities/{e1['id']}", json={
             "status": "deprecated", "replacement_entity_id": e2["id"]
         })
 
@@ -123,8 +123,8 @@ class TestGetEntity:
 
 class TestSearchEntities:
     async def test_alias_exact(self, admin_client: AsyncClient):
-        entity = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "기능 X"})
-        await _post(admin_client, f"/entities/{entity['id']}/aliases", {
+        entity = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "기능 X"})
+        await _post(admin_client, f"/api/v1/entities/{entity['id']}/aliases", {
             "locale": "ko", "alias": "정확한alias"
         })
 
@@ -135,15 +135,15 @@ class TestSearchEntities:
         assert matching["match_reason"] == "alias_exact"
 
     async def test_canonical_name_partial(self, admin_client: AsyncClient):
-        entity = await _post(admin_client, "/entities", {"type": "UI_AREA", "canonical_name": "사용자 목록 화면"})
+        entity = await _post(admin_client, "/api/v1/entities", {"type": "UI_AREA", "canonical_name": "사용자 목록 화면"})
 
         result = await _call("search_entities", {"query": "목록 화면"})
         ids = [r["id"] for r in result["results"]]
         assert entity["id"] in ids
 
     async def test_type_filter(self, admin_client: AsyncClient):
-        feat = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "공통 기능"})
-        area = await _post(admin_client, "/entities", {"type": "UI_AREA", "canonical_name": "공통 영역"})
+        feat = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "공통 기능"})
+        area = await _post(admin_client, "/api/v1/entities", {"type": "UI_AREA", "canonical_name": "공통 영역"})
 
         result = await _call("search_entities", {"query": "공통", "types": ["FEATURE"]})
         ids = [r["id"] for r in result["results"]]
@@ -158,8 +158,8 @@ class TestSearchEntities:
 
 class TestGetContextBundle:
     async def test_bundle_root_only(self, admin_client: AsyncClient):
-        entity = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "번들 루트"})
-        await _post(admin_client, f"/entities/{entity['id']}/contexts", {
+        entity = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "번들 루트"})
+        await _post(admin_client, f"/api/v1/entities/{entity['id']}/contexts", {
             "context_type": "summary", "body": "번들 요약 내용", "language": "ko"
         })
 
@@ -173,9 +173,9 @@ class TestGetContextBundle:
         assert result["contexts"][0]["body"] == "번들 요약 내용"
 
     async def test_bundle_with_related(self, admin_client: AsyncClient):
-        root = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "루트 기능"})
-        child = await _post(admin_client, "/entities", {"type": "INFRA_UNIT", "canonical_name": "연관 인프라"})
-        await _post(admin_client, "/relations", {
+        root = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "루트 기능"})
+        child = await _post(admin_client, "/api/v1/entities", {"type": "INFRA_UNIT", "canonical_name": "연관 인프라"})
+        await _post(admin_client, "/api/v1/relations", {
             "from_entity_id": root["id"],
             "to_entity_id": child["id"],
             "relation_type": "USES",
@@ -190,9 +190,9 @@ class TestGetContextBundle:
         assert child["id"] in all_ids
 
     async def test_bundle_deprecated_warning(self, admin_client: AsyncClient):
-        old = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "구 기능"})
-        new = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "신 기능"})
-        await admin_client.patch(f"/entities/{old['id']}", json={
+        old = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "구 기능"})
+        new = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "신 기능"})
+        await admin_client.patch(f"/api/v1/entities/{old['id']}", json={
             "status": "deprecated", "replacement_entity_id": new["id"]
         })
 
@@ -212,8 +212,8 @@ class TestGetContextBundle:
 
 class TestValidateReferences:
     async def test_all_resolved(self, admin_client: AsyncClient):
-        entity = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "검증 기능"})
-        await _post(admin_client, f"/entities/{entity['id']}/aliases", {
+        entity = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "검증 기능"})
+        await _post(admin_client, f"/api/v1/entities/{entity['id']}/aliases", {
             "locale": "ko", "alias": "검증alias"
         })
 
@@ -232,10 +232,10 @@ class TestValidateReferences:
         assert fake_id in result["missing"]
 
     async def test_ambiguous_alias(self, admin_client: AsyncClient):
-        e1 = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "중복 기능 A"})
-        e2 = await _post(admin_client, "/entities", {"type": "FEATURE", "canonical_name": "중복 기능 B"})
+        e1 = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "중복 기능 A"})
+        e2 = await _post(admin_client, "/api/v1/entities", {"type": "FEATURE", "canonical_name": "중복 기능 B"})
         for eid in [e1["id"], e2["id"]]:
-            await _post(admin_client, f"/entities/{eid}/aliases", {"locale": "ko", "alias": "중복alias"})
+            await _post(admin_client, f"/api/v1/entities/{eid}/aliases", {"locale": "ko", "alias": "중복alias"})
 
         result = await _call("validate_references", {"references": ["중복alias"]})
         assert result["valid"] is False

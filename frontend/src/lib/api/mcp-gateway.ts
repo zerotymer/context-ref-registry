@@ -1,6 +1,6 @@
 // MCP streamable-http gateway proxy.
 //
-// Forwards `/api/v1/mcp` to the backend MCP endpoint (`/mcp/`, served by the
+// Forwards `/api/v1/mcp` to the same backend MCP endpoint (`/api/v1/mcp/`, served by the
 // `api` app as a read-only streamable-http transport). Unlike the REST gateway
 // (`gateway.ts`), MCP uses SSE / chunked streaming and long-lived connections,
 // so this proxy MUST pipe request and response bodies as streams rather than
@@ -39,7 +39,7 @@ const FORWARD_RESPONSE_HEADERS = [
  * Proxy an MCP request to the backend streamable-http endpoint.
  *
  * Bodies are streamed in both directions; nothing is buffered. The backend
- * endpoint is `/mcp/` (trailing slash) — targeting it directly avoids the
+ * endpoint is `/api/v1/mcp/` (trailing slash) — targeting it directly avoids the
  * `/mcp` -> `/mcp/` 307 redirect, which a streamed (single-read) request body
  * could not survive.
  *
@@ -47,10 +47,9 @@ const FORWARD_RESPONSE_HEADERS = [
  */
 export async function proxyMcpToBackend(request: Request): Promise<Response> {
   const url = new URL(request.url);
-  // /api/v1/mcp[/...] -> /mcp[/...]; normalize the bare endpoint to a trailing
+  // Backend serves the same path; normalize the bare endpoint to a trailing
   // slash so the backend serves it without redirecting.
-  const stripped = url.pathname.replace(/^\/api\/v1/, "");
-  const backendPath = stripped === "/mcp" ? "/mcp/" : stripped;
+  const backendPath = url.pathname === "/api/v1/mcp" ? "/api/v1/mcp/" : url.pathname;
   const targetUrl = `${BACKEND}${backendPath}${url.search}`;
 
   // Forward only whitelisted headers. No cookies, no hop-by-hop headers.

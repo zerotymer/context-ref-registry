@@ -81,4 +81,5 @@ Deployment:
 09-security-and-ops.md
 10-examples.md
 11-codex-task-brief.md
+12-reverse-proxy.md
 ```

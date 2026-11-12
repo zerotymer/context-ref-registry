@@ -2,7 +2,7 @@ import contextlib
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
@@ -35,16 +35,28 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with contextlib.AsyncExitStack() as stack:
-        # Run the MCP streamable-http session manager for the mounted /mcp app.
+        # Run the MCP streamable-http session manager for the mounted /api/v1/mcp app.
         await stack.enter_async_context(mcp.session_manager.run())
         yield
 
 
-app = FastAPI(title="LLM Reference Registry", version="2.0.0", lifespan=lifespan)
+# All REST + MCP routes live under API_PREFIX so a reverse proxy can route
+# `/api/v1/*` straight to this app while `/` goes to the frontend. The frontend
+# gateway exposes the same paths, so both routing modes share one URL contract.
+API_PREFIX = "/api/v1"
+
+app = FastAPI(
+    title="LLM Reference Registry",
+    version="2.1.0",
+    lifespan=lifespan,
+    docs_url=f"{API_PREFIX}/docs",
+    openapi_url=f"{API_PREFIX}/openapi.json",
+    redoc_url=None,
+)
 app.add_middleware(RequestLoggingMiddleware)
 
-# Read-only MCP server over streamable-http at /mcp, gated by API key auth.
-app.mount("/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))
+# Read-only MCP server over streamable-http at /api/v1/mcp, gated by API key auth.
+app.mount(f"{API_PREFIX}/mcp", McpApiKeyAuthMiddleware(mcp.streamable_http_app()))
 
 
 @app.exception_handler(RegistryError)
@@ -58,20 +70,22 @@ async def _registry_error_handler(request: Request, exc: RegistryError) -> JSONR
     )
 
 
-app.include_router(auth_router)
-app.include_router(admin_projects_router)
-app.include_router(admin_api_keys_router)
-app.include_router(projects_router)
-app.include_router(entities_router)
-app.include_router(aliases_router)
-app.include_router(contexts_router)
-app.include_router(relations_router)
-app.include_router(ingest_router)
-app.include_router(bundles_router)
-app.include_router(search_router)
-app.include_router(tags_router)
-app.include_router(export_router)
-app.include_router(validate_router)
+api = APIRouter(prefix=API_PREFIX)
+api.include_router(auth_router)
+api.include_router(admin_projects_router)
+api.include_router(admin_api_keys_router)
+api.include_router(projects_router)
+api.include_router(entities_router)
+api.include_router(aliases_router)
+api.include_router(contexts_router)
+api.include_router(relations_router)
+api.include_router(ingest_router)
+api.include_router(bundles_router)
+api.include_router(search_router)
+api.include_router(tags_router)
+api.include_router(export_router)
+api.include_router(validate_router)
+app.include_router(api)
 
 
 @app.get("/health")
